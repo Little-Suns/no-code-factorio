@@ -5,7 +5,6 @@ function getSize(kind: MachineKind): { w: number; h: number } {
   switch (kind) {
     case 'belt':
     case 'chest':
-    case 'pole':
       return { w: 1, h: 1 };
     case 'miner':
     case 'furnace':
@@ -159,7 +158,7 @@ export function outPorts(entity: Entity): { tile: Vec; branch: Branch }[] {
       });
       break;
 
-    // silo, telegram, accumulator, pole — нет выходов
+    // silo, telegram, accumulator — нет выходов
   }
 
   return ports;
@@ -186,7 +185,6 @@ export function inTiles(entity: Entity): Set<string> {
 
     case 'miner':
     case 'accumulator':
-    case 'pole':
       // Нет входов
       return tiles;
 

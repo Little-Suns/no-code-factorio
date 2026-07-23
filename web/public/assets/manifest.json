@@ -89,10 +89,6 @@
       "size": [2, 2],
       "idle": "accumulator_idle.png"
     },
-    "pole": {
-      "size": [1, 1],
-      "idle": "pole_idle.png"
-    },
     "item.text": {
       "size": [0.45, 0.45],
       "idle": "item_text.png"

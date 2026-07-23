@@ -51,7 +51,7 @@ export type MachineKind =
   | 'belt'
   | 'miner' | 'assembler' | 'splitter' | 'mixer' | 'silo' | 'telegram'   // MVP-ядро
   | 'furnace' | 'chest' | 'lab'                              // усиление: станки
-  | 'accumulator' | 'pole';                                  // усиление: энергослой (вне графа лент, docs/04)
+  | 'accumulator';                                           // усиление: энергослой (вне графа лент, docs/04)
 
 export interface Entity {
   id: string;                  // crypto.randomUUID().slice(0, 8)
