@@ -1,37 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { useEffect, useRef } from 'react';
-import { createApp } from './game/app';
-import { loadAssets } from './game/assets';
-import { mountDebugScene } from './game/debugScene';
-
-function App() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    if (!canvasRef.current) return;
-
-    createApp(canvasRef.current).then(async ({ app, layers }) => {
-      // Загрузить ассеты
-      await loadAssets(app.renderer);
-
-      // TODO(A3): убрать debug-сцену при появлении реального размещения
-      mountDebugScene(layers);
-
-      // Приложение готово
-      console.log('App ready', app.renderer.width, 'x', app.renderer.height);
-    });
-  }, []);
-
-  return (
-    <div style={{ width: '100%', height: '100vh', margin: 0, padding: 0, overflow: 'hidden' }}>
-      <canvas
-        ref={canvasRef}
-        style={{ display: 'block', width: '100%', height: '100%' }}
-      />
-    </div>
-  );
-}
+import { App } from './ui/App';
 
 const root = ReactDOM.createRoot(document.getElementById('root')!);
 // Без StrictMode: двойной mount-эффект инициализировал бы Pixi дважды на одном canvas

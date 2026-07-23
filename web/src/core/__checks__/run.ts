@@ -2,7 +2,8 @@
 // Запускается: pnpm --filter web check
 
 import './grid';
-// import './graph.ts'
+import './graph';
+import './rasterize';
 // import './nodes.ts'
 
 console.log('✓ Check runner ready');

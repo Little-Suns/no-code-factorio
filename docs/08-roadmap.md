@@ -20,7 +20,13 @@
 - [x] **A2. Реестр ассетов + плейсхолдеры** (~3ч): манифест, generateTexture-плейсхолдеры с буквой и стрелкой, `getTexture`. AC: без PNG всё рисуется; PNG + строка манифеста подменяет спрайт без правки кода.
   - assets.ts: loadAssets + getTexture с кэшем, нарезка кадров, graceful fallback на плейсхолдеры (проверено в браузере — все станки рисуются буквами/стрелками без PNG).
   - debugScene.ts — временная витрина всех MachineKind, убрать в A3.
-- [ ] **A3. Размещение** (~5ч, после B1): hotbar, ghost с валидацией, клик-постановка, drag-ленты, R, снос, выделение. AC: «шахта → 5 лент → станок → лента → ракета» мышью за минуту.
+- [x] **A3. Размещение** (~5ч, после B1): hotbar, ghost с валидацией, клик-постановка, drag-ленты, R, снос, выделение. AC: «шахта → 5 лент → станок → лента → ракета» мышью за минуту.
+  - store.ts: реализованы все actions (place/remove/rotate/setConfig/select/setTool/setRunning/setStatus/setIO/pushResult/toast/loadWorld) с проверками canPlace и блокировкой при running.
+  - game/input.ts: обработка ввода (ЛКМ для placement, drag для лент, R для поворота, Delete для сноса, выделение по клику).
+  - game/rasterize.ts + __checks__/rasterize.ts: растеризация пути drag-ленты по тайлам (сначала по оси большего смещения), 8 проверок.
+  - game/machines.ts + game/belts.ts: подписка на store, рендер спрайтами с поворотом.
+  - ui/Hotbar.tsx + Hotbar.css: панель внизу с кнопками (belt, miner, assembler, splitter, mixer, silo, telegram), хоткеи 1–7, подсветка выбранного.
+  - ui/App.tsx + App.css: монтирование Pixi и React-оверлея с Hotbar.
 - [ ] **A4. Transport + анимации** (~5ч, по контракту docs/01): движение предметов (400 мс/тайл, масштаб от sizeHint), hold у входа, consume-втягивание, статус-лампы, work-анимации, scrap+дым, `clear()`. AC: FakeEngine-скрипт гоняет предмет по 10 тайлам плавно; Stop чистит мгновенно; затор виден.
 - [ ] **A5. Ракета + FX-полиш** (~2ч): запуск silo, дым, звуки (опц.). AC: `result` от silo проигрывает запуск ракеты.
 
@@ -29,7 +35,9 @@
 - [x] **B1. types + grid** (~2ч, ПЕРВЫМ в проекте): `core/types.ts` ровно по docs/01, `grid.ts`, `__checks__/grid.ts`. AC: см. docs/03.
   - grid.ts: rotOffset/footprintTiles/outPorts/inTiles/buildOccupancy/canPlace; порты снаружи footprint через rotOffset(dx,-1).
   - Ревью-фикс: inTiles возвращал локальные координаты вместо мировых — исправлено, чек усилен ненулевым pos.
-- [ ] **B2. Извлечение графа** (~3ч): `graph.ts`, `__checks__/graph.ts`. AC: см. docs/03.
+- [x] **B2. Извлечение графа** (~3ч): `graph.ts`, `__checks__/graph.ts`. AC: см. docs/03.
+  - buildGraph(entities): Edge[] трассирует ленты от outPorts каждого станка, guard от колец (visited + path > 500), детектирует to по inTiles.
+  - 7 проверок: miner→3 belts→assembler (path=3), dead-end (to=null), ring не виснет, lab rework feedback, splitter 2 branches, порт в пустоту, multi-edges.
 - [ ] **B3. Engine + tpl** (~5ч): docs/04 целиком, включая буферы смесителя, ttl-защиту петель и вебхук-подписку, на FakeTransport. AC: 8 проверок из docs/04.
 - [ ] **B4. Станки ядра** (~4ч): NODE_DEFS + хендлеры miner/assembler/splitter/mixer/silo/telegram + recipes.ts, `__checks__/nodes.ts`. AC: см. docs/05.
 - [ ] **B5. Станки усиления** (~3ч, только после интеграции): furnace, chest, lab. AC: см. docs/05.
