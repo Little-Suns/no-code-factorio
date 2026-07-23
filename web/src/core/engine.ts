@@ -196,13 +196,59 @@ export class Engine {
     const toNode = this.entities[edge.to!];
     if (!toNode) return;
 
-    // Смеситель — специальная обработка
+    // Смеситель и сундук — специальная обработка (буферизация)
     if (toNode.kind === 'mixer') {
       this.deliverToMixer(toNode, edge, packet);
+    } else if (toNode.kind === 'chest') {
+      this.deliverToChest(toNode, packet);
     } else {
       // Остальные узлы — в очередь
       this.enqueuePacket(toNode, packet);
     }
+  }
+
+  /**
+   * Доставка в сундук: копит пакеты во внутреннем буфере движка до batchSize (docs/05).
+   * Недобор — станок не встаёт в очередь и не спавнит выход, но эмитит result
+   * с прогрессом (видно в инспекторе, docs/00: «+result для инспектора»).
+   * Полный набор — пропускается через обычный enqueuePacket/handler станка,
+   * data при этом уже массив накопленных payload'ов.
+   */
+  private deliverToChest(chest: Entity, packet: Packet): void {
+    if (!this.buffers.has(chest.id)) {
+      this.buffers.set(chest.id, new Map());
+    }
+    const chestBuffer = this.buffers.get(chest.id)!;
+    if (!chestBuffer.has('items')) {
+      chestBuffer.set('items', []);
+    }
+    const items = chestBuffer.get('items')!;
+
+    this.emit({ t: 'packet-consume', packetId: packet.id, nodeId: chest.id });
+    this.emit({ t: 'node-status', nodeId: chest.id, status: 'working' });
+
+    items.push(packet);
+
+    const batchSize = Math.max(1, Number(chest.config['batchSize']) || 5);
+
+    if (items.length < batchSize) {
+      this.emit({ t: 'node-io', nodeId: chest.id, lastIn: packet.data });
+      this.emit({ t: 'result', nodeId: chest.id, data: { buffered: items.length, batchSize } });
+      this.emit({ t: 'node-status', nodeId: chest.id, status: 'ok' });
+      return;
+    }
+
+    // Полная пачка собрана — сбрасываем буфер, дальше как обычный станок
+    chestBuffer.set('items', []);
+    const mergedPacket: Packet = {
+      id: `pkt-${crypto.randomUUID().slice(0, 8)}`,
+      data: items.map((p) => p.data),
+      item: 'batch',
+      sizeHint: items.reduce((sum, p) => sum + p.sizeHint, 0),
+      ttl: Math.min(...items.map((p) => p.ttl)) - 1,
+    };
+
+    this.enqueuePacket(chest, mergedPacket);
   }
 
   /**
@@ -378,7 +424,12 @@ export class Engine {
         }
       } else {
         // Выход (assembler, splitter, etc.)
-        const outItem = this.getOutItem(node, result.out);
+        const branch = 'branch' in result ? result.branch : 'out';
+        // lab/rework — явный outItem verdict (docs/05), для остальных веток — обычное правило
+        let outItem = this.getOutItem(node, result.out);
+        if (node.kind === 'lab' && branch === 'rework') {
+          outItem = 'verdict';
+        }
         const newPacket: Packet = {
           id: `pkt-${crypto.randomUUID().slice(0, 8)}`,
           data: result.out,
@@ -401,7 +452,6 @@ export class Engine {
         });
 
         // Находим исходящие edge с соответствующим branch
-        const branch = 'branch' in result ? result.branch : 'out';
         const outEdges = this.edges.filter(
           (e) => e.from === node.id && e.branch === branch
         );

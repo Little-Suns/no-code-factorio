@@ -693,6 +693,75 @@ async function testWebhookMiner() {
 }
 
 /**
+ * AC9 (B5): сундук выпускает пачку ровно на batchSize.
+ * Недобор — result-событие с прогрессом у chest, но без spawn/доставки в silo;
+ * набралось batchSize — один result у silo с массивом всех накопленных payload'ов.
+ */
+async function testChestBatch() {
+  const events: EngineEvent[] = [];
+
+  const entities: Record<string, Entity> = {
+    miner1: { id: 'miner1', kind: 'miner', pos: { x: 0, y: 0 }, dir: 0, config: { mode: 'text', text: 'item-0' } },
+    miner2: { id: 'miner2', kind: 'miner', pos: { x: 0, y: 3 }, dir: 0, config: { mode: 'text', text: 'item-1' } },
+    miner3: { id: 'miner3', kind: 'miner', pos: { x: 0, y: 6 }, dir: 0, config: { mode: 'text', text: 'item-2' } },
+    chest1: { id: 'chest1', kind: 'chest', pos: { x: 5, y: 3 }, dir: 0, config: { batchSize: 3 } },
+    silo1: { id: 'silo1', kind: 'silo', pos: { x: 10, y: 3 }, dir: 0, config: {} },
+  };
+
+  const edges: Edge[] = [
+    { id: 'e1:out:0', from: 'miner1', branch: 'out', to: 'chest1', path: [{ x: 1, y: 0 }, { x: 5, y: 3 }] },
+    { id: 'e2:out:0', from: 'miner2', branch: 'out', to: 'chest1', path: [{ x: 1, y: 3 }, { x: 5, y: 3 }] },
+    { id: 'e3:out:0', from: 'miner3', branch: 'out', to: 'chest1', path: [{ x: 1, y: 6 }, { x: 5, y: 3 }] },
+    { id: 'e4:out:0', from: 'chest1', branch: 'out', to: 'silo1', path: [{ x: 6, y: 3 }, { x: 10, y: 3 }] },
+  ];
+
+  const handlers: Record<string, (ctx: NodeCtx) => Promise<HandlerResult>> = {
+    chest: async (ctx) => ({ out: ctx.data }),
+    silo: async () => ({ done: true }),
+  };
+
+  const engine = new Engine(entities, edges, fakeTransport, (e) => events.push(e), {
+    handlers: handlers as any,
+  });
+
+  engine.start();
+  engine.triggerMiner('miner1');
+  engine.triggerMiner('miner2');
+  engine.triggerMiner('miner3');
+
+  await new Promise((r) => setTimeout(r, 100));
+  engine.stop();
+
+  const chestResults = events.filter(
+    (e): e is Extract<EngineEvent, { t: 'result' }> => e.t === 'result' && e.nodeId === 'chest1'
+  );
+  if (chestResults.length !== 2) {
+    throw new Error(`AC9: ожидались 2 промежуточных result у chest (недобор), получено ${chestResults.length}`);
+  }
+  const buffered = chestResults.map((e) => (e.data as { buffered: number }).buffered);
+  if (buffered[0] !== 1 || buffered[1] !== 2) {
+    throw new Error(`AC9: неверный прогресс буфера: ${buffered.join(',')}`);
+  }
+
+  const siloResults = events.filter(
+    (e): e is Extract<EngineEvent, { t: 'result' }> => e.t === 'result' && e.nodeId === 'silo1'
+  );
+  if (siloResults.length !== 1) {
+    throw new Error(`AC9: ожидался ровно 1 result у silo (пачка на batchSize), получено ${siloResults.length}`);
+  }
+  const batch = siloResults[0].data as unknown[];
+  if (batch.length !== 3) {
+    throw new Error(`AC9: пачка должна содержать 3 элемента, получено ${batch.length}`);
+  }
+  const sorted = [...batch].sort();
+  if (JSON.stringify(sorted) !== JSON.stringify(['item-0', 'item-1', 'item-2'])) {
+    throw new Error(`AC9: неверное содержимое пачки: ${JSON.stringify(batch)}`);
+  }
+
+  console.log('✓ AC9: chest batch exact on batchSize OK');
+}
+
+/**
  * Запуск всех проверок
  */
 (async () => {
@@ -705,8 +774,9 @@ async function testWebhookMiner() {
     await testStopAbort();
     await testQueue();
     await testWebhookMiner();
+    await testChestBatch();
 
-    console.log('\n✅ engine checks OK — все 8 AC пройдены');
+    console.log('\n✅ engine checks OK — все 9 AC пройдены');
   } catch (e) {
     console.error('\n❌ engine checks FAILED:', e);
     throw e;

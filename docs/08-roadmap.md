@@ -56,7 +56,13 @@
   - NODE_DEFS с интерфейсами NodeDef и Field, полный реестр включая furnace/chest/lab/accumulator (заглушки с title/size/schema).
   - getOutItem в engine.ts использует NODE_DEFS.outItem, fallback на auto-правило (string→text).
   - Все 6 AC пройдены: assembler-llm, splitter-expr/llm, mixer-concat/llm, miner-url, telegram (success/error), registry-complete.
-- [ ] **B5. Станки усиления** (~3ч, только после интеграции): furnace, chest, lab. AC: см. docs/05.
+- [x] **B5. Станки усиления** (~3ч, только после интеграции): furnace, chest, lab. AC: см. docs/05.
+  - furnace: `new Function('data', code)` — быстрый JS-препроцессор без LLM; `undefined` на выходе → throw `'furnace must return a value'`.
+  - lab: `llm(...)` с system-критиком, парсит первую строку ответа (PASS/REWORK); PASS → `{branch:'pass', out:data}`; REWORK → `{branch:'rework', out:{draft,critique}}`. outItem для ветки rework (`verdict`) — точечный override в `engine.ts callHandler` (`node.kind==='lab' && branch==='rework'`), т.к. NodeDef.outItem один на кind, а не на branch.
+  - chest: буферизация — **не** в handler (он стейтлесс), а в новом `Engine.deliverToChest` (аналог `deliverToMixer`, тот же `this.buffers` Map, только копит N пакетов с одного узла вместо 1 пакета с каждого входа). Недобор → `result`-событие с `{buffered, batchSize}` для инспектора, без spawn/доставки дальше; набор полон → `enqueuePacket` с массивом payload'ов как обычно, handler chest тривиален (`{out: ctx.data}`).
+  - Hotbar.tsx: `MVP_TOOLS`(7) → `ALL_TOOLS`(10) + `KEY_TO_TOOL` по HOTKEYS вместо позиционной арифметики по индексу — иначе furnace/chest/lab были бы нерасставляемы в UI, несмотря на рабочий handler (клавиши 8/9/0 уже были заявлены в HOTKEYS, но не подключены).
+  - `__checks__/nodes.ts`: +4 (furnace-transform, furnace-undefined-error, lab-pass, lab-rework), `testRegistry` теперь требует handler у всех kind кроме `accumulator`. `__checks__/engine.ts`: +1 (AC9, chest — 3 миксера → chest(batchSize=3) → silo, проверка ровно 2 промежуточных result + 1 финальный с массивом из 3).
+  - `pnpm typecheck` ✓, `pnpm check` ✓ (9 AC engine + 12 AC nodes), `pnpm build` ✓. Ручного smoke-теста в браузере не делал (без Claude in Chrome в этой сессии) — стоит прогнать глазами перед демо.
 
 ## Трек C — сервер и UI (docs/07, 06)
 

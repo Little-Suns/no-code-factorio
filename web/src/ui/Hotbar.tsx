@@ -3,7 +3,11 @@ import { useStore } from '../state/store';
 import type { MachineKind } from '../core/types';
 import './Hotbar.css';
 
-const MVP_TOOLS: MachineKind[] = ['belt', 'miner', 'assembler', 'splitter', 'mixer', 'silo', 'telegram'];
+// Аккумулятор (E1, вне графа лент) сюда не входит — размещается отдельным потоком.
+const ALL_TOOLS: MachineKind[] = [
+  'belt', 'miner', 'assembler', 'splitter', 'mixer', 'silo', 'telegram',
+  'furnace', 'chest', 'lab',
+];
 const HOTKEYS: Record<MachineKind, string> = {
   belt: '1',
   miner: '2',
@@ -17,6 +21,9 @@ const HOTKEYS: Record<MachineKind, string> = {
   lab: '0',
   accumulator: '',
 };
+const KEY_TO_TOOL: Partial<Record<string, MachineKind>> = Object.fromEntries(
+  ALL_TOOLS.map((tool) => [HOTKEYS[tool], tool])
+);
 
 const TOOL_NAMES: Record<MachineKind, string> = {
   belt: 'Belt',
@@ -38,14 +45,10 @@ export function Hotbar() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key >= '1' && e.key <= '9') {
-        const tool = MVP_TOOLS[parseInt(e.key) - 1];
-        if (tool) {
-          setTool(tool);
-          e.preventDefault();
-        }
-      } else if (e.key === '0') {
-        // Пока не поддерживаем усиление
+      const tool = KEY_TO_TOOL[e.key];
+      if (tool) {
+        setTool(tool);
+        e.preventDefault();
       }
     };
 
@@ -55,7 +58,7 @@ export function Hotbar() {
 
   return (
     <div className="hotbar">
-      {MVP_TOOLS.map((tool) => (
+      {ALL_TOOLS.map((tool) => (
         <button
           key={tool}
           className={`hotbar-slot ${selectedTool === tool ? 'active' : ''}`}

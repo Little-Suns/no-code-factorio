@@ -1,6 +1,7 @@
 /**
- * Проверки для станков (B4).
- * 6 AC: assembler-llm, splitter-expr/llm, mixer-concat/llm, miner-url, telegram.
+ * Проверки для станков (B4 + B5).
+ * B4 (6 AC): assembler-llm, splitter-expr/llm, mixer-concat/llm, miner-url, telegram.
+ * B5 (2 AC): furnace (return/undefined), lab (PASS/REWORK).
  */
 
 import { NODE_DEFS } from '../nodes';
@@ -32,6 +33,14 @@ const mockLlm = async (req: {
   if (req.system?.includes('сжимаешь')) {
     // Assembler summarizer
     return 'Краткое резюме текста.';
+  }
+
+  if (req.system?.includes('критик')) {
+    // Lab: PASS/REWORK по маркеру в data
+    if (req.prompt.includes('GOOD_TEXT')) {
+      return 'PASS\nВыглядит отлично, замечаний нет.';
+    }
+    return 'REWORK\nСлишком длинно и не по делу.';
   }
 
   // Mixer LLM: просто объедини номера
@@ -300,6 +309,91 @@ async function testTelegramError() {
 }
 
 // ============================================================================
+// AC 7: furnace исполняет code над data, падает на undefined (B5)
+// ============================================================================
+
+async function testFurnaceTransform() {
+  const handler = NODE_DEFS.furnace.handler as Handler;
+  if (!handler) throw new Error('furnace handler missing');
+
+  const ctx: NodeCtx = {
+    config: { code: "return String(data).replace(/<[^>]+>/g, '')" },
+    data: '<b>hello</b> world',
+    tpl: (s) => s,
+    llm: mockLlm,
+    proxyFetch: mockProxyFetch,
+  };
+
+  const result = (await handler(ctx)) as { out: unknown };
+  if (result.out !== 'hello world') throw new Error('AC7a: furnace must strip tags');
+  console.log('✓ AC7a: furnace-transform');
+}
+
+async function testFurnaceUndefinedError() {
+  const handler = NODE_DEFS.furnace.handler as Handler;
+
+  const ctx: NodeCtx = {
+    config: { code: '// не возвращает ничего' },
+    data: 'anything',
+    tpl: (s) => s,
+    llm: mockLlm,
+    proxyFetch: mockProxyFetch,
+  };
+
+  try {
+    await handler(ctx);
+    throw new Error('AC7b: must throw when code returns undefined');
+  } catch (e) {
+    if (e instanceof Error && e.message.includes('must return a value')) {
+      console.log('✓ AC7b: furnace-undefined-error');
+    } else {
+      throw e;
+    }
+  }
+}
+
+// ============================================================================
+// AC 8: lab ветвит по PASS/REWORK (B5)
+// ============================================================================
+
+async function testLabPass() {
+  const handler = NODE_DEFS.lab.handler as Handler;
+  if (!handler) throw new Error('lab handler missing');
+
+  const ctx: NodeCtx = {
+    config: { criteria: 'Be polite and concise' },
+    data: 'GOOD_TEXT: a polite short message',
+    tpl: (s) => s,
+    llm: mockLlm,
+    proxyFetch: mockProxyFetch,
+  };
+
+  const result = (await handler(ctx)) as { branch: string; out: unknown };
+  if (result.branch !== 'pass') throw new Error('AC8a: expected pass branch');
+  if (result.out !== ctx.data) throw new Error('AC8a: pass must preserve original data');
+  console.log('✓ AC8a: lab-pass');
+}
+
+async function testLabRework() {
+  const handler = NODE_DEFS.lab.handler as Handler;
+
+  const ctx: NodeCtx = {
+    config: { criteria: 'Be polite and concise' },
+    data: 'a long rambling message',
+    tpl: (s) => s,
+    llm: mockLlm,
+    proxyFetch: mockProxyFetch,
+  };
+
+  const result = (await handler(ctx)) as { branch: string; out: unknown };
+  if (result.branch !== 'rework') throw new Error('AC8b: expected rework branch');
+  const out = result.out as { draft?: unknown; critique?: string };
+  if (out.draft !== ctx.data) throw new Error('AC8b: rework must carry original draft');
+  if (!out.critique) throw new Error('AC8b: rework must carry critique text');
+  console.log('✓ AC8b: lab-rework');
+}
+
+// ============================================================================
 // AC 6: реестр покрывает все MachineKind кроме belt
 // ============================================================================
 
@@ -324,6 +418,10 @@ function testRegistry() {
     if (!def.title) throw new Error(`AC6: ${kind} has no title`);
     if (!def.size) throw new Error(`AC6: ${kind} has no size`);
     if (!def.schema) throw new Error(`AC6: ${kind} has no schema`);
+    // accumulator — вне графа лент, handler не требуется (docs/04)
+    if (kind !== 'accumulator' && !def.handler) {
+      throw new Error(`AC6: ${kind} missing handler`);
+    }
   }
 
   // Belt проверяем отдельно (есть в реестре но без handler)
@@ -347,9 +445,13 @@ export async function checkNodes() {
   await testMinerUrl();
   await testTelegramSuccess();
   await testTelegramError();
+  await testFurnaceTransform();
+  await testFurnaceUndefinedError();
+  await testLabPass();
+  await testLabRework();
   testRegistry();
 
-  console.log('✓ All nodes checks passed (B4 AC 1-6)');
+  console.log('✓ All nodes checks passed (B4 AC 1-6, B5 AC 7-8)');
 }
 
 // Выполнить проверки

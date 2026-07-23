@@ -37,10 +37,12 @@ import { splitterHandler, splitterSchema } from './splitter';
 import { mixerHandler, mixerSchema } from './mixer';
 import { siloHandler, siloSchema } from './silo';
 import { telegramHandler, telegramSchema } from './telegram';
+import { furnaceHandler, furnaceSchema } from './furnace';
+import { chestHandler, chestSchema } from './chest';
+import { labHandler, labSchema } from './lab';
 
 /**
  * Реестр всех станков. Belt не включен (у него нет handler и schema).
- * Furnace, chest, lab — заглушки с title/size/schema, handler=undefined (B5).
  */
 export const NODE_DEFS: Record<MachineKind, NodeDef> = {
   // MVP-ядро
@@ -98,51 +100,28 @@ export const NODE_DEFS: Record<MachineKind, NodeDef> = {
     // no handler
   },
 
-  // Усиление (B5): заглушки
+  // Усиление (B5)
   furnace: {
     kind: 'furnace',
     title: 'Печь / Препроцессор',
     size: { w: 2, h: 2 },
-    schema: [
-      {
-        key: 'code',
-        label: 'Код',
-        type: 'textarea',
-        placeholder: "return String(data).replace(/<[^>]+>/g, '')",
-        default: "return data;",
-      },
-    ],
-    // handler в B5
+    schema: furnaceSchema,
+    handler: furnaceHandler,
   },
   chest: {
     kind: 'chest',
     title: 'Сундук / Буфер',
     size: { w: 1, h: 1 },
     outItem: 'batch',
-    schema: [
-      {
-        key: 'batchSize',
-        label: 'Размер пачки',
-        type: 'number',
-        default: 5,
-      },
-    ],
-    // handler в B5
+    schema: chestSchema,
+    handler: chestHandler,
   },
   lab: {
     kind: 'lab',
     title: 'Лаборатория / Критик',
     size: { w: 2, h: 1 },
-    schema: [
-      {
-        key: 'criteria',
-        label: 'Критерии',
-        type: 'textarea',
-        placeholder: 'Текст вежлив, без воды, до 500 знаков',
-        default: 'Be polite and concise',
-      },
-    ],
-    // handler в B5
+    schema: labSchema,
+    handler: labHandler,
   },
 
   // Усиление (E1): энергия
