@@ -8,7 +8,7 @@ React поверх canvas. Оверлеи — absolute-элементы с `poin
 Монтирует Pixi (`game/app.ts`) в `<div ref>`, поверх — TopBar, Hotbar, ConfigPanel, ResultPanel, Toasts.
 
 ### Hotbar.tsx (низ по центру, стиль инвентаря Factorio)
-- Слоты в порядке: belt, miner, assembler, splitter, mixer, silo, telegram, затем furnace, chest, lab, accumulator, pole (усиление — можно скрыть за флагом). Хоткеи 1..9, 0.
+- Слоты в порядке: belt, miner, assembler, splitter, mixer, silo, telegram, затем furnace, chest, lab, accumulator (усиление — можно скрыть за флагом). Хоткеи 1..9, 0.
 - Иконка — мини-плейсхолдер цвета станка (или спрайт из реестра), подпись — title из `NODE_DEFS`, выбранный слот подсвечен.
 - Клик/хоткей → `store.setTool(kind)`; повторно или Esc → сброс.
 
