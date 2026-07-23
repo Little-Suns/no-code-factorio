@@ -23,6 +23,29 @@ n8n — только образец. **Агентам не нужно откры
 | Execute workflow | ручной прогон: batch данных проходит целиком | у нас **непрерывный поток** (Run/Stop) — сознательное отличие и фича | docs/04 |
 | Шаблоны воркфлоу | галерея готовых шаблонов | чертежи (усиление E4) + `demo.json` | docs/03, 08 |
 
+## Мини-пример: как n8n хранит workflow (для интуиции)
+
+```json
+{
+  "name": "Demo",
+  "nodes": [
+    { "id": "a1", "name": "Webhook", "type": "n8n-nodes-base.webhook",
+      "position": [0, 0], "parameters": { "path": "demo" } },
+    { "id": "b2", "name": "IF", "type": "n8n-nodes-base.if",
+      "position": [200, 0], "parameters": { "conditions": "..." } }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "IF", "type": "main", "index": 0 }]] },
+    "IF": { "main": [
+      [{ "node": "Positive branch", "type": "main", "index": 0 }],
+      [{ "node": "Negative branch", "type": "main", "index": 0 }]
+    ] }
+  }
+}
+```
+
+Ключевое отличие нашего хранения: n8n хранит и ноды, и связи; **мы храним только мир** (`{ version: 1, entities: Entity[] }`, docs/01) — связи не сериализуются, а каждый раз выводятся из лент (`buildGraph`, docs/03). Ленты — источник правды о связях.
+
 ## Формы конфигурации нод
 
 В n8n у каждой ноды декларативная схема параметров (`properties: [{ displayName, name, type, default }]`), по ней рендерится панель. Мы воссоздаём это как `NodeDef.schema: Field[]` → `FormRenderer` (docs/05, 06). Никакого динамического «displayOptions/зависимых полей» из n8n не берём — плоский список полей.

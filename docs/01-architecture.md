@@ -135,9 +135,15 @@ interface Store {
 
 Рендерер подписывается через `useStore.subscribe` (вне React), UI — хуками.
 
+## Скрипты и окружение
+
+- `web/package.json` scripts: `dev` (vite), `build` (`tsc && vite build`), `typecheck` (`tsc --noEmit`), `check` (`tsx src/core/__checks__/run.ts`, где `run.ts` просто импортирует все файлы `__checks__/`; `tsx` — dev-зависимость только для этого).
+- Адрес сервера: `const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? 'http://localhost:8787'` — задаётся в одном месте, `state/runtime.ts`; больше нигде URL не хардкодить.
+- Корневой `.gitignore` (создаётся в A1): `node_modules/`, `dist/`, `server/.env`, `__pycache__/`, `.venv/` — ключи API в git не попадают.
+
 ## Персистентность
 
-- Автосейв `entities` в `localStorage` (debounce 500 мс), восстановление при старте.
+- Автосейв `entities` в `localStorage` под ключом `ncf.world.v1` (debounce 500 мс), восстановление при старте. Чертежи (E4) — ключ `ncf.blueprints.v1`.
 - Export/Import JSON и Load demo (`web/public/demo.json`). Формат: `{ version: 1, entities: Entity[] }`.
 
 ## Задачи и acceptance criteria

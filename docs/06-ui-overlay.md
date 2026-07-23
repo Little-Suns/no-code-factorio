@@ -13,7 +13,7 @@ React поверх canvas. Оверлеи — absolute-элементы с `poin
 - Клик/хоткей → `store.setTool(kind)`; повторно или Esc → сброс.
 
 ### TopBar.tsx (верх)
-- ▶ Run / ⏹ Stop (Space): Run строит граф + Engine и запускает (docs/01 «Поток данных»); Stop гасит.
+- ▶ Run / ⏹ Stop (Space): Run строит граф + Engine и запускает (docs/01 «Поток данных»); Stop гасит. Run всегда создаёт свежие граф и Engine; без единой шахты на карте — тост «Поставь шахту» и не запускаемся.
 - Кнопки: Export (скачать JSON), Import (файл), Load demo (`fetch('/demo.json')` → `store.loadWorld`).
 - Индикатор: число сущностей, зелёная точка running. Усиление E1: шкала заряда электричества (`charge/capacity` — это токены LLM); появляется, только если на карте есть аккумулятор.
 

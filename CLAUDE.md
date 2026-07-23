@@ -10,7 +10,7 @@
 
 ## Стек (зафиксирован, не менять)
 
-- `web/`: Vite + React 18 + TypeScript strict + PixiJS v8 + pixi-viewport + Zustand
+- `web/`: Vite + React 18 + TypeScript strict + PixiJS v8 + pixi-viewport + Zustand (+ `tsx` как dev-зависимость — только для запуска `__checks__/`)
 - `server/`: Python 3.12 + FastAPI + uvicorn + httpx — один файл `main.py`
 - Пакетный менеджер: pnpm для web, pip/requirements.txt для server
 - Разрешённые зависимости — только перечисленные выше. Новые не добавлять: пара строк кода дешевле зависимости.

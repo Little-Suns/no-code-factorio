@@ -18,7 +18,13 @@ export interface Field {
   type: 'text' | 'textarea' | 'number' | 'json' | 'select';
   options?: { value: string; label: string }[];   // для select
   placeholder?: string;
+  default?: unknown;                              // значение при постановке станка
 }
+```
+
+При постановке станка `config` заполняется дефолтами из `schema` (`store.place`) — Run никогда не падает на пустых полях: у каждой ноды рабочий дефолт (у miner — текст-заглушка, у assembler — рецепт «Суммаризатор», у splitter — `true`).
+
+```ts
 export type HandlerResult =
   | { out: unknown } | { branch: 'true' | 'false' | 'pass' | 'rework'; out: unknown } | { done: true };
 export interface NodeCtx {
@@ -40,7 +46,13 @@ export type Handler = (ctx: NodeCtx) => Promise<HandlerResult>;
 
 ### assembler — Сборочный станок / Агент (3×3, outItem: text) — сердце системы
 - schema: `recipe` (select: Суммаризатор / Переводчик на английский / Классификатор тональности / Критик / Свой рецепт), `system` (textarea — заполняется пресетом, редактируется).
-- Пресеты (`core/nodes/recipes.ts`): `{ value, label, system }`, например Суммаризатор → «Ты сжимаешь текст до 3 предложений, сохраняя суть. Отвечай только результатом».
+- Пресеты (`core/nodes/recipes.ts`), формат `{ value, label, system }` — готовые system-промпты:
+  - **Суммаризатор**: «Ты сжимаешь текст до 3 предложений, сохраняя суть. Отвечай только результатом, без преамбул.»
+  - **Переводчик**: «Переведи текст на английский. Отвечай только переводом.»
+  - **Классификатор тональности**: «Определи тональность текста. Ответь одним словом: positive, negative или neutral.»
+  - **Критик**: «Назови 3 главные слабости текста и предложи улучшения. Кратко, списком.»
+  - **Копирайтер**: «Преврати текст в короткий пост для соцсетей, до 280 знаков, один эмодзи.»
+  - **Свой рецепт**: пустой system, пользователь пишет сам.
 - handler: `llm({ system: config.system, prompt: typeof data === 'string' ? data : JSON.stringify(data), tools: config.modules })` → `{ out: text }`.
 - **Модульные слоты (усиление E2)**: `config.modules: string[]` — до 3 модулей-MCP, вставляются в ConfigPanel (docs/06). `MODULE_DEFS` в `core/nodes/modules.ts`: `{ id, label, energyCost }` — `web-search` (веб-поиск посреди хода, через сервер, docs/07) и `memory` (снапшот содержимого сундуков подмешивается в prompt как RAG-контекст; движок передаёт его в NodeCtx). Каждый модуль повышает расход энергии станка (docs/04).
 
