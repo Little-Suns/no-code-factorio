@@ -5,6 +5,8 @@ import { loadAssets } from '../game/assets';
 import { initInput } from '../game/input';
 import { initMachines } from '../game/machines';
 import { initBelts } from '../game/belts';
+import { initPackets } from '../game/packets';
+import { initFX } from '../game/fx';
 import { Hotbar } from './Hotbar';
 import './App.css';
 
@@ -21,6 +23,8 @@ export function App() {
       // Инициализировать рендеры
       initMachines(layers);
       initBelts(layers);
+      initPackets(app, layers);
+      initFX(app, layers);
 
       // Инициализировать ввод
       initInput(canvasRef.current!, viewport, layers);

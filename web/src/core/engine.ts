@@ -1,0 +1,451 @@
+import { Entity, Edge, Packet, Transport, EngineEvent, ItemType } from './types';
+import { tpl } from './tpl';
+
+// Контракты NodeCtx/Handler — ровно по docs/05 (B4 пишет хендлеры против них)
+export interface LlmRequest { system?: string; prompt: string; tools?: string[] }
+export interface ProxyRequest { url: string; method?: string; headers?: Record<string, string>; body?: string }
+
+export interface NodeCtx {
+  config: Record<string, unknown>;
+  data: unknown;                        // payload пакета; у mixer — массив
+  tpl(s: string): string;
+  llm(req: LlmRequest): Promise<string>;
+  proxyFetch(req: ProxyRequest): Promise<{ status: number; body: unknown }>;
+}
+
+export type HandlerResult =
+  | { out: unknown }
+  | { branch: 'true' | 'false' | 'pass' | 'rework'; out: unknown }
+  | { done: true };
+
+export type Handler = (ctx: NodeCtx) => Promise<HandlerResult>;
+
+export interface EngineDeps {
+  llm?: NodeCtx['llm'];
+  proxyFetch?: NodeCtx['proxyFetch'];
+  webhooks?: (cb: (nodeId: string, body: unknown) => void) => () => void;
+  handlers?: Partial<Record<string, Handler>>;
+}
+
+/**
+ * Движок исполнения фабрики.
+ * Управляет жизненным циклом пакетов: spawn → move → deliver → process → emit result.
+ */
+export class Engine {
+  private queues = new Map<string, Promise<void>>();
+  private buffers = new Map<string, Map<string, Packet[]>>();
+  private abortController = new AbortController();
+  private running = new Set<Promise<void>>();
+  private intervals: ReturnType<typeof setInterval>[] = [];
+  private unsubscribeWebhooks: (() => void) | null = null;
+
+  constructor(
+    private entities: Record<string, Entity>,
+    private edges: Edge[],
+    private transport: Transport,
+    private emit: (e: EngineEvent) => void,
+    private deps: EngineDeps = {},
+  ) {}
+
+  start(): void {
+    // Запускаем интервалы для шахт с intervalSec > 0
+    for (const entity of Object.values(this.entities)) {
+      if (entity.kind === 'miner') {
+        const intervalSec = (entity.config['intervalSec'] as number) || 0;
+        if (intervalSec > 0) {
+          // Без window.* — core обязан работать headless (tsx-проверки под node)
+          const id = setInterval(() => {
+            if (!this.abortController.signal.aborted) {
+              this.triggerMiner(entity.id);
+            }
+          }, intervalSec * 1000);
+          this.intervals.push(id);
+        }
+      }
+    }
+
+    // Подписываемся на вебхуки
+    if (this.deps.webhooks) {
+      this.unsubscribeWebhooks = this.deps.webhooks((nodeId, body) => {
+        if (!this.abortController.signal.aborted) {
+          // Найдём шахту с этим ID и спавним пакет с телом
+          const miner = this.entities[nodeId];
+          if (miner && miner.kind === 'miner') {
+            this.spawnPacket(body, miner);
+          }
+        }
+      });
+    }
+
+  }
+
+  stop(): void {
+    this.abortController.abort();
+
+    // Очищаем интервалы
+    for (const id of this.intervals) {
+      clearInterval(id);
+    }
+    this.intervals = [];
+
+    // Отписываемся от вебхуков
+    if (this.unsubscribeWebhooks) {
+      this.unsubscribeWebhooks();
+      this.unsubscribeWebhooks = null;
+    }
+
+    // Чистим транспорт
+    this.transport.clear();
+
+    // Очищаем буферы смесителя
+    this.buffers.clear();
+
+    // Устанавливаем все узлы в idle
+    for (const entity of Object.values(this.entities)) {
+      this.emit({ t: 'node-status', nodeId: entity.id, status: 'idle' });
+    }
+  }
+
+  triggerMiner(nodeId: string): void {
+    const miner = this.entities[nodeId];
+    if (!miner || miner.kind !== 'miner') return;
+    if (this.abortController.signal.aborted) return;
+
+    this.spawnPacket(undefined, miner);
+  }
+
+  /**
+   * Создаёт пакет из шахты и для каждого исходящего edge запускает цепочку доставки.
+   */
+  private spawnPacket(webhookBody: unknown, miner: Entity): void {
+    // Определяем payload шахты
+    let data: unknown;
+    const mode = (miner.config['mode'] as string) || 'text';
+
+    if (mode === 'text') {
+      data = miner.config['text'] || '';
+    } else if (mode === 'url') {
+      // TODO(B4): mode='url' требует proxyFetch
+      data = miner.config['url'] || '';
+    } else if (mode === 'webhook') {
+      data = webhookBody;
+    } else {
+      data = '';
+    }
+
+    // Создаём базовый пакет
+    const packet: Packet = {
+      id: `pkt-${crypto.randomUUID().slice(0, 8)}`,
+      data,
+      item: 'text',
+      sizeHint: JSON.stringify(data).length,
+      ttl: 64,
+    };
+
+    this.emit({
+      t: 'packet-spawn',
+      packet,
+      at: miner.pos,
+    });
+
+    // Для каждого исходящего edge: клонируем пакет и запускаем доставку
+    const outgoingEdges = this.edges.filter((e) => e.from === miner.id);
+    for (const edge of outgoingEdges) {
+      const clonedPacket = { ...packet };
+      const chain = this.deliverPacket(edge, clonedPacket);
+      this.running.add(chain);
+      chain.finally(() => this.running.delete(chain));
+    }
+  }
+
+  /**
+   * Цепочка доставки пакета по одному edge (move → deliver).
+   */
+  private async deliverPacket(edge: Edge, packet: Packet): Promise<void> {
+    try {
+      // Ждём, пока предмет доехал до конца пути
+      await this.transport.move(packet.id, edge.path, packet.item, packet.sizeHint);
+
+      if (this.abortController.signal.aborted) return;
+
+      // Если это тупик — дропим
+      if (edge.to === null) {
+        this.emit({
+          t: 'packet-drop',
+          packetId: packet.id,
+          reason: 'dead-end',
+        });
+        return;
+      }
+
+      // Иначе — доставляем в узел
+      this.deliver(edge, packet);
+    } catch (e) {
+      if (!this.abortController.signal.aborted) {
+        console.error('deliverPacket error:', e);
+      }
+    }
+  }
+
+  /**
+   * Обработка пакета в узле.
+   * Для смесителя — буферизация, иначе — очередь.
+   */
+  private deliver(edge: Edge, packet: Packet): void {
+    const toNode = this.entities[edge.to!];
+    if (!toNode) return;
+
+    // Смеситель — специальная обработка
+    if (toNode.kind === 'mixer') {
+      this.deliverToMixer(toNode, edge, packet);
+    } else {
+      // Остальные узлы — в очередь
+      this.enqueuePacket(toNode, packet);
+    }
+  }
+
+  /**
+   * Доставка в смеситель: буферизация до получения от всех входов.
+   */
+  private deliverToMixer(mixer: Entity, edge: Edge, packet: Packet): void {
+    // Получаем буфер смесителя
+    if (!this.buffers.has(mixer.id)) {
+      this.buffers.set(mixer.id, new Map());
+    }
+    const mixerBuffers = this.buffers.get(mixer.id)!;
+
+    // Получаем входящие edge этого смесителя
+    const incomingEdges = this.edges.filter((e) => e.to === mixer.id);
+    if (incomingEdges.length === 0) {
+      // Если не входов — обработаем как обычно
+      this.enqueuePacket(mixer, packet);
+      return;
+    }
+
+    // Кладём пакет в буфер по edge.id
+    if (!mixerBuffers.has(edge.id)) {
+      mixerBuffers.set(edge.id, []);
+    }
+    mixerBuffers.get(edge.id)!.push(packet);
+
+    // Проверяем, собрана ли полная комплектация (по одному пакету от каждого входа)
+    let isReady = true;
+    const packets: Packet[] = [];
+
+    for (const inEdge of incomingEdges) {
+      const buf = mixerBuffers.get(inEdge.id);
+      if (!buf || buf.length === 0) {
+        isReady = false;
+        break;
+      }
+      packets.push(buf[0]); // Берём первый пакет
+    }
+
+    if (!isReady) {
+      // Ждём остальные пакеты
+      return;
+    }
+
+    // Полный комплект собран — обрабатываем
+    // Удаляем из буферов
+    for (const inEdge of incomingEdges) {
+      const buf = mixerBuffers.get(inEdge.id)!;
+      buf.shift();
+    }
+
+    // Эмитим consume для всех пакетов
+    for (const p of packets) {
+      this.emit({
+        t: 'packet-consume',
+        packetId: p.id,
+        nodeId: mixer.id,
+      });
+    }
+
+    // Создаём объединённый пакет с массивом данных
+    const mergedPacket: Packet = {
+      id: `pkt-${crypto.randomUUID().slice(0, 8)}`,
+      data: packets.map((p) => p.data),
+      item: 'json',
+      sizeHint: packets.reduce((sum, p) => sum + p.sizeHint, 0),
+      ttl: Math.min(...packets.map((p) => p.ttl)) - 1,
+    };
+
+    // Обрабатываем объединённый пакет через очередь узла (второй комплект ждёт первый)
+    this.enqueuePacket(mixer, mergedPacket);
+  }
+
+  /**
+   * Добавляем пакет в очередь узла (мьютекс). Очередь ЖДЁТ завершения handler —
+   * иначе «последовательность» фиктивна и заторов не будет.
+   */
+  private enqueuePacket(node: Entity, packet: Packet): void {
+    const prevPromise = this.queues.get(node.id) ?? Promise.resolve();
+    const newPromise = prevPromise.then(async () => {
+      if (this.abortController.signal.aborted) return;
+      await this.processNode(node, packet);
+    });
+
+    this.queues.set(node.id, newPromise);
+  }
+
+  /**
+   * Обработка пакета в узле: consume → handler → spawn output / done / error.
+   */
+  private async processNode(node: Entity, packet: Packet): Promise<void> {
+    // Эмитим consume
+    this.emit({
+      t: 'packet-consume',
+      packetId: packet.id,
+      nodeId: node.id,
+    });
+
+    // Эмитим working
+    this.emit({
+      t: 'node-status',
+      nodeId: node.id,
+      status: 'working',
+    });
+
+    // Проверяем TTL
+    if (packet.ttl <= 0) {
+      this.emit({
+        t: 'packet-drop',
+        packetId: packet.id,
+        reason: 'ttl',
+      });
+      this.emit({
+        t: 'node-status',
+        nodeId: node.id,
+        status: 'ok',
+      });
+      return;
+    }
+
+    // Вызываем handler узла (async, в try/catch) — ЖДЁМ его для мьютекса очереди
+    await this.callHandler(node, packet);
+  }
+
+  /**
+   * Вызов handler узла.
+   */
+  private async callHandler(node: Entity, packet: Packet): Promise<void> {
+    try {
+      if (this.abortController.signal.aborted) return;
+
+      const handlers = this.deps.handlers || {};
+      const handler = handlers[node.kind];
+
+      let result: HandlerResult;
+      if (handler) {
+        const ctx: NodeCtx = {
+          data: packet.data,
+          config: node.config,
+          tpl: (s: string) => tpl(s, packet.data),
+          llm: this.deps.llm ?? (async () => { throw new Error('LLM недоступен (нет deps.llm)'); }),
+          proxyFetch: this.deps.proxyFetch ?? (async () => { throw new Error('proxyFetch недоступен'); }),
+        };
+        result = await handler(ctx);
+      } else {
+        // Дефолт-заглушка: просто пропускаем данные
+        result = { out: packet.data };
+      }
+
+      if (this.abortController.signal.aborted) return;
+
+      // Обработка результата (union по docs/05; ошибки — через throw в catch ниже)
+      if ('done' in result) {
+        // Конец (silo, chest)
+        this.emit({
+          t: 'node-status',
+          nodeId: node.id,
+          status: 'ok',
+        });
+        this.emit({
+          t: 'node-io',
+          nodeId: node.id,
+          lastIn: packet.data,
+        });
+
+        // Для silo эмитим result
+        if (node.kind === 'silo') {
+          this.emit({
+            t: 'result',
+            nodeId: node.id,
+            data: packet.data,
+          });
+        }
+      } else {
+        // Выход (assembler, splitter, etc.)
+        const outItem = this.getOutItem(node, result.out);
+        const newPacket: Packet = {
+          id: `pkt-${crypto.randomUUID().slice(0, 8)}`,
+          data: result.out,
+          item: outItem,
+          sizeHint: JSON.stringify(result.out).length,
+          ttl: packet.ttl - 1,
+        };
+
+        this.emit({
+          t: 'node-io',
+          nodeId: node.id,
+          lastIn: packet.data,
+          lastOut: result.out,
+        });
+
+        this.emit({
+          t: 'packet-spawn',
+          packet: newPacket,
+          at: node.pos,
+        });
+
+        // Находим исходящие edge с соответствующим branch
+        const branch = 'branch' in result ? result.branch : 'out';
+        const outEdges = this.edges.filter(
+          (e) => e.from === node.id && e.branch === branch
+        );
+
+        // Запускаем доставку по каждому edge
+        for (const edge of outEdges) {
+          const chain = this.deliverPacket(edge, newPacket);
+          this.running.add(chain);
+          chain.finally(() => this.running.delete(chain));
+        }
+
+        this.emit({
+          t: 'node-status',
+          nodeId: node.id,
+          status: 'ok',
+        });
+      }
+    } catch (e) {
+      if (!this.abortController.signal.aborted) {
+        const errorMsg = e instanceof Error ? e.message : String(e);
+        this.emit({
+          t: 'node-status',
+          nodeId: node.id,
+          status: 'error',
+          error: errorMsg,
+        });
+        this.emit({
+          t: 'packet-drop',
+          packetId: packet.id,
+          reason: 'error',
+        });
+      }
+    }
+  }
+
+  /**
+   * Определение типа выходного предмета.
+   * Правило: если явно задан outItem (lab → verdict, chest → batch) — используем.
+   * Иначе auto: string → 'text', иное → 'json'.
+   */
+  private getOutItem(_node: Entity, out: unknown): ItemType {
+    // TODO(B4): outItem из NODE_DEFS (lab rework → verdict, chest → batch)
+    if (typeof out === 'string') {
+      return 'text';
+    }
+    return 'json';
+  }
+}

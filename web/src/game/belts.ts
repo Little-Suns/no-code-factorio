@@ -1,11 +1,15 @@
-import { Sprite, Container } from 'pixi.js';
+import { Sprite, AnimatedSprite, Container } from 'pixi.js';
 import { TILE } from './app';
 import { getTexture } from './assets';
 import { useStore } from '../state/store';
 import type { Entity } from '../core/types';
 import type { GameLayers } from './app';
 
-const beltSprites = new Map<string, Sprite>();
+interface BeltSprite {
+  sprite: Sprite | AnimatedSprite;
+}
+
+const beltSprites = new Map<string, BeltSprite>();
 
 export function initBelts(layers: GameLayers): void {
   // Подписка на изменения entities
@@ -32,9 +36,9 @@ function updateBelts(entities: Record<string, Entity>, layer: Container): void {
   // Удалить спрайты удалённых лент
   for (const id of existingIds) {
     if (!currentBeltIds.has(id)) {
-      const sprite = beltSprites.get(id);
-      if (sprite) {
-        layer.removeChild(sprite);
+      const bs = beltSprites.get(id);
+      if (bs) {
+        layer.removeChild(bs.sprite);
         beltSprites.delete(id);
       }
     }
@@ -44,23 +48,36 @@ function updateBelts(entities: Record<string, Entity>, layer: Container): void {
   for (const [id, entity] of Object.entries(entities)) {
     if (entity.kind !== 'belt') continue;
 
-    let sprite = beltSprites.get(id);
+    let beltSprite = beltSprites.get(id);
 
-    if (!sprite) {
+    if (!beltSprite) {
       // Создать новый спрайт
-      const texture = getTexture('belt', 'idle');
-      const tex = Array.isArray(texture) ? texture[0] : texture;
-      sprite = new Sprite(tex);
-      sprite.anchor.set(0, 0);
+      const textureOrFrames = getTexture('belt', 'work');
+      let sprite: Sprite | AnimatedSprite;
+
+      if (Array.isArray(textureOrFrames)) {
+        // Анимированный спрайт
+        sprite = new AnimatedSprite(textureOrFrames);
+        if (sprite instanceof AnimatedSprite) {
+          sprite.animationSpeed = 0.15;
+          sprite.play();
+        }
+      } else {
+        // Статический спрайт (плейсхолдер)
+        sprite = new Sprite(textureOrFrames);
+      }
+
+      sprite.anchor.set(0.5, 0.5);
       layer.addChild(sprite);
-      beltSprites.set(id, sprite);
+      beltSprite = { sprite };
+      beltSprites.set(id, beltSprite);
     }
 
     // Обновить позицию и поворот
-    sprite.position.set(entity.pos.x * TILE, entity.pos.y * TILE);
-    sprite.pivot.set(TILE * 0.5, TILE * 0.5);
-    sprite.position.x += TILE * 0.5;
-    sprite.position.y += TILE * 0.5;
-    sprite.angle = entity.dir * 90;
+    beltSprite.sprite.position.set(
+      entity.pos.x * TILE + TILE * 0.5,
+      entity.pos.y * TILE + TILE * 0.5
+    );
+    beltSprite.sprite.angle = entity.dir * 90;
   }
 }

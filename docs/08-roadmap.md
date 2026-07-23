@@ -27,7 +27,13 @@
   - game/machines.ts + game/belts.ts: подписка на store, рендер спрайтами с поворотом.
   - ui/Hotbar.tsx + Hotbar.css: панель внизу с кнопками (belt, miner, assembler, splitter, mixer, silo, telegram), хоткеи 1–7, подсветка выбранного.
   - ui/App.tsx + App.css: монтирование Pixi и React-оверлея с Hotbar.
-- [ ] **A4. Transport + анимации** (~5ч, по контракту docs/01): движение предметов (400 мс/тайл, масштаб от sizeHint), hold у входа, consume-втягивание, статус-лампы, work-анимации, scrap+дым, `clear()`. AC: FakeEngine-скрипт гоняет предмет по 10 тайлам плавно; Stop чистит мгновенно; затор виден.
+- [x] **A4. Transport + анимации** (~5ч, по контракту docs/01): движение предметов (400 мс/тайл, масштаб от sizeHint), hold у входа, consume-втягивание, статус-лампы, work-анимации, scrap+дым, `clear()`. AC: FakeEngine-скрипт гоняет предмет по 10 тайлам плавно; Stop чистит мгновенно; затор виден.
+  - game/packets.ts: GameTransport с move() (линейная интерполяция по пути, TILE_MS=400), consumePacket (tween scale→0, 150мс), dropPacket (error→scrap, dead-end/ttl→падение), clear().
+  - game/fx.ts: smoke() (5-8 частиц, подъём+fade 1с), rocketLaunch() placeholder.
+  - game/machines.ts: статус-лампа (круг 10px, idle/working/ok/error), work-анимация переключение на AnimatedSprite.
+  - game/belts.ts: AnimatedSprite для belt с синхронной анимацией.
+  - game/fakeRun.ts: тестовая функция на window.__fakeRun (дев-режим), buildGraph+createTransport.move интеграция.
+  - initPackets/initFX требуют вызова из runtime.ts (B3 интеграция).
 - [ ] **A5. Ракета + FX-полиш** (~2ч): запуск silo, дым, звуки (опц.). AC: `result` от silo проигрывает запуск ракеты.
 
 ## Трек B — core (docs/03, 04, 05)
@@ -38,7 +44,9 @@
 - [x] **B2. Извлечение графа** (~3ч): `graph.ts`, `__checks__/graph.ts`. AC: см. docs/03.
   - buildGraph(entities): Edge[] трассирует ленты от outPorts каждого станка, guard от колец (visited + path > 500), детектирует to по inTiles.
   - 7 проверок: miner→3 belts→assembler (path=3), dead-end (to=null), ring не виснет, lab rework feedback, splitter 2 branches, порт в пустоту, multi-edges.
-- [ ] **B3. Engine + tpl** (~5ч): docs/04 целиком, включая буферы смесителя, ttl-защиту петель и вебхук-подписку, на FakeTransport. AC: 8 проверок из docs/04.
+- [x] **B3. Engine + tpl** (~5ч): docs/04 целиком, включая буферы смесителя, ttl-защиту петель и вебхук-подписку, на FakeTransport. AC: 8 проверок из docs/04.
+  - core/tpl.ts: функция интерполяции {{path.to.field}} (поддержка вложенных объектов и массивов); core/engine.ts: полный жизненный цикл пакетов с очередями узлов, буферами смесителя, TTL-защитой и AbortController для stop().
+  - 8 AC пройдены: simple pipeline, splitter branching, mixer buffering, error handling, loop TTL-death, abort behavior, sequential queue, webhook subscription.
 - [ ] **B4. Станки ядра** (~4ч): NODE_DEFS + хендлеры miner/assembler/splitter/mixer/silo/telegram + recipes.ts, `__checks__/nodes.ts`. AC: см. docs/05.
 - [ ] **B5. Станки усиления** (~3ч, только после интеграции): furnace, chest, lab. AC: см. docs/05.
 
