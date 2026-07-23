@@ -1,8 +1,7 @@
 // Check runner — импортирует все проверки из __checks__/
 // Запускается: pnpm --filter web check
 
-// TODO: добавить импорты проверочных модулей по мере их создания
-// например: import './grid.ts'
+import './grid';
 // import './graph.ts'
 // import './nodes.ts'
 

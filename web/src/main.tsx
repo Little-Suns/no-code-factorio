@@ -2,6 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { useEffect, useRef } from 'react';
 import { createApp } from './game/app';
+import { loadAssets } from './game/assets';
+import { mountDebugScene } from './game/debugScene';
 
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -9,7 +11,13 @@ function App() {
   useEffect(() => {
     if (!canvasRef.current) return;
 
-    createApp(canvasRef.current).then(({ app }) => {
+    createApp(canvasRef.current).then(async ({ app, layers }) => {
+      // Загрузить ассеты
+      await loadAssets(app.renderer);
+
+      // TODO(A3): убрать debug-сцену при появлении реального размещения
+      mountDebugScene(layers);
+
       // Приложение готово
       console.log('App ready', app.renderer.width, 'x', app.renderer.height);
     });

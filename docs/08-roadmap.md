@@ -17,14 +17,18 @@
   - main.tsx: React + Canvas для Pixi; заглушки UI, store, assets.
   - .gitignore (node_modules/, dist/, server/.env, __pycache__/, .venv/).
   - pnpm install ✓, typecheck ✓.
-- [ ] **A2. Реестр ассетов + плейсхолдеры** (~3ч): манифест, generateTexture-плейсхолдеры с буквой и стрелкой, `getTexture`. AC: без PNG всё рисуется; PNG + строка манифеста подменяет спрайт без правки кода.
+- [x] **A2. Реестр ассетов + плейсхолдеры** (~3ч): манифест, generateTexture-плейсхолдеры с буквой и стрелкой, `getTexture`. AC: без PNG всё рисуется; PNG + строка манифеста подменяет спрайт без правки кода.
+  - assets.ts: loadAssets + getTexture с кэшем, нарезка кадров, graceful fallback на плейсхолдеры (проверено в браузере — все станки рисуются буквами/стрелками без PNG).
+  - debugScene.ts — временная витрина всех MachineKind, убрать в A3.
 - [ ] **A3. Размещение** (~5ч, после B1): hotbar, ghost с валидацией, клик-постановка, drag-ленты, R, снос, выделение. AC: «шахта → 5 лент → станок → лента → ракета» мышью за минуту.
 - [ ] **A4. Transport + анимации** (~5ч, по контракту docs/01): движение предметов (400 мс/тайл, масштаб от sizeHint), hold у входа, consume-втягивание, статус-лампы, work-анимации, scrap+дым, `clear()`. AC: FakeEngine-скрипт гоняет предмет по 10 тайлам плавно; Stop чистит мгновенно; затор виден.
 - [ ] **A5. Ракета + FX-полиш** (~2ч): запуск silo, дым, звуки (опц.). AC: `result` от silo проигрывает запуск ракеты.
 
 ## Трек B — core (docs/03, 04, 05)
 
-- [ ] **B1. types + grid** (~2ч, ПЕРВЫМ в проекте): `core/types.ts` ровно по docs/01, `grid.ts`, `__checks__/grid.ts`. AC: см. docs/03.
+- [x] **B1. types + grid** (~2ч, ПЕРВЫМ в проекте): `core/types.ts` ровно по docs/01, `grid.ts`, `__checks__/grid.ts`. AC: см. docs/03.
+  - grid.ts: rotOffset/footprintTiles/outPorts/inTiles/buildOccupancy/canPlace; порты снаружи footprint через rotOffset(dx,-1).
+  - Ревью-фикс: inTiles возвращал локальные координаты вместо мировых — исправлено, чек усилен ненулевым pos.
 - [ ] **B2. Извлечение графа** (~3ч): `graph.ts`, `__checks__/graph.ts`. AC: см. docs/03.
 - [ ] **B3. Engine + tpl** (~5ч): docs/04 целиком, включая буферы смесителя, ttl-защиту петель и вебхук-подписку, на FakeTransport. AC: 8 проверок из docs/04.
 - [ ] **B4. Станки ядра** (~4ч): NODE_DEFS + хендлеры miner/assembler/splitter/mixer/silo/telegram + recipes.ts, `__checks__/nodes.ts`. AC: см. docs/05.

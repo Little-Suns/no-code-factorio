@@ -10,7 +10,7 @@
       }
     },
     "miner": {
-      "size": [1, 1],
+      "size": [2, 2],
       "idle": "miner_idle.png",
       "work": {
         "file": "miner_work.png",
@@ -55,7 +55,7 @@
       }
     },
     "telegram": {
-      "size": [1, 1],
+      "size": [2, 2],
       "idle": "telegram_idle.png",
       "work": {
         "file": "telegram_work.png",
@@ -64,7 +64,7 @@
       }
     },
     "furnace": {
-      "size": [1, 1],
+      "size": [2, 2],
       "idle": "furnace_idle.png",
       "work": {
         "file": "furnace_work.png",
