@@ -156,11 +156,18 @@ function generatePlaceholder(key: string): Texture {
 
   const container = new Container();
 
-  // Скруглённый прямоугольник
+  // Скруглённый прямоугольник: станки — светлый металл + акцентный глиф, пакеты/fx — цветная заливка
   const color = PLACEHOLDER_COLORS[key] ?? 0x888888;
+  const isMachine = !key.startsWith('item.') && !key.startsWith('fx.');
+  const glyphColor = isMachine ? color : 0xffffff;
   const graphics = new Graphics();
-  graphics.roundRect(0, 0, width, height, 8);
-  graphics.fill(color);
+  graphics.roundRect(0, 0, width, height, 12);
+  if (isMachine) {
+    graphics.fill(0xf1f2f5);
+    graphics.stroke({ width: 1.5, color: 0xb9bec6 });
+  } else {
+    graphics.fill(color);
+  }
   container.addChild(graphics);
 
   // Первая буква (для item.text → T, fx.smoke → S — различимость)
@@ -169,7 +176,7 @@ function generatePlaceholder(key: string): Texture {
     text: letter,
     style: {
       fontSize: Math.max(20, Math.min(width, height) * 0.5),
-      fill: 0xffffff,
+      fill: glyphColor,
       fontWeight: 'bold',
     },
   });
@@ -184,7 +191,7 @@ function generatePlaceholder(key: string): Texture {
     arrow.lineTo(width * 0.35, height * 0.35);
     arrow.lineTo(width * 0.65, height * 0.35);
     arrow.closePath();
-    arrow.fill(0xffffff);
+    arrow.fill(glyphColor);
     container.addChild(arrow);
   }
 

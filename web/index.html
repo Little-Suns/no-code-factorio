@@ -5,7 +5,27 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>No Code Factorio</title>
-    <style>html, body { margin: 0; overflow: hidden; }</style>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #eef0f3; --dirt: #eceef1; --dirt-dark: #e2e5e9;
+        --panel-bg: #ffffff; --panel-bg-2: #f7f8fa; --panel-border: #dde1e6;
+        --metal: #d9dce1; --metal-light: #f1f2f5; --rivet: #b9bec6;
+        --rust: #cdd1d7; --rust-dark: #aeb3bb;
+        --accent: #c8933a; --accent-dim: #a9762e; --accent-bright: #dba852;
+        --text: #262a30; --text-muted: #7d828b; --text-dim: #a3a7ae;
+        --ok: #3f9d64; --error: #d94f68; --idle: #b6bac0; --node-icon: #8f95a0;
+        --f-disp: 'Big Shoulders', sans-serif;
+        --f-body: 'Manrope', sans-serif;
+        --f-mono: 'IBM Plex Mono', monospace;
+      }
+      html, body { margin: 0; overflow: hidden; }
+      body { background: var(--bg); color: var(--text); font-family: var(--f-body); }
+    </style>
   </head>
   <body>
     <div id="root"></div>

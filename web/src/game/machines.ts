@@ -1,4 +1,4 @@
-import { Sprite, AnimatedSprite, Container, Graphics } from 'pixi.js';
+import { Sprite, AnimatedSprite, Container, Graphics, Ticker } from 'pixi.js';
 import { TILE } from './app';
 import { getTexture } from './assets';
 import { useStore } from '../state/store';
@@ -15,10 +15,10 @@ interface MachineSprite {
 const machineSprites = new Map<string, MachineSprite>();
 
 const STATUS_COLORS: Record<NodeStatus, number> = {
-  idle: 0x888888,     // серый
-  working: 0xffd700,  // жёлтый
-  ok: 0x00cc00,       // зелёный
-  error: 0xff0000,    // красный
+  idle: 0xb6bac0,     // серый (idle)
+  working: 0xc8933a,  // золотой акцент (working)
+  ok: 0x3f9d64,       // зелёный
+  error: 0xd94f68,    // красный
 };
 
 export function initMachines(layers: GameLayers): void {
@@ -46,6 +46,15 @@ export function initMachines(layers: GameLayers): void {
     if (state.energy !== prevEnergy) {
       prevEnergy = state.energy;
       updateChargeBars(state.entities, state.energy);
+    }
+  });
+
+  // Пульсация статус-лампы у работающих станков (дизайн-макет: animation:lamp)
+  Ticker.shared.add(() => {
+    const pulse = 0.4 + 0.6 * Math.abs(Math.sin(performance.now() / 340));
+    const status = useStore.getState().nodeStatus;
+    for (const [id, ms] of machineSprites) {
+      ms.statusLamp.alpha = status[id]?.status === 'working' ? pulse : 1;
     }
   });
 }
@@ -112,11 +121,12 @@ function updateMachines(entities: Record<string, Entity>, layer: Container): voi
       sprite.anchor.set(0, 0);
       container.addChild(sprite);
 
-      // Создать статус-лампу (круг 10px в углу)
+      // Создать статус-лампу (дизайн-макет: небольшой круг в правом верхнем углу)
+      const lampW = getSize(entity.kind).w * TILE;
       const statusLamp = new Graphics();
-      statusLamp.circle(5, 5, 5);
+      statusLamp.circle(4, 4, 4);
       statusLamp.fill(STATUS_COLORS.idle);
-      statusLamp.position.set(5, 5); // в верхний левый угол
+      statusLamp.position.set(lampW - 12, 6);
       container.addChild(statusLamp);
 
       // Полоска заряда — только у аккумулятора (E1), рисуется кодом, без отдельного спрайта
@@ -158,7 +168,7 @@ function updateMachineStatus(
 
     // Обновить лампу
     machineSprite.statusLamp.clear();
-    machineSprite.statusLamp.circle(5, 5, 5);
+    machineSprite.statusLamp.circle(4, 4, 4);
     machineSprite.statusLamp.fill(STATUS_COLORS[status]);
 
     // Переключить спрайт на work-анимацию если working
@@ -200,10 +210,10 @@ function drawChargeBar(bar: Graphics, kind: MachineKind, dir: Dir, charge: numbe
 
   bar.clear();
   bar.rect(x, y, width, barHeight);
-  bar.fill(0x0a0a0e);
+  bar.fill(0xe2e5e9);
   if (ratio > 0) {
     bar.rect(x, y, width * ratio, barHeight);
-    bar.fill(0xffd700);
+    bar.fill(0xdba852);
   }
 }
 

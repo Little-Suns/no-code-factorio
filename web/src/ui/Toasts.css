@@ -1,6 +1,6 @@
 .toasts {
   position: fixed;
-  top: 16px;
+  top: 72px;
   right: 16px;
   display: flex;
   flex-direction: column;
@@ -10,27 +10,23 @@
 }
 
 .toast {
-  padding: 12px 16px;
-  background: #d9a441;
-  color: #1d1d22;
-  border-radius: 4px;
-  font-size: 13px;
+  padding: 8px 12px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-left: 3px solid var(--accent);
+  color: var(--text);
+  border-radius: 10px;
+  font-family: var(--f-mono);
+  font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
   opacity: 0;
   transform: translateX(400px);
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 6px 18px rgba(30, 35, 45, 0.12);
 }
 
 .toast.visible {
   opacity: 1;
   transform: translateX(0);
-}
-
-@media (prefers-color-scheme: light) {
-  .toast {
-    background: #d9a441;
-    color: #1d1d22;
-  }
 }
