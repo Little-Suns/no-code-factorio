@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { useStore } from '../state/store';
 import { createApp } from '../game/app';
 import { loadAssets } from '../game/assets';
 import { initInput } from '../game/input';
@@ -26,6 +27,13 @@ export function App() {
 
       // Приложение готово
       console.log('App ready', app.renderer.width, 'x', app.renderer.height);
+
+      // Дев-хук для e2e-прогонов (не попадает в prod-сборку)
+      if (import.meta.env.DEV) {
+        const w = window as unknown as Record<string, unknown>;
+        w.__store = useStore;
+        w.__viewport = viewport;
+      }
     });
   }, []);
 

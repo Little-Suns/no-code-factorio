@@ -77,7 +77,6 @@ function updateMachines(entities: Record<string, Entity>, layer: Container): voi
       switch (kind) {
         case 'belt':
         case 'chest':
-        case 'pole':
           return { w: 1, h: 1 };
         case 'miner':
         case 'furnace':
@@ -98,11 +97,11 @@ function updateMachines(entities: Record<string, Entity>, layer: Container): voi
 
     const size = getSize(entity.kind);
     const rotatedSize = entity.dir === 1 || entity.dir === 3 ? { w: size.h, h: size.w } : size;
-    const centerX = rotatedSize.w * TILE * 0.5;
-    const centerY = rotatedSize.h * TILE * 0.5;
 
-    machineSprite.sprite.pivot.set(centerX, centerY);
-    machineSprite.sprite.position.set(centerX, centerY);
+    // Пивот — центр БАЗОВОЙ текстуры (dir=0), позиция — центр повёрнутого footprint:
+    // иначе несимметричные станки (2×1) при повороте уезжают из своего footprint
+    machineSprite.sprite.pivot.set(size.w * TILE * 0.5, size.h * TILE * 0.5);
+    machineSprite.sprite.position.set(rotatedSize.w * TILE * 0.5, rotatedSize.h * TILE * 0.5);
     machineSprite.sprite.angle = entity.dir * 90;
   }
 }

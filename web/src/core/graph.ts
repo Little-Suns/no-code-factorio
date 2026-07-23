@@ -16,8 +16,8 @@ export function buildGraph(entities: Record<string, Entity>): Edge[] {
   const branchCount: Record<string, number> = {};
 
   for (const entity of Object.values(entities)) {
-    // Игнорируем ленты, аккумуляторы и столбы
-    if (entity.kind === 'belt' || entity.kind === 'accumulator' || entity.kind === 'pole') {
+    // Игнорируем ленты и аккумуляторы (энергослой вне графа лент)
+    if (entity.kind === 'belt' || entity.kind === 'accumulator') {
       continue;
     }
 

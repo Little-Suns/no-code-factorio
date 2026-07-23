@@ -74,7 +74,10 @@ export const useStore = create<Store>((set, get) => ({
     const entity = state.entities[entityId];
     if (!entity) return;
     const newEntity = { ...entity, dir: ((entity.dir + 1) % 4) as 0 | 1 | 2 | 3 };
-    if (!canPlace({ ...state.entities, [entityId]: newEntity }, newEntity)) {
+    // Сам станок исключаем из занятости — иначе поворот всегда «занято»
+    const others = { ...state.entities };
+    delete others[entityId];
+    if (!canPlace(others, newEntity)) {
       return;
     }
     set((s) => ({

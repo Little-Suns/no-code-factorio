@@ -16,7 +16,6 @@ const HOTKEYS: Record<MachineKind, string> = {
   chest: '9',
   lab: '0',
   accumulator: '',
-  pole: '',
 };
 
 const TOOL_NAMES: Record<MachineKind, string> = {
@@ -31,7 +30,6 @@ const TOOL_NAMES: Record<MachineKind, string> = {
   chest: 'Chest',
   lab: 'Lab',
   accumulator: 'Accumulator',
-  pole: 'Pole',
 };
 
 export function Hotbar() {
