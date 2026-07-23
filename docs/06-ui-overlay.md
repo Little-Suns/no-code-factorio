@@ -8,19 +8,19 @@ React поверх canvas. Оверлеи — absolute-элементы с `poin
 Монтирует Pixi (`game/app.ts`) в `<div ref>`, поверх — TopBar, Hotbar, ConfigPanel, ResultPanel, Toasts.
 
 ### Hotbar.tsx (низ по центру, стиль инвентаря Factorio)
-- Слоты в порядке: belt, miner, assembler, splitter, mixer, silo, telegram, затем furnace, chest, lab (усиление — можно скрыть за флагом). Хоткеи 1..9, 0.
+- Слоты в порядке: belt, miner, assembler, splitter, mixer, silo, telegram, затем furnace, chest, lab, accumulator, pole (усиление — можно скрыть за флагом). Хоткеи 1..9, 0.
 - Иконка — мини-плейсхолдер цвета станка (или спрайт из реестра), подпись — title из `NODE_DEFS`, выбранный слот подсвечен.
 - Клик/хоткей → `store.setTool(kind)`; повторно или Esc → сброс.
 
 ### TopBar.tsx (верх)
 - ▶ Run / ⏹ Stop (Space): Run строит граф + Engine и запускает (docs/01 «Поток данных»); Stop гасит.
 - Кнопки: Export (скачать JSON), Import (файл), Load demo (`fetch('/demo.json')` → `store.loadWorld`).
-- Индикатор: число сущностей, зелёная точка running. Усиление E1: полоска энергии (budget/used); E4: две шкалы — ток (восстанавливается) и топливо (+ кнопка «Подкинуть угля»).
+- Индикатор: число сущностей, зелёная точка running. Усиление E1: шкала заряда электричества (`charge/capacity` — это токены LLM); появляется, только если на карте есть аккумулятор.
 
 ### ConfigPanel.tsx (правый drawer, открыт при `selectedEntityId != null`)
 - Заголовок: title + kind + закрыть (Esc).
 - **FormRenderer** по `NODE_DEFS[kind].schema`: `text`/`number` → `<input>`, `textarea` → `<textarea rows=6>` (моноширинный), `json` → textarea с JSON-валидацией on-blur (красная рамка), `select` → `<select>`; выбор пресета рецепта у assembler подставляет `system` в textarea. Изменения → `store.setConfig`.
-- Спец-блоки: miner — кнопка «▶ Вбросить» (активна при running, зовёт `runtime.triggerMiner(id)`); miner в режиме webhook — readonly URL `{server}/webhook/{id}` + кнопка Copy; assembler (усиление E2) — блок «Модули»: 3 слота-переключателя из `MODULE_DEFS` с иконками и подписью расхода энергии → `config.modules`.
+- Спец-блоки: miner — кнопка «▶ Вбросить» (активна при running, зовёт `runtime.triggerMiner(id)`); miner в режиме webhook — readonly URL `{server}/webhook/{id}` + кнопка Copy; assembler (усиление E2) — блок «Модули»: 3 слота-переключателя из `MODULE_DEFS` с иконками и подписью расхода электричества → `config.modules`; accumulator (усиление E1) — заряд/ёмкость, поле `capacity` и кнопка «Зарядить».
 - Низ: статус-бейдж по `nodeStatus`, текст последней ошибки, свёртки «Последний вход» / «Последний выход» с `<JsonView>`.
 
 ### ResultPanel.tsx — кульминация демо

@@ -40,7 +40,7 @@ getTexture(key: string, state: 'idle' | 'work'): Texture | Texture[]   // Textur
 
 - Загрузка: манифест → `Assets.load` → нарезка кадров (`Texture` + `Rectangle`).
 - **Нет ключа или файл не загрузился → программный плейсхолдер** (`Graphics` → `generateTexture`): скруглённый прямоугольник цвета станка + крупная буква + белая стрелка направления (обязательна — иначе ориентация не читается).
-- Цвета плейсхолдеров: belt `#8a8f98`, miner `#d9a441`, furnace `#c0653a`, assembler `#4a90d9`, splitter `#d94a6a`, mixer `#9b59d0`, chest `#7f8c8d`, lab `#2abfa4`, silo `#e74c3c`, telegram `#2aabee`; предметы: text `#e8e4d8`, json `#4ade80`, image `#7fb3d5`, verdict `#f1c40f`, batch `#b87333`, scrap `#555555`.
+- Цвета плейсхолдеров: belt `#8a8f98`, miner `#d9a441`, furnace `#c0653a`, assembler `#4a90d9`, splitter `#d94a6a`, mixer `#9b59d0`, chest `#7f8c8d`, lab `#2abfa4`, silo `#e74c3c`, telegram `#2aabee`, accumulator `#f39c12`, pole `#a9805b`; предметы: text `#e8e4d8`, json `#4ade80`, image `#7fb3d5`, verdict `#f1c40f`, batch `#b87333`, scrap `#555555`.
 
 ## Отрисовка сущностей
 
@@ -78,12 +78,16 @@ const TILE_MS = 400;   // скорость ленты
 | lab | idle + 4 work | 128×64 |
 | silo (ракета на площадке) | idle + 6 launch | 192×192 |
 | telegram (антенна с тарелкой) | idle + 4 work | 128×128 |
+| accumulator (аккумуляторная станция) | idle | 128×128 |
+| pole (энергостолб) | idle | 64×64 |
 | belt | 8 work | 64×64 × 8 |
 | item.text / json / image / verdict / batch / scrap | 1 | 32×32 |
 | fx.smoke | 1 | 32×32 |
 | ground (опц.) | 1–2 | 64×64 |
 
 Стиль: топ-даун, индустриальный, пиксель-арт или чистый вектор — главное единообразие. Не копировать спрайты Factorio.
+
+Энергослой (усиление): полоску заряда на аккумуляторе и провода между столбами рисует код (`Graphics`: линия с лёгким провисом между вершинами столбов) — отдельные спрайты не нужны.
 
 ## Задачи и acceptance criteria
 
