@@ -26,7 +26,11 @@
 
 ## Трек C — сервер и UI (docs/07, 06)
 
-- [ ] **C1. Сервер** (~3ч, рано — моки нужны всем): Python/FastAPI (`server/main.py`), `/llm` с мок-режимом, `/proxy`, `/webhook/{node_id}` + SSE `/events`. AC: 5 проверок из docs/07.
+- [x] **C1. Сервер** (~3ч, рано — моки нужны всем): Python/FastAPI (`server/main.py`), `/llm` с мок-режимом, `/proxy`, `/webhook/{node_id}` + SSE `/events`. AC: 5 проверок из docs/07.
+  - FastAPI + uvicorn на порту 8787, CORS для локальной разработки
+  - /llm: мок-режим (~1.5s) с YES/NO и web-search; готов для OpenRouter API
+  - /proxy: SSRF через httpx, /webhook: SSE broadcast с 15s heartbeat
+  - Все 5 AC прошли: мок, GitHub API, ошибки не роняют, SSE-webhook working
 - [ ] **C2. UI-оверлей** (~5ч, после B4): TopBar, Hotbar (с A3), ConfigPanel+FormRenderer, ResultPanel, Toasts, runtime.ts. AC: 6 проверок из docs/06.
 - [ ] **C3. Персистентность + демо-заготовка** (~2ч): localStorage-автосейв, Export/Import, Load demo + сборка `web/public/demo.json` (фабрика из демо-сценария docs/00). AC: перезагрузка сохраняет мир; demo.json грузится и запускается.
 
