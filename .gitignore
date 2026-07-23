@@ -4,3 +4,4 @@ server/.env
 __pycache__/
 .venv/
 *.log
+.qoder/

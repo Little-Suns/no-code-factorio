@@ -2,7 +2,7 @@
 import { Engine, EngineDeps, LlmRequest, ProxyRequest } from '../core/engine';
 import { buildGraph } from '../core/graph';
 import type { Entity, EngineEvent } from '../core/types';
-import { GameTransport } from '../game/packets';
+import { GameTransport, consumePacket, dropPacket } from '../game/packets';
 import { rocketLaunch } from '../game/fx';
 import { useStore } from './store';
 
@@ -26,7 +26,7 @@ async function createLlmFetch(): Promise<EngineDeps['llm']> {
       throw new Error(body.error || `LLM error: ${res.status}`);
     }
     const data = await res.json();
-    return data.result;
+    return data.text; // контракт сервера docs/07: { text, mock? }
   };
 }
 
@@ -86,20 +86,17 @@ function setupEventHandler() {
 
     switch (event.t) {
       case 'packet-spawn':
-        // Событие фиксируем для отладки, но особого экшена нет
-        console.debug('Packet spawned', event.packet.id);
+        // Спрайт создаёт transport.move; отдельного экшена нет
         break;
 
       case 'packet-consume':
-        // Пакет потреблен, пакет на конец пути (dropPacket сам рисует)
+        // Втягивание предмета в станок (scale→0)
+        consumePacket(event.packetId);
         break;
 
       case 'packet-drop':
-        // Пакет упал: dropPacket из game/packets рисует лом
-        // На ошибку — store.toast (но только на node-status error)
-        if (event.reason === 'error') {
-          // Дроп по ошибке будет, но тост уже выписан от node-status
-        }
+        // error → лом+дым; dead-end/ttl → падение с fade (тост даёт node-status error)
+        dropPacket(event.packetId, event.reason);
         break;
 
       case 'node-status':
