@@ -43,3 +43,4 @@ docs/     документация проекта
 | [docs/06-ui-overlay.md](docs/06-ui-overlay.md) | React-интерфейс |
 | [docs/07-server.md](docs/07-server.md) | сервер: /llm (+мок-режим), /proxy |
 | [docs/08-roadmap.md](docs/08-roadmap.md) | роадмап, задачи, MVP vs усиление |
+| [docs/09-n8n-reference.md](docs/09-n8n-reference.md) | выжимка по n8n: что воссоздаём, что нет |
