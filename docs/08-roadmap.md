@@ -100,7 +100,14 @@
   - Попутно нашёл и починил тот же класс бага, что был у furnace/chest/lab: `accumulator` не было в `Hotbar.ALL_TOOLS` — станок нельзя было поставить мышью. Добавлен, хоткей `E` (цифры 0-9 заняты).
   - `__checks__/engine.ts` +1 (AC10: недобор блокирует с 'Нет питания', `rechargeEnergy()` разблокирует на следующей 2с-попытке — единственный тест с реальным ~2.2с ожиданием в сьюте, осознанно, т.к. интервал ретрая фиксирован спекой).
   - `pnpm typecheck` ✓, `pnpm check` ✓ (10 AC engine), `pnpm build` ✓. Браузером по-прежнему не проверял (нет Claude in Chrome в этой сессии).
-- [ ] **E2. Модули MCP** (~3ч): `MODULE_DEFS`, слоты у assembler в ConfigPanel, `web-search` через `:online`-суффикс модели OpenRouter (сервер, docs/07) + `memory` (снапшот сундуков в prompt). Сильный питч-угол — показать вживую. AC: агент с модулем поиска отвечает на вопрос о сегодняшних событиях; без модуля — нет.
+- [x] **E2. Модули MCP** (~3ч): `MODULE_DEFS`, слоты у assembler в ConfigPanel, `web-search` через `:online`-суффикс модели OpenRouter (сервер, docs/07) + `memory` (снапшот сундуков в prompt). Сильный питч-угол — показать вживую. AC: агент с модулем поиска отвечает на вопрос о сегодняшних событиях; без модуля — нет.
+  - `server/main.py` (`/llm`) уже умел `:online`-суффикс и мок-режим для `web-search` — это было сделано ещё в C1, отдельно трогать сервер не пришлось.
+  - `core/nodes/modules.ts`: `MODULE_DEFS` — `web-search` и `memory`, оба `energyCost: 0.5` (совпадает с реальной формулой `Engine.getEnergyCost`, а не декоративное число).
+  - `assembler.ts`: `tools: modules` уже уходил в `ctx.llm` с B4 — это сервер сам разруливает. Новое — `memory`: сервер её игнорирует (по спеке), поэтому подмешивание в prompt сделано на клиенте, в самом `assemblerHandler`, только если `config.modules.includes('memory')` (без модуля `ctx.memory` игнорируется, даже если она есть в ctx — проверено отдельным AC).
+  - `engine.ts`: `NodeCtx.memory?: unknown[]` (второе за сессию реальное расширение контракта, после `EngineEvent.energy`) + `collectChestMemory()` — сканирует все entities `kind==='chest'`, берёт то, что уже накопилось в `this.buffers` (буфер до батча, см. B5/`deliverToChest`), отдаёт в ctx только assembler-у с модулем `memory`.
+  - ConfigPanel: сырой JSON-field `modules` у assembler больше не рендерится generic-циклом — вместо него блок переключателей по `MODULE_DEFS` (до 3, дальше клики по новым игнорируются), disabled при running, подпись с `energyCost` в title.
+  - `__checks__/nodes.ts` +3 (AC9a tools→llm, AC9b memory→prompt, AC9c без модуля — memory не используется, даже если она в ctx). `__checks__/engine.ts` +1 (AC11 — assembler с `modules:['memory']` реально получает через движок то, что miner'ы успели накопить в chest, до полного батча).
+  - `pnpm typecheck` ✓, `pnpm check` ✓ (11 AC engine, 9+3 AC nodes), `pnpm build` ✓. Браузером по-прежнему не проверял.
 - [ ] **E3 = B5. Станки усиления**: furnace, chest, lab (описаны в треке B).
 - [ ] **E4. Чертежи** (~3ч): рамка выделения, localStorage, групповой ghost, экспорт/импорт строкой. Брать, только если E1–E3 стабильны (docs/03, 06).
 

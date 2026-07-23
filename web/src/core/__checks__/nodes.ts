@@ -1,7 +1,8 @@
 /**
- * Проверки для станков (B4 + B5).
+ * Проверки для станков (B4 + B5 + E2).
  * B4 (6 AC): assembler-llm, splitter-expr/llm, mixer-concat/llm, miner-url, telegram.
  * B5 (2 AC): furnace (return/undefined), lab (PASS/REWORK).
+ * E2 (1 AC, 3 сценария): assembler-модули — tools в llm, memory в prompt, без модуля не подмешивается.
  */
 
 import { NODE_DEFS } from '../nodes';
@@ -394,6 +395,74 @@ async function testLabRework() {
 }
 
 // ============================================================================
+// AC 9: assembler-модули (E2) — tools пробрасываются в llm, memory подмешивается в prompt
+// ============================================================================
+
+async function testAssemblerModulesTools() {
+  mockLlmCalls = [];
+  const handler = NODE_DEFS.assembler.handler as Handler;
+
+  const ctx: NodeCtx = {
+    config: { system: 'Ты помощник.', modules: ['web-search'] },
+    data: 'Что нового сегодня?',
+    tpl: (s) => s,
+    llm: mockLlm,
+    proxyFetch: mockProxyFetch,
+  };
+
+  await handler(ctx);
+  if (!mockLlmCalls[0]?.tools?.includes('web-search')) {
+    throw new Error('AC9a: модуль web-search должен уйти в llm({tools})');
+  }
+  console.log('✓ AC9a: assembler-modules-tools');
+}
+
+async function testAssemblerMemoryModule() {
+  mockLlmCalls = [];
+  const handler = NODE_DEFS.assembler.handler as Handler;
+
+  const ctx: NodeCtx = {
+    config: { system: 'Ты помощник.', modules: ['memory'] },
+    data: 'Сделай вывод по собранным данным.',
+    memory: ['отзыв: отлично', 'отзыв: так себе'],
+    tpl: (s) => s,
+    llm: mockLlm,
+    proxyFetch: mockProxyFetch,
+  };
+
+  await handler(ctx);
+  const prompt = mockLlmCalls[0]?.prompt ?? '';
+  if (!prompt.includes('отзыв: отлично') || !prompt.includes('отзыв: так себе')) {
+    throw new Error('AC9b: ctx.memory должен быть подмешан в prompt');
+  }
+  if (!prompt.includes('Сделай вывод по собранным данным.')) {
+    throw new Error('AC9b: исходная задача не должна теряться при подмешивании памяти');
+  }
+  console.log('✓ AC9b: assembler-memory-module');
+}
+
+async function testAssemblerNoMemoryWithoutModule() {
+  mockLlmCalls = [];
+  const handler = NODE_DEFS.assembler.handler as Handler;
+
+  const ctx: NodeCtx = {
+    config: { system: 'Ты помощник.', modules: [] },
+    data: 'Задача без памяти.',
+    memory: ['это не должно попасть в prompt'],
+    tpl: (s) => s,
+    llm: mockLlm,
+    proxyFetch: mockProxyFetch,
+  };
+
+  await handler(ctx);
+  const prompt = mockLlmCalls[0]?.prompt ?? '';
+  if (prompt.includes('это не должно попасть в prompt')) {
+    throw new Error('AC9c: без модуля memory в config.modules — ctx.memory не должен использоваться');
+  }
+  console.log('✓ AC9c: assembler-memory-ignored-without-module');
+}
+
+// ============================================================================
 // AC 6: реестр покрывает все MachineKind кроме belt
 // ============================================================================
 
@@ -449,9 +518,12 @@ export async function checkNodes() {
   await testFurnaceUndefinedError();
   await testLabPass();
   await testLabRework();
+  await testAssemblerModulesTools();
+  await testAssemblerMemoryModule();
+  await testAssemblerNoMemoryWithoutModule();
   testRegistry();
 
-  console.log('✓ All nodes checks passed (B4 AC 1-6, B5 AC 7-8)');
+  console.log('✓ All nodes checks passed (B4 AC 1-6, B5 AC 7-8, E2 AC 9)');
 }
 
 // Выполнить проверки

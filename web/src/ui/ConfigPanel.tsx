@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useStore } from '../state/store';
 import { NODE_DEFS } from '../core/nodes';
 import { triggerMiner, rechargeAccumulator } from '../state/runtime';
+import { MODULE_DEFS } from '../core/nodes/modules';
 import { JsonView } from './JsonView';
 import './ConfigPanel.css';
 
@@ -48,6 +49,16 @@ export function ConfigPanel() {
     }
   };
 
+  const handleToggleModule = (moduleId: string) => {
+    const current = (entity.config['modules'] as string[]) || [];
+    const next = current.includes(moduleId)
+      ? current.filter((m) => m !== moduleId)
+      : current.length < 3 // до 3 модулей-MCP на станок (docs/05)
+        ? [...current, moduleId]
+        : current;
+    handleConfigChange('modules', next);
+  };
+
   const handleCopyWebhook = () => {
     if (webhookUrl) {
       navigator.clipboard.writeText(webhookUrl);
@@ -70,7 +81,10 @@ export function ConfigPanel() {
       <div className="config-content">
         {/* Основные поля конфига */}
         <div className="config-fields">
-          {def.schema.map((field) => (
+          {def.schema.map((field) => {
+            // modules у assembler рендерится отдельным блоком переключателей ниже, не сырым JSON
+            if (entity.kind === 'assembler' && field.key === 'modules') return null;
+            return (
             <div key={field.key} className="config-field">
               <label className="config-label">{field.label}</label>
 
@@ -156,8 +170,33 @@ export function ConfigPanel() {
                 </select>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
+
+        {/* Спец-блок для assembler (E2): модули как переключатели, не сырой JSON */}
+        {entity.kind === 'assembler' && (
+          <div className="config-special">
+            <label className="config-label">Модули (до 3)</label>
+            <div className="module-toggles">
+              {MODULE_DEFS.map((mod) => {
+                const active = ((entity.config['modules'] as string[]) || []).includes(mod.id);
+                return (
+                  <button
+                    key={mod.id}
+                    type="button"
+                    className={`module-toggle ${active ? 'active' : ''}`}
+                    onClick={() => handleToggleModule(mod.id)}
+                    disabled={running}
+                    title={`${mod.label} (+${Math.round(mod.energyCost * 100)}% к расходу энергии станка)`}
+                  >
+                    {mod.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Спец-блоки для miner */}
         {entity.kind === 'miner' && (

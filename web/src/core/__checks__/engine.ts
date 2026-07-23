@@ -840,6 +840,64 @@ async function testEnergyLayer() {
 }
 
 /**
+ * AC11 (E2): модуль 'memory' у assembler получает снапшот того, что уже накопилось
+ * в буфере chest (ещё не уехавшая пачка) — движок собирает его из this.buffers.
+ */
+async function testAssemblerMemorySnapshot() {
+  const entities: Record<string, Entity> = {
+    minerA: { id: 'minerA', kind: 'miner', pos: { x: 0, y: 0 }, dir: 0, config: { mode: 'text', text: 'note-A' } },
+    minerB: { id: 'minerB', kind: 'miner', pos: { x: 0, y: 3 }, dir: 0, config: { mode: 'text', text: 'note-B' } },
+    minerC: { id: 'minerC', kind: 'miner', pos: { x: 0, y: 6 }, dir: 0, config: { mode: 'text', text: 'trigger' } },
+    chest1: { id: 'chest1', kind: 'chest', pos: { x: 5, y: 0 }, dir: 0, config: { batchSize: 5 } }, // не наберётся за тест
+    assembler1: { id: 'assembler1', kind: 'assembler', pos: { x: 5, y: 6 }, dir: 0, config: { modules: ['memory'] } },
+    silo1: { id: 'silo1', kind: 'silo', pos: { x: 10, y: 6 }, dir: 0, config: {} },
+  };
+
+  const edges: Edge[] = [
+    { id: 'eA:out:0', from: 'minerA', branch: 'out', to: 'chest1', path: [{ x: 1, y: 0 }, { x: 5, y: 0 }] },
+    { id: 'eB:out:0', from: 'minerB', branch: 'out', to: 'chest1', path: [{ x: 1, y: 3 }, { x: 5, y: 0 }] },
+    { id: 'eC:out:0', from: 'minerC', branch: 'out', to: 'assembler1', path: [{ x: 1, y: 6 }, { x: 5, y: 6 }] },
+    { id: 'eD:out:0', from: 'assembler1', branch: 'out', to: 'silo1', path: [{ x: 6, y: 6 }, { x: 10, y: 6 }] },
+  ];
+
+  let capturedMemory: unknown[] | undefined;
+  const handlers: Record<string, (ctx: NodeCtx) => Promise<HandlerResult>> = {
+    assembler: async (ctx) => {
+      capturedMemory = ctx.memory;
+      return { out: 'ok' };
+    },
+    silo: async () => ({ done: true }),
+  };
+
+  const engine = new Engine(entities, edges, fakeTransport, () => {}, {
+    handlers: handlers as any,
+  });
+
+  engine.start();
+
+  // Наполняем chest1 двумя пакетами (batchSize=5 — пачка не соберётся, оба остаются в буфере)
+  engine.triggerMiner('minerA');
+  await new Promise((r) => setTimeout(r, 50));
+  engine.triggerMiner('minerB');
+  await new Promise((r) => setTimeout(r, 50));
+
+  // Триггерим assembler — он должен увидеть текущий буфер chest как ctx.memory
+  engine.triggerMiner('minerC');
+  await new Promise((r) => setTimeout(r, 50));
+  engine.stop();
+
+  if (!capturedMemory) {
+    throw new Error('AC11: ctx.memory не был передан assembler-у с модулем memory');
+  }
+  const sorted = [...capturedMemory].sort();
+  if (JSON.stringify(sorted) !== JSON.stringify(['note-A', 'note-B'])) {
+    throw new Error(`AC11: неверный снапшот памяти: ${JSON.stringify(capturedMemory)}`);
+  }
+
+  console.log('✓ AC11: assembler memory-снапшот из буфера chest OK');
+}
+
+/**
  * Запуск всех проверок
  */
 (async () => {
@@ -854,8 +912,9 @@ async function testEnergyLayer() {
     await testWebhookMiner();
     await testChestBatch();
     await testEnergyLayer();
+    await testAssemblerMemorySnapshot();
 
-    console.log('\n✅ engine checks OK — все 10 AC пройдены');
+    console.log('\n✅ engine checks OK — все 11 AC пройдены');
   } catch (e) {
     console.error('\n❌ engine checks FAILED:', e);
     throw e;

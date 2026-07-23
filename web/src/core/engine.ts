@@ -12,6 +12,7 @@ export interface NodeCtx {
   tpl(s: string): string;
   llm(req: LlmRequest): Promise<string>;
   proxyFetch(req: ProxyRequest): Promise<{ status: number; body: unknown }>;
+  memory?: unknown[];                   // E2: снапшот содержимого сундуков (модуль 'memory')
 }
 
 export type HandlerResult =
@@ -133,6 +134,22 @@ export class Engine {
     this.energy.charge -= cost;
     this.emit({ t: 'energy', charge: this.energy.charge, capacity: this.energy.capacity });
     return true;
+  }
+
+  /**
+   * Снапшот содержимого всех сундуков на карте (модуль 'memory', E2) —
+   * то, что уже накопилось в буфере chest (см. deliverToChest), но ещё не уехало пачкой.
+   */
+  private collectChestMemory(): unknown[] {
+    const items: unknown[] = [];
+    for (const entity of Object.values(this.entities)) {
+      if (entity.kind !== 'chest') continue;
+      const buffered = this.buffers.get(entity.id)?.get('items');
+      if (buffered) {
+        items.push(...buffered.map((p) => p.data));
+      }
+    }
+    return items;
   }
 
   stop(): void {
@@ -454,6 +471,11 @@ export class Engine {
           llm: this.deps.llm ?? (async () => { throw new Error('LLM недоступен (нет deps.llm)'); }),
           proxyFetch: this.deps.proxyFetch ?? (async () => { throw new Error('proxyFetch недоступен'); }),
         };
+        // Модуль 'memory' (E2): снапшот содержимого сундуков как RAG-контекст
+        const modules = (node.config['modules'] as string[]) || [];
+        if (node.kind === 'assembler' && modules.includes('memory')) {
+          ctx.memory = this.collectChestMemory();
+        }
         result = await handler(ctx);
       } else {
         // Дефолт-заглушка: просто пропускаем данные

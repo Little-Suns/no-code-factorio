@@ -183,6 +183,40 @@
   color: #bbb;
 }
 
+.module-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.module-toggle {
+  padding: 6px 10px;
+  background: #2a2a2e;
+  border: 1px solid #666;
+  border-radius: 4px;
+  color: #bbb;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.module-toggle:hover:not(:disabled) {
+  border-color: #d9a441;
+  color: #d9a441;
+}
+
+.module-toggle.active {
+  background: #d9a441;
+  border-color: #d9a441;
+  color: #1d1d22;
+  font-weight: 600;
+}
+
+.module-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .webhook-url-group {
   display: flex;
   gap: 4px;
@@ -354,6 +388,23 @@
 
   .energy-readout {
     color: #666;
+  }
+
+  .module-toggle {
+    background: #e8e8e8;
+    border-color: #ccc;
+    color: #333;
+  }
+
+  .module-toggle:hover:not(:disabled) {
+    border-color: #d9a441;
+    color: #d9a441;
+  }
+
+  .module-toggle.active {
+    background: #d9a441;
+    border-color: #d9a441;
+    color: #fff;
   }
 
   .config-status {
