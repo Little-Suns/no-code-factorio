@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Entity, NodeStatus, MachineKind } from '../core/types';
 import { canPlace } from '../core/grid';
+import { NODE_DEFS } from '../core/nodes';
 
 export interface Store {
   entities: Record<string, Entity>;
@@ -45,8 +46,23 @@ export const useStore = create<Store>((set, get) => ({
     if (!canPlace(state.entities, entity)) {
       return false;
     }
+
+    // Заполняем config дефолтами из NODE_DEFS если их нет
+    let config = entity.config;
+    if (Object.keys(config).length === 0) {
+      const def = NODE_DEFS[entity.kind];
+      if (def) {
+        config = {};
+        for (const field of def.schema) {
+          if (field.default !== undefined) {
+            config[field.key] = field.default;
+          }
+        }
+      }
+    }
+
     set((s) => ({
-      entities: { ...s.entities, [entity.id]: entity },
+      entities: { ...s.entities, [entity.id]: { ...entity, config } },
     }));
     return true;
   },

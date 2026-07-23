@@ -7,5 +7,6 @@ import './rasterize';
 import './tpl';
 import './engine';
 import './nodes';
+import './demo';
 
 console.log('✓ Check runner ready');

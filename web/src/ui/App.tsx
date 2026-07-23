@@ -8,6 +8,10 @@ import { initBelts } from '../game/belts';
 import { initPackets } from '../game/packets';
 import { initFX } from '../game/fx';
 import { Hotbar } from './Hotbar';
+import { TopBar } from './TopBar';
+import { ConfigPanel } from './ConfigPanel';
+import { ResultPanel } from './ResultPanel';
+import { Toasts } from './Toasts';
 import './App.css';
 
 export function App() {
@@ -41,6 +45,18 @@ export function App() {
     });
   }, []);
 
+  // Закрытие панели конфига на Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && e.target === document.body) {
+        useStore.getState().select(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <div className="app-container">
       <canvas
@@ -48,7 +64,11 @@ export function App() {
         style={{ display: 'block', width: '100%', height: '100%' }}
       />
       <div className="ui-overlay">
+        <TopBar />
+        <ConfigPanel />
+        <ResultPanel />
         <Hotbar />
+        <Toasts />
       </div>
     </div>
   );

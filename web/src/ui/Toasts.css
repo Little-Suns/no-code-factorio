@@ -1,0 +1,36 @@
+.toasts {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: auto;
+  z-index: 1000;
+}
+
+.toast {
+  padding: 12px 16px;
+  background: #d9a441;
+  color: #1d1d22;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(400px);
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+@media (prefers-color-scheme: light) {
+  .toast {
+    background: #d9a441;
+    color: #1d1d22;
+  }
+}

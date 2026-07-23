@@ -65,8 +65,19 @@
   - /llm: мок-режим (~1.5s) с YES/NO и web-search; готов для OpenRouter API
   - /proxy: SSRF через httpx, /webhook: SSE broadcast с 15s heartbeat
   - Все 5 AC прошли: мок, GitHub API, ошибки не роняют, SSE-webhook working
-- [ ] **C2. UI-оверлей** (~5ч, после B4): TopBar, Hotbar (с A3), ConfigPanel+FormRenderer, ResultPanel, Toasts, runtime.ts. AC: 6 проверок из docs/06.
-- [ ] **C3. Персистентность + демо-заготовка** (~2ч): localStorage-автосейв, Export/Import, Load demo + сборка `web/public/demo.json` (фабрика из демо-сценария docs/00). AC: перезагрузка сохраняет мир; demo.json грузится и запускается.
+- [x] **C2. UI-оверлей** (~5ч, после B4): TopBar, Hotbar (с A3), ConfigPanel+FormRenderer, ResultPanel, Toasts, runtime.ts. AC: 6 проверок из docs/06.
+  - state/runtime.ts: ENGINE управляет жизненным циклом (startRun/stopRun/triggerMiner), fetchers для /llm и /proxy, webhooks подписка на /events через EventSource.
+  - ui/TopBar.tsx: Run/Stop (Space), Export/Import (JSON), Load demo, счётчик сущностей, зелёный индикатор running.
+  - ui/ConfigPanel.tsx: FormRenderer (text/number/textarea/json/select), мощные поля-collapsible lastIn/lastOut, статус-бейдж, кнопка триггера для шахты (disabled при !running), webhook URL с Copy.
+  - ui/ResultPanel.tsx: авто-открытие при результате от silo, список результатов с временем, Clear.
+  - ui/Toasts.tsx: уведомления в верхний-правый угол, автоудаление 4с.
+  - ui/JsonView.tsx: мини-компонент для красивого отображения JSON с Copy.
+  - store.ts: место при постановке заполняет config дефолтами из NODE_DEFS[kind].schema.
+  - Все эффекты: emit маппит EngineEvent → store actions + sideeffects (rocketLaunch на result, тост на node-status error).
+- [x] **C3. Персистентность + демо-заготовка** (~2ч): localStorage-автосейв, Export/Import, Load demo + сборка `web/public/demo.json` (фабрика из демо-сценария docs/00). AC: перезагрузка сохраняет мир; demo.json грузится и запускается.
+  - state/persist.ts: initPersist() с debounce 500мс, загрузка при старте, подписка на entities
+  - web/public/demo.json: две фабрики (miner1→assembler→silo, miner2→telegram), 21 entity, компактная раскладка (0,0)-(16,11)
+  - __checks__/demo.ts: валидация JSON, граф, цепочка miner→assembler→silo
 
 ## Трек D — ассеты (вне кода, параллельно)
 
