@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useStore } from '../state/store';
 import { NODE_DEFS } from '../core/nodes';
-import { triggerMiner } from '../state/runtime';
+import { triggerMiner, rechargeAccumulator } from '../state/runtime';
 import { JsonView } from './JsonView';
 import './ConfigPanel.css';
 
@@ -12,6 +12,7 @@ export function ConfigPanel() {
   const entities = useStore((state) => state.entities);
   const running = useStore((state) => state.running);
   const nodeStatus = useStore((state) => state.nodeStatus);
+  const energy = useStore((state) => state.energy);
   const setConfig = useStore((state) => state.setConfig);
   const select = useStore((state) => state.select);
 
@@ -38,6 +39,12 @@ export function ConfigPanel() {
   const handleTriggerMiner = () => {
     if (running && entity.kind === 'miner') {
       triggerMiner(entity.id);
+    }
+  };
+
+  const handleRecharge = () => {
+    if (running && entity.kind === 'accumulator') {
+      rechargeAccumulator();
     }
   };
 
@@ -184,6 +191,25 @@ export function ConfigPanel() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Спец-блок для accumulator (E1) */}
+        {entity.kind === 'accumulator' && (
+          <div className="config-special">
+            <div className="energy-readout">
+              {energy
+                ? `Заряд: ${Math.round(energy.charge)} / ${Math.round(energy.capacity)}`
+                : 'Заряд: — (фабрика не запущена)'}
+            </div>
+            <button
+              className="trigger-miner"
+              onClick={handleRecharge}
+              disabled={!running}
+              title="Пополнить энергию до максимума (доступно при running)"
+            >
+              ⚡ Зарядить
+            </button>
           </div>
         )}
 

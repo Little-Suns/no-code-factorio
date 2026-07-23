@@ -178,6 +178,11 @@
   gap: 4px;
 }
 
+.energy-readout {
+  font-size: 12px;
+  color: #bbb;
+}
+
 .webhook-url-group {
   display: flex;
   gap: 4px;
@@ -345,6 +350,10 @@
 
   .trigger-miner:hover:not(:disabled) {
     background: #e8b855;
+  }
+
+  .energy-readout {
+    color: #666;
   }
 
   .config-status {

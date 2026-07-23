@@ -762,6 +762,84 @@ async function testChestBatch() {
 }
 
 /**
+ * AC10 (E1): энергослой — включается только при наличии аккумулятора на карте,
+ * недобор заряда держит пакет в очереди с 'Нет питания' (не роняет его как ошибку),
+ * rechargeEnergy() разблокирует на следующей 2с-попытке.
+ */
+async function testEnergyLayer() {
+  const events: EngineEvent[] = [];
+
+  const entities: Record<string, Entity> = {
+    acc1: { id: 'acc1', kind: 'accumulator', pos: { x: 0, y: 5 }, dir: 0, config: { capacity: 15 } },
+    miner1: { id: 'miner1', kind: 'miner', pos: { x: 0, y: 0 }, dir: 0, config: { mode: 'text', text: 'x' } },
+    silo1: { id: 'silo1', kind: 'silo', pos: { x: 5, y: 0 }, dir: 0, config: {} },
+  };
+
+  const edges: Edge[] = [
+    {
+      id: 'e1:out:0',
+      from: 'miner1',
+      branch: 'out',
+      to: 'silo1',
+      path: [{ x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }, { x: 4, y: 0 }],
+    },
+  ];
+
+  const handlers: Record<string, (ctx: NodeCtx) => Promise<HandlerResult>> = {
+    silo: async () => ({ done: true }),
+  };
+
+  const engine = new Engine(entities, edges, fakeTransport, (e) => events.push(e), {
+    handlers: handlers as any,
+  });
+
+  engine.start();
+
+  // Стартовый заряд полный (15), эмитится сразу в start()
+  const energyEvents = () =>
+    events.filter((e): e is Extract<EngineEvent, { t: 'energy' }> => e.t === 'energy');
+  const initial = energyEvents()[0];
+  if (!initial || initial.charge !== 15 || initial.capacity !== 15) {
+    throw new Error(`AC10: неверный старт энергии: ${JSON.stringify(initial)}`);
+  }
+
+  // silo — механический, стоит 10: заряда (15) хватает → 15-10=5
+  engine.triggerMiner('miner1');
+  await new Promise((r) => setTimeout(r, 100));
+
+  const resultsAfterFirst = events.filter((e) => e.t === 'result');
+  if (resultsAfterFirst.length !== 1) {
+    throw new Error(`AC10: первый пакет должен пройти (заряда хватало), result=${resultsAfterFirst.length}`);
+  }
+
+  // Второй пакет: осталось 5, нужно 10 → блокируется с 'Нет питания', не проходит
+  engine.triggerMiner('miner1');
+  await new Promise((r) => setTimeout(r, 100));
+
+  const noPowerEvents = events.filter(
+    (e) => e.t === 'node-status' && e.status === 'error' && e.error === 'Нет питания'
+  );
+  if (noPowerEvents.length === 0) {
+    throw new Error('AC10: второй пакет должен встать с "Нет питания" при недоборе заряда');
+  }
+  if (events.filter((e) => e.t === 'result').length !== 1) {
+    throw new Error('AC10: второй пакет не должен пройти раньше времени (заряда не хватает)');
+  }
+
+  // Подзаряжаем — на следующей 2с-попытке пакет должен пройти
+  engine.rechargeEnergy();
+  await new Promise((r) => setTimeout(r, 2200));
+  engine.stop();
+
+  const resultsAfterRecharge = events.filter((e) => e.t === 'result');
+  if (resultsAfterRecharge.length !== 2) {
+    throw new Error(`AC10: после rechargeEnergy() второй пакет должен пройти, result=${resultsAfterRecharge.length}`);
+  }
+
+  console.log('✓ AC10: energy layer — недобор блокирует, recharge разблокирует OK');
+}
+
+/**
  * Запуск всех проверок
  */
 (async () => {
@@ -775,8 +853,9 @@ async function testChestBatch() {
     await testQueue();
     await testWebhookMiner();
     await testChestBatch();
+    await testEnergyLayer();
 
-    console.log('\n✅ engine checks OK — все 9 AC пройдены');
+    console.log('\n✅ engine checks OK — все 10 AC пройдены');
   } catch (e) {
     console.error('\n❌ engine checks FAILED:', e);
     throw e;

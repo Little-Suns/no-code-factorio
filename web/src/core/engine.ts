@@ -39,6 +39,9 @@ export class Engine {
   private running = new Set<Promise<void>>();
   private intervals: ReturnType<typeof setInterval>[] = [];
   private unsubscribeWebhooks: (() => void) | null = null;
+  // Энергослой (E1, усиление): выключен, если на карте нет ни одного аккумулятора (docs/04)
+  private energyEnabled = false;
+  private energy = { charge: 0, capacity: 0 };
 
   constructor(
     private entities: Record<string, Entity>,
@@ -78,6 +81,58 @@ export class Engine {
       });
     }
 
+    // Энергослой: включается, только если на карте есть хотя бы один аккумулятор
+    const accumulators = Object.values(this.entities).filter((e) => e.kind === 'accumulator');
+    if (accumulators.length > 0) {
+      this.energyEnabled = true;
+      this.energy.capacity = accumulators.reduce(
+        (sum, a) => sum + (Number(a.config['capacity']) || 0),
+        0
+      );
+      this.energy.charge = this.energy.capacity; // полный заряд на старте
+      this.emit({ t: 'energy', charge: this.energy.charge, capacity: this.energy.capacity });
+    }
+  }
+
+  /**
+   * Пополнить энергию до максимума («Зарядить» в панели аккумулятора, docs/04).
+   * Нет-оп, если энергослой выключен (аккумуляторов на карте нет).
+   */
+  rechargeEnergy(): void {
+    if (!this.energyEnabled) return;
+    this.energy.charge = this.energy.capacity;
+    this.emit({ t: 'energy', charge: this.energy.charge, capacity: this.energy.capacity });
+  }
+
+  /**
+   * Оценка расхода энергии станком перед вызовом handler (docs/04):
+   * LLM-станки (могут звать ctx.llm) — по формуле от размера payload'а и модулей;
+   * механические станки — константа 10.
+   */
+  private getEnergyCost(node: Entity, packet: Packet): number {
+    const LLM_KINDS = new Set(['assembler', 'splitter', 'mixer', 'lab']);
+    if (!LLM_KINDS.has(node.kind)) return 10;
+    const modules = (node.config['modules'] as unknown[]) || [];
+    return (packet.sizeHint / 4 + 400) * (1 + modules.length * 0.5);
+  }
+
+  /**
+   * Ждёт, пока хватит энергии на станок; списывает и эмитит 'energy' при успехе.
+   * Пакет держится в очереди узла (мьютекс уже держит caller, docs/04) — честный
+   * видимый backpressure, «Нет питания» на лампе вместо тихого зависания.
+   * Возвращает false, если stop() прервал ожидание.
+   */
+  private async awaitPower(node: Entity, packet: Packet): Promise<boolean> {
+    const cost = this.getEnergyCost(node, packet);
+    while (this.energy.charge < cost) {
+      if (this.abortController.signal.aborted) return false;
+      this.emit({ t: 'node-status', nodeId: node.id, status: 'error', error: 'Нет питания' });
+      await new Promise((r) => setTimeout(r, 2000));
+      if (this.abortController.signal.aborted) return false;
+    }
+    this.energy.charge -= cost;
+    this.emit({ t: 'energy', charge: this.energy.charge, capacity: this.energy.capacity });
+    return true;
   }
 
   stop(): void {
@@ -379,6 +434,13 @@ export class Engine {
   private async callHandler(node: Entity, packet: Packet): Promise<void> {
     try {
       if (this.abortController.signal.aborted) return;
+
+      // Энергослой: недобор держит пакет в очереди («Нет питания»), не роняет его как ошибку
+      if (this.energyEnabled) {
+        const powered = await this.awaitPower(node, packet);
+        if (!powered || this.abortController.signal.aborted) return;
+        this.emit({ t: 'node-status', nodeId: node.id, status: 'working' });
+      }
 
       const handlers = this.deps.handlers || {};
       const handler = handlers[node.kind];

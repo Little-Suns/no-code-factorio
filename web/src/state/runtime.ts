@@ -123,6 +123,10 @@ function setupEventHandler() {
         }
         break;
       }
+
+      case 'energy':
+        store.setEnergy(event.charge, event.capacity);
+        break;
     }
   };
 }
@@ -203,4 +207,16 @@ export function triggerMiner(nodeId: string): void {
   }
 
   engine.triggerMiner(nodeId);
+}
+
+/**
+ * Пополнить энергию до максимума (кнопка «Зарядить» у аккумулятора).
+ */
+export function rechargeAccumulator(): void {
+  if (!engine) {
+    console.warn('Engine not running');
+    return;
+  }
+
+  engine.rechargeEnergy();
 }

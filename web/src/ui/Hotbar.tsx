@@ -3,10 +3,10 @@ import { useStore } from '../state/store';
 import type { MachineKind } from '../core/types';
 import './Hotbar.css';
 
-// Аккумулятор (E1, вне графа лент) сюда не входит — размещается отдельным потоком.
+// Аккумулятор (E1) вне графа лент, но всё равно ставится мышью как обычный станок.
 const ALL_TOOLS: MachineKind[] = [
   'belt', 'miner', 'assembler', 'splitter', 'mixer', 'silo', 'telegram',
-  'furnace', 'chest', 'lab',
+  'furnace', 'chest', 'lab', 'accumulator',
 ];
 const HOTKEYS: Record<MachineKind, string> = {
   belt: '1',
@@ -19,7 +19,7 @@ const HOTKEYS: Record<MachineKind, string> = {
   furnace: '8',
   chest: '9',
   lab: '0',
-  accumulator: '',
+  accumulator: 'e',
 };
 const KEY_TO_TOOL: Partial<Record<string, MachineKind>> = Object.fromEntries(
   ALL_TOOLS.map((tool) => [HOTKEYS[tool], tool])

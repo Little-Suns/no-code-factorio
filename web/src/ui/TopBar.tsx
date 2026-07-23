@@ -8,6 +8,7 @@ export function TopBar() {
   const running = useStore((state) => state.running);
   const entities = useStore((state) => state.entities);
   const loadWorld = useStore((state) => state.loadWorld);
+  const energy = useStore((state) => state.energy);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const entityCount = Object.keys(entities).length;
@@ -114,6 +115,23 @@ export function TopBar() {
         </span>
 
         <div className={`status-indicator ${running ? 'active' : ''}`} />
+
+        {energy && (
+          <div
+            className="energy-bar"
+            title={`Энергия: ${Math.round(energy.charge)} / ${Math.round(energy.capacity)}`}
+          >
+            <span className="energy-bar-icon">⚡</span>
+            <div className="energy-bar-track">
+              <div
+                className="energy-bar-fill"
+                style={{
+                  width: `${Math.max(0, Math.min(100, (energy.charge / energy.capacity) * 100))}%`,
+                }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="top-bar-center">

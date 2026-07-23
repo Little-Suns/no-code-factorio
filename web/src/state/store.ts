@@ -11,6 +11,7 @@ export interface Store {
   nodeStatus: Record<string, { status: NodeStatus; error?: string; lastIn?: unknown; lastOut?: unknown }>;
   results: Record<string, { at: number; data: unknown }[]>;
   toasts: { id: string; text: string }[];
+  energy: { charge: number; capacity: number } | null; // E1: null — энергослой выключен (нет аккумулятора)
   // actions
   place: (entity: Entity) => boolean;
   remove: (entityId: string) => void;
@@ -24,6 +25,7 @@ export interface Store {
   pushResult: (nodeId: string, data: unknown) => void;
   toast: (text: string) => void;
   loadWorld: (entities: Entity[]) => void;
+  setEnergy: (charge: number, capacity: number) => void;
 }
 
 export const useStore = create<Store>((set, get) => ({
@@ -34,6 +36,7 @@ export const useStore = create<Store>((set, get) => ({
   nodeStatus: {},
   results: {},
   toasts: [],
+  energy: null,
 
   place: (entity: Entity) => {
     const state = get();
@@ -165,5 +168,9 @@ export const useStore = create<Store>((set, get) => ({
       entitiesMap[entity.id] = entity;
     }
     set({ entities: entitiesMap });
+  },
+
+  setEnergy: (charge: number, capacity: number) => {
+    set({ energy: { charge, capacity } });
   },
 }));

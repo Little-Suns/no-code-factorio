@@ -2,13 +2,14 @@ import { Sprite, AnimatedSprite, Container, Graphics } from 'pixi.js';
 import { TILE } from './app';
 import { getTexture } from './assets';
 import { useStore } from '../state/store';
-import type { Entity, MachineKind, NodeStatus } from '../core/types';
+import type { Entity, MachineKind, NodeStatus, Dir } from '../core/types';
 import type { GameLayers } from './app';
 
 interface MachineSprite {
   container: Container;
   sprite: Sprite | AnimatedSprite;
   statusLamp: Graphics;
+  chargeBar?: Graphics; // только у accumulator (E1)
 }
 
 const machineSprites = new Map<string, MachineSprite>();
@@ -36,6 +37,15 @@ export function initMachines(layers: GameLayers): void {
     if (state.nodeStatus !== prevNodeStatus) {
       prevNodeStatus = state.nodeStatus;
       updateMachineStatus(state.entities, state.nodeStatus);
+    }
+  });
+
+  // Подписка на energy (E1) — полоска заряда рисуется кодом прямо на аккумуляторе (docs/02)
+  let prevEnergy: { charge: number; capacity: number } | null = null;
+  useStore.subscribe((state) => {
+    if (state.energy !== prevEnergy) {
+      prevEnergy = state.energy;
+      updateChargeBars(state.entities, state.energy);
     }
   });
 }
@@ -109,9 +119,16 @@ function updateMachines(entities: Record<string, Entity>, layer: Container): voi
       statusLamp.position.set(5, 5); // в верхний левый угол
       container.addChild(statusLamp);
 
+      // Полоска заряда — только у аккумулятора (E1), рисуется кодом, без отдельного спрайта
+      let chargeBar: Graphics | undefined;
+      if (entity.kind === 'accumulator') {
+        chargeBar = new Graphics();
+        container.addChild(chargeBar);
+      }
+
       layer.addChild(container);
 
-      machineSprite = { container, sprite, statusLamp };
+      machineSprite = { container, sprite, statusLamp, chargeBar };
       machineSprites.set(id, machineSprite);
     }
 
@@ -164,6 +181,45 @@ function updateMachineStatus(
       } else if (!Array.isArray(idleTexture)) {
         machineSprite.sprite.texture = idleTexture;
       }
+    }
+  }
+}
+
+/**
+ * Рисует полоску заряда на аккумуляторе (E1): фон + заполнение по charge/capacity.
+ * Отдельный спрайт не нужен (docs/02) — просто Graphics поверх idle-текстуры.
+ */
+function drawChargeBar(bar: Graphics, kind: MachineKind, dir: Dir, charge: number, capacity: number): void {
+  const size = getSize(kind);
+  const rotatedSize = dir === 1 || dir === 3 ? { w: size.h, h: size.w } : size;
+  const barHeight = 6;
+  const x = 4;
+  const width = rotatedSize.w * TILE - x * 2;
+  const y = rotatedSize.h * TILE - barHeight - 4;
+  const ratio = capacity > 0 ? Math.max(0, Math.min(1, charge / capacity)) : 0;
+
+  bar.clear();
+  bar.rect(x, y, width, barHeight);
+  bar.fill(0x0a0a0e);
+  if (ratio > 0) {
+    bar.rect(x, y, width * ratio, barHeight);
+    bar.fill(0xffd700);
+  }
+}
+
+function updateChargeBars(
+  entities: Record<string, Entity>,
+  energy: { charge: number; capacity: number } | null
+): void {
+  for (const [id, machineSprite] of machineSprites.entries()) {
+    if (!machineSprite.chargeBar) continue;
+    const entity = entities[id];
+    if (!entity) continue;
+
+    if (energy) {
+      drawChargeBar(machineSprite.chargeBar, entity.kind, entity.dir, energy.charge, energy.capacity);
+    } else {
+      machineSprite.chargeBar.clear();
     }
   }
 }

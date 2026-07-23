@@ -53,7 +53,8 @@ export type EngineEvent =
   | { t: 'packet-drop'; packetId: string; reason: 'dead-end' | 'ttl' | 'error' }
   | { t: 'node-status'; nodeId: string; status: NodeStatus; error?: string }
   | { t: 'node-io'; nodeId: string; lastIn?: unknown; lastOut?: unknown }
-  | { t: 'result'; nodeId: string; data: unknown };            // silo/chest: накопить в store
+  | { t: 'result'; nodeId: string; data: unknown }             // silo/chest: накопить в store
+  | { t: 'energy'; charge: number; capacity: number };         // E1: суммарный заряд/ёмкость аккумуляторов
 
 export interface Transport {
   // Резолвится, когда предмет ВИЗУАЛЬНО доехал до конца path. Реализует рендерер.
