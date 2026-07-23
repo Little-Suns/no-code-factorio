@@ -31,7 +31,6 @@ const PLACEHOLDER_COLORS: Record<string, number> = {
   silo: 0xe74c3c,
   telegram: 0x2aabee,
   accumulator: 0xf39c12,
-  pole: 0xa9805b,
   // предметы
   'item.text': 0xe8e4d8,
   'item.json': 0x4ade80,

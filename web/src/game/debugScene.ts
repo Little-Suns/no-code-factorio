@@ -6,7 +6,7 @@ import type { MachineKind } from '../core/types';
 
 const MACHINE_KINDS: MachineKind[] = [
   'belt', 'miner', 'assembler', 'splitter', 'mixer', 'silo', 'telegram',
-  'furnace', 'chest', 'lab', 'accumulator', 'pole',
+  'furnace', 'chest', 'lab', 'accumulator',
 ];
 
 // Размеры каждой машины в тайлах
@@ -22,7 +22,6 @@ const MACHINE_SIZES: Record<MachineKind, [number, number]> = {
   chest: [1, 1],
   lab: [2, 1],
   accumulator: [2, 2],
-  pole: [1, 1],
 };
 
 export function mountDebugScene(layers: GameLayers): void {
