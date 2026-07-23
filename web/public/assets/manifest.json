@@ -1,0 +1,125 @@
+{
+  "tileSize": 64,
+  "sprites": {
+    "belt": {
+      "size": [1, 1],
+      "work": {
+        "file": "belt.png",
+        "frames": 8,
+        "fps": 16
+      }
+    },
+    "miner": {
+      "size": [1, 1],
+      "idle": "miner_idle.png",
+      "work": {
+        "file": "miner_work.png",
+        "frames": 4,
+        "fps": 8
+      }
+    },
+    "assembler": {
+      "size": [3, 3],
+      "idle": "assembler_idle.png",
+      "work": {
+        "file": "assembler_work.png",
+        "frames": 4,
+        "fps": 8
+      }
+    },
+    "splitter": {
+      "size": [2, 1],
+      "idle": "splitter_idle.png",
+      "work": {
+        "file": "splitter_work.png",
+        "frames": 4,
+        "fps": 8
+      }
+    },
+    "mixer": {
+      "size": [3, 3],
+      "idle": "mixer_idle.png",
+      "work": {
+        "file": "mixer_work.png",
+        "frames": 4,
+        "fps": 8
+      }
+    },
+    "silo": {
+      "size": [3, 3],
+      "idle": "silo_idle.png",
+      "work": {
+        "file": "silo_work.png",
+        "frames": 6,
+        "fps": 8
+      }
+    },
+    "telegram": {
+      "size": [1, 1],
+      "idle": "telegram_idle.png",
+      "work": {
+        "file": "telegram_work.png",
+        "frames": 4,
+        "fps": 8
+      }
+    },
+    "furnace": {
+      "size": [1, 1],
+      "idle": "furnace_idle.png",
+      "work": {
+        "file": "furnace_work.png",
+        "frames": 4,
+        "fps": 8
+      }
+    },
+    "chest": {
+      "size": [1, 1],
+      "idle": "chest_idle.png"
+    },
+    "lab": {
+      "size": [2, 1],
+      "idle": "lab_idle.png",
+      "work": {
+        "file": "lab_work.png",
+        "frames": 4,
+        "fps": 8
+      }
+    },
+    "accumulator": {
+      "size": [2, 2],
+      "idle": "accumulator_idle.png"
+    },
+    "pole": {
+      "size": [1, 1],
+      "idle": "pole_idle.png"
+    },
+    "item.text": {
+      "size": [0.45, 0.45],
+      "idle": "item_text.png"
+    },
+    "item.json": {
+      "size": [0.45, 0.45],
+      "idle": "item_json.png"
+    },
+    "item.image": {
+      "size": [0.45, 0.45],
+      "idle": "item_image.png"
+    },
+    "item.verdict": {
+      "size": [0.45, 0.45],
+      "idle": "item_verdict.png"
+    },
+    "item.batch": {
+      "size": [0.45, 0.45],
+      "idle": "item_batch.png"
+    },
+    "item.scrap": {
+      "size": [0.45, 0.45],
+      "idle": "item_scrap.png"
+    },
+    "fx.smoke": {
+      "size": [0.5, 0.5],
+      "idle": "fx_smoke.png"
+    }
+  }
+}

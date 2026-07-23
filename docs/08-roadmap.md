@@ -10,7 +10,13 @@
 
 ## Трек A — рендер и ввод (docs/02, 03)
 
-- [ ] **A1. Скаффолд + мир** (~2ч): pnpm workspace (web), Vite+React+TS strict, Pixi + pixi-viewport, слои, сетка. AC: `pnpm dev` открывает поле, зум к курсору, пан, 60 fps.
+- [x] **A1. Скаффолд + мир** (~2ч): pnpm workspace (web), Vite+React+TS strict, Pixi + pixi-viewport, слои, сетка. AC: `pnpm dev` открывает поле, зум к курсору, пан, 60 fps.
+  - Создана структура: pnpm-workspace.yaml, web/package.json с зависимостями (Vite, React 18, PixiJS v8, pixi-viewport, Zustand, tsx); tsconfig.json strict; vite.config.ts.
+  - game/app.ts: PixiJS Application (фон #3a3226), Viewport с зумом колесом (к курсору) и паном (правая/средняя кнопка), слои (ground, belts, items, machines, fx, ghost).
+  - src/core/types.ts: канонические типы (Vec, Dir, MachineKind, Entity, Packet, Edge, EngineEvent, Transport).
+  - main.tsx: React + Canvas для Pixi; заглушки UI, store, assets.
+  - .gitignore (node_modules/, dist/, server/.env, __pycache__/, .venv/).
+  - pnpm install ✓, typecheck ✓.
 - [ ] **A2. Реестр ассетов + плейсхолдеры** (~3ч): манифест, generateTexture-плейсхолдеры с буквой и стрелкой, `getTexture`. AC: без PNG всё рисуется; PNG + строка манифеста подменяет спрайт без правки кода.
 - [ ] **A3. Размещение** (~5ч, после B1): hotbar, ghost с валидацией, клик-постановка, drag-ленты, R, снос, выделение. AC: «шахта → 5 лент → станок → лента → ракета» мышью за минуту.
 - [ ] **A4. Transport + анимации** (~5ч, по контракту docs/01): движение предметов (400 мс/тайл, масштаб от sizeHint), hold у входа, consume-втягивание, статус-лампы, work-анимации, scrap+дым, `clear()`. AC: FakeEngine-скрипт гоняет предмет по 10 тайлам плавно; Stop чистит мгновенно; затор виден.
