@@ -3,3 +3,4 @@ dist/
 server/.env
 __pycache__/
 .venv/
+*.log
