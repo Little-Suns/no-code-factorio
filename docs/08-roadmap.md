@@ -34,7 +34,11 @@
   - game/belts.ts: AnimatedSprite для belt с синхронной анимацией.
   - game/fakeRun.ts: тестовая функция на window.__fakeRun (дев-режим), buildGraph+createTransport.move интеграция.
   - initPackets/initFX требуют вызова из runtime.ts (B3 интеграция).
-- [ ] **A5. Ракета + FX-полиш** (~2ч): запуск silo, дым, звуки (опц.). AC: `result` от silo проигрывает запуск ракеты.
+- [x] **A5. Ракета + FX-полиш** (~2ч): запуск silo, дым, звуки (опц.). AC: `result` от silo проигрывает запуск ракеты.
+  - rocketLaunch(entity): Promise обрабатывает 3 этапа — тряска (200мс, jitter), улёт с огнём (1.2с, easeIn+частицы каждые 50мс, дым в начале), спуск (0.6с после паузы 1с).
+  - Guard activeRockets Set от одновременных запусков.
+  - Дев-хук window.__rocket = (entityId) => рocketLaunch(...) через async import.
+  - typecheck ✓, анимация на Ticker как smoke().
 
 ## Трек B — core (docs/03, 04, 05)
 
@@ -47,7 +51,11 @@
 - [x] **B3. Engine + tpl** (~5ч): docs/04 целиком, включая буферы смесителя, ttl-защиту петель и вебхук-подписку, на FakeTransport. AC: 8 проверок из docs/04.
   - core/tpl.ts: функция интерполяции {{path.to.field}} (поддержка вложенных объектов и массивов); core/engine.ts: полный жизненный цикл пакетов с очередями узлов, буферами смесителя, TTL-защитой и AbortController для stop().
   - 8 AC пройдены: simple pipeline, splitter branching, mixer buffering, error handling, loop TTL-death, abort behavior, sequential queue, webhook subscription.
-- [ ] **B4. Станки ядра** (~4ч): NODE_DEFS + хендлеры miner/assembler/splitter/mixer/silo/telegram + recipes.ts, `__checks__/nodes.ts`. AC: см. docs/05.
+- [x] **B4. Станки ядра** (~4ч): NODE_DEFS + хендлеры miner/assembler/splitter/mixer/silo/telegram + recipes.ts, `__checks__/nodes.ts`. AC: см. docs/05.
+  - Реализованы все 6 станков ядра: miner (text/url/webhook), assembler (6 рецептов), splitter (expr/llm), mixer (concat/llm), silo (output), telegram (sendMessage).
+  - NODE_DEFS с интерфейсами NodeDef и Field, полный реестр включая furnace/chest/lab/accumulator (заглушки с title/size/schema).
+  - getOutItem в engine.ts использует NODE_DEFS.outItem, fallback на auto-правило (string→text).
+  - Все 6 AC пройдены: assembler-llm, splitter-expr/llm, mixer-concat/llm, miner-url, telegram (success/error), registry-complete.
 - [ ] **B5. Станки усиления** (~3ч, только после интеграции): furnace, chest, lab. AC: см. docs/05.
 
 ## Трек C — сервер и UI (docs/07, 06)

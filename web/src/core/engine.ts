@@ -1,5 +1,6 @@
 import { Entity, Edge, Packet, Transport, EngineEvent, ItemType } from './types';
 import { tpl } from './tpl';
+import { NODE_DEFS } from './nodes';
 
 // Контракты NodeCtx/Handler — ровно по docs/05 (B4 пишет хендлеры против них)
 export interface LlmRequest { system?: string; prompt: string; tools?: string[] }
@@ -438,11 +439,15 @@ export class Engine {
 
   /**
    * Определение типа выходного предмета.
-   * Правило: если явно задан outItem (lab → verdict, chest → batch) — используем.
+   * Правило: если явно задан outItem в NODE_DEFS — используем.
    * Иначе auto: string → 'text', иное → 'json'.
    */
-  private getOutItem(_node: Entity, out: unknown): ItemType {
-    // TODO(B4): outItem из NODE_DEFS (lab rework → verdict, chest → batch)
+  private getOutItem(node: Entity, out: unknown): ItemType {
+    const nodeDef = NODE_DEFS[node.kind];
+    if (nodeDef?.outItem) {
+      return nodeDef.outItem;
+    }
+    // Auto-правило
     if (typeof out === 'string') {
       return 'text';
     }
