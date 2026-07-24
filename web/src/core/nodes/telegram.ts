@@ -4,6 +4,7 @@
  */
 
 import { Handler, NodeCtx } from '../engine';
+import { tpl } from '../tpl';
 import { Field } from './index';
 
 export const telegramSchema: Field[] = [
@@ -42,7 +43,13 @@ export const telegramHandler: Handler = async (ctx: NodeCtx) => {
     throw new Error('telegram: botToken and chatId are required');
   }
 
-  const messageText = ctx.tpl(textTemplate);
+  // ctx.tpl резолвит {{path}} только против ctx.data как есть — если payload пришёл
+  // голой строкой (обычный случай miner/assembler с outItem 'text'), путь 'text' не
+  // найдётся (getNestedValue на строке — не объект) и подставится пустая строка.
+  // Оборачиваем строку в { text: ... } и рендерим напрямую через tpl (не ctx.tpl),
+  // чтобы {{text}} работал независимо от формы payload'а — тот же приём, что в webhook.ts.
+  const templateData = typeof ctx.data === 'string' ? { text: ctx.data } : ctx.data;
+  const messageText = tpl(textTemplate, templateData);
 
   try {
     const res = await ctx.proxyFetch({
