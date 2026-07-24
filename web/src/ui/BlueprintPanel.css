@@ -12,6 +12,13 @@
   z-index: 200;
   box-shadow: -4px 4px 0 rgba(0, 0, 0, 0.4);
   overflow: hidden;
+  transition: right 0.2s ease; /* синхронно со слайдом ConfigPanel (0.2s) */
+}
+
+/* Редактор объекта (ConfigPanel, 320px drawer справа) открыт — уходим левее,
+   чтобы не оказаться под ним. */
+.blueprint-panel.config-open {
+  right: 334px; /* 320px ширина drawer + 14px зазор */
 }
 
 .blueprint-header {
@@ -186,24 +193,3 @@
   flex: none;
 }
 
-.blueprint-reopen {
-  position: fixed;
-  bottom: 96px;
-  right: 14px;
-  width: fit-content;
-  padding: 8px 12px;
-  background: var(--panel-bg);
-  border: 2px solid var(--panel-border);
-  color: var(--accent);
-  font-family: var(--f-disp);
-  font-size: 9px;
-  cursor: pointer;
-  pointer-events: auto;
-  z-index: 200;
-  box-shadow: -4px 4px 0 rgba(0, 0, 0, 0.4);
-  transition: all 0.2s ease;
-}
-
-.blueprint-reopen:hover {
-  border-color: var(--accent);
-}
