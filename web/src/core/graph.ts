@@ -24,7 +24,7 @@ export function buildGraph(entities: Record<string, Entity>): Edge[] {
     // Для каждого выходного порта
     const ports = outPorts(entity);
     for (const port of ports) {
-      const traceResult = trace(port.tile, entities, occupancy);
+      const traceResult = trace(port.tile, entities, occupancy, entity.kind === 'manipulator');
 
       // Edge создаётся только если path непуст ИЛИ to найден
       if (traceResult.path.length > 0 || traceResult.to !== null) {
@@ -56,8 +56,18 @@ interface TraceResult {
 /**
  * Трассирует путь от стартового тайла по лентам
  * Возвращает конечный станок (если он есть и принимает вход) и путь
+ *
+ * fromManipulator: entity, от чьего порта начата трасса, сам является манипулятором.
+ * Манипулятор — обязательный посредник для ЛЮБОЙ передачи между станками (docs/03):
+ * прямое соединение станок↔станок (впритык или через одни ленты, без манипулятора
+ * между ними) не образует edge — только тупик (если были ленты) либо вообще ничего.
  */
-function trace(start: Vec, entities: Record<string, Entity>, occupancy: Map<string, string>): TraceResult {
+function trace(
+  start: Vec,
+  entities: Record<string, Entity>,
+  occupancy: Map<string, string>,
+  fromManipulator: boolean
+): TraceResult {
   const path: Vec[] = [];
   const visited = new Set<string>();
   let cur = start;
@@ -93,12 +103,16 @@ function trace(start: Vec, entities: Record<string, Entity>, occupancy: Map<stri
     if (entityAtTile.kind !== 'belt') {
       // Дошли до станка — проверяем входит ли тайл в его inTiles
       const targetInTiles = inTiles(entityAtTile);
-      if (targetInTiles.has(key)) {
-        return { to: entityAtTile.id, path };
-      } else {
+      if (!targetInTiles.has(key)) {
         // Станок не принимает вход на этом тайле — тупик
         return { to: null, path };
       }
+      // Валидное соединение станок↔станок ТОЛЬКО если одна из сторон — манипулятор
+      if (fromManipulator || entityAtTile.kind === 'manipulator') {
+        return { to: entityAtTile.id, path };
+      }
+      // Обе стороны — «настоящие» станки без манипулятора между ними: тупик
+      return { to: null, path };
     }
 
     // На этом тайле лента

@@ -5,8 +5,8 @@
       "size": [1, 1],
       "work": {
         "file": "belt.png",
-        "frames": 8,
-        "fps": 16
+        "frames": 12,
+        "fps": 8
       }
     },
     "miner": {
@@ -14,7 +14,7 @@
       "idle": "miner_idle.png",
       "work": {
         "file": "miner_work.png",
-        "frames": 4,
+        "frames": 16,
         "fps": 8
       }
     },
@@ -23,16 +23,15 @@
       "idle": "assembler_idle.png",
       "work": {
         "file": "assembler_work.png",
-        "frames": 4,
+        "frames": 16,
         "fps": 8
       }
     },
     "splitter": {
       "size": [2, 1],
-      "idle": "splitter_idle.png",
       "work": {
         "file": "splitter_work.png",
-        "frames": 4,
+        "frames": 16,
         "fps": 8
       }
     },
@@ -41,7 +40,7 @@
       "idle": "mixer_idle.png",
       "work": {
         "file": "mixer_work.png",
-        "frames": 4,
+        "frames": 8,
         "fps": 8
       }
     },
@@ -50,7 +49,7 @@
       "idle": "silo_idle.png",
       "work": {
         "file": "silo_work.png",
-        "frames": 6,
+        "frames": 16,
         "fps": 8
       }
     },
@@ -68,7 +67,7 @@
       "idle": "furnace_idle.png",
       "work": {
         "file": "furnace_work.png",
-        "frames": 4,
+        "frames": 16,
         "fps": 8
       }
     },
@@ -81,7 +80,7 @@
       "idle": "lab_idle.png",
       "work": {
         "file": "lab_work.png",
-        "frames": 4,
+        "frames": 16,
         "fps": 8
       }
     },

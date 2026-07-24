@@ -9,8 +9,9 @@ function assert(cond: boolean, msg: string): void {
 
 console.log('Testing buildGraph...');
 
-// Test 1: miner(2x2, dir=0) → 3 ленты вверх → assembler: ровно 1 edge, path длиной 3, to = assembler.id
-console.log('Test 1: miner → 3 belts → assembler');
+// Test 1: miner → 2 ленты → манипулятор → assembler: 2 edge (миner→манипулятор, манипулятор→assembler)
+// Манипулятор — обязательный посредник для ЛЮБОЙ передачи станок↔станок (docs/03).
+console.log('Test 1: miner → 2 belts → manipulator → assembler');
 {
   const miner: Entity = {
     id: 'miner1',
@@ -20,7 +21,7 @@ console.log('Test 1: miner → 3 belts → assembler');
     config: {},
   };
 
-  // 3 ленты вверх: (10, 19), (10, 18), (10, 17)
+  // 2 ленты вверх: (10, 19), (10, 18); манипулятор перед самим assembler: (10, 17)
   const belt1: Entity = {
     id: 'belt1',
     kind: 'belt',
@@ -37,15 +38,15 @@ console.log('Test 1: miner → 3 belts → assembler');
     config: {},
   };
 
-  const belt3: Entity = {
-    id: 'belt3',
-    kind: 'belt',
+  const manipulator: Entity = {
+    id: 'manip1',
+    kind: 'manipulator',
     pos: { x: 10, y: 17 },
     dir: 0,
     config: {},
   };
 
-  // assembler у входа лент вверх
+  // assembler у входа манипулятора
   const assembler: Entity = {
     id: 'asm1',
     kind: 'assembler',
@@ -58,23 +59,29 @@ console.log('Test 1: miner → 3 belts → assembler');
     miner1: miner,
     belt1: belt1,
     belt2: belt2,
-    belt3: belt3,
+    manip1: manipulator,
     asm1: assembler,
   };
 
   const edges = buildGraph(entities);
 
-  // Ищем edge от miner'а
+  // miner → манипулятор: 2 ленты, to = manip1
   const minerEdges = edges.filter((e) => e.from === 'miner1');
   assert(minerEdges.length === 1, `Expected 1 edge from miner, got ${minerEdges.length}`);
-
-  const edge = minerEdges[0];
-  assert(edge.to === 'asm1', `Edge should point to asm1, got ${edge.to}`);
+  const minerEdge = minerEdges[0];
+  assert(minerEdge.to === 'manip1', `Miner edge should point to manip1, got ${minerEdge.to}`);
   assert(
-    edge.path.length === 3,
-    `Path should have 3 tiles, got ${edge.path.length}: ${JSON.stringify(edge.path)}`
+    minerEdge.path.length === 2,
+    `Miner→manipulator path should have 2 tiles, got ${minerEdge.path.length}: ${JSON.stringify(minerEdge.path)}`
   );
-  assert(edge.branch === 'out', `Branch should be 'out', got ${edge.branch}`);
+  assert(minerEdge.branch === 'out', `Branch should be 'out', got ${minerEdge.branch}`);
+
+  // манипулятор → assembler: впритык, path пуст, to = asm1
+  const manipEdges = edges.filter((e) => e.from === 'manip1');
+  assert(manipEdges.length === 1, `Expected 1 edge from manipulator, got ${manipEdges.length}`);
+  const manipEdge = manipEdges[0];
+  assert(manipEdge.to === 'asm1', `Manipulator edge should point to asm1, got ${manipEdge.to}`);
+  assert(manipEdge.path.length === 0, `Manipulator→assembler path should be empty, got ${manipEdge.path.length}`);
 }
 console.log('✓ Test 1 OK');
 
@@ -177,8 +184,8 @@ console.log('Test 3: belt ring does not hang');
 }
 console.log('✓ Test 3 OK');
 
-// Test 4: lab — 'rework' порт с лентами назад к assembler
-console.log('Test 4: lab rework port with feedback');
+// Test 4: lab — 'rework' порт через манипулятор назад к assembler
+console.log('Test 4: lab rework port with feedback (through manipulator)');
 {
   const lab: Entity = {
     id: 'lab1',
@@ -188,8 +195,7 @@ console.log('Test 4: lab rework port with feedback');
     config: {},
   };
 
-  // Lab rightPort at (21, 24), лента от порта вверх
-  // Ленты: (21, 24), (21, 23) до assembler входов в (20,22)...(22,22)
+  // Lab rightPort at (21, 24), лента от порта вверх, манипулятор перед assembler
   const belt1: Entity = {
     id: 'lb1',
     kind: 'belt',
@@ -198,9 +204,9 @@ console.log('Test 4: lab rework port with feedback');
     config: {},
   };
 
-  const belt2: Entity = {
-    id: 'lb2',
-    kind: 'belt',
+  const manipulator: Entity = {
+    id: 'manip2',
+    kind: 'manipulator',
     pos: { x: 21, y: 23 },
     dir: 0,
     config: {},
@@ -217,7 +223,7 @@ console.log('Test 4: lab rework port with feedback');
   const entities = {
     lab1: lab,
     lb1: belt1,
-    lb2: belt2,
+    manip2: manipulator,
     asm2: assembler,
   };
 
@@ -228,13 +234,17 @@ console.log('Test 4: lab rework port with feedback');
 
   const reworkEdge = labEdges.find((e) => e.branch === 'rework');
   if (reworkEdge) {
-    assert(reworkEdge.to === 'asm2', `Rework should point to asm2, got ${reworkEdge.to}`);
-    assert(reworkEdge.path.length === 2, `Rework path should have 2 belts, got ${reworkEdge.path.length}`);
+    assert(reworkEdge.to === 'manip2', `Rework should point to manip2, got ${reworkEdge.to}`);
+    assert(reworkEdge.path.length === 1, `Rework path should have 1 belt, got ${reworkEdge.path.length}`);
+
+    const manipEdges = edges.filter((e) => e.from === 'manip2');
+    assert(manipEdges.length === 1, `Expected 1 edge from manip2, got ${manipEdges.length}`);
+    assert(manipEdges[0].to === 'asm2', `Manipulator should point to asm2, got ${manipEdges[0].to}`);
   }
 }
 console.log('✓ Test 4 OK');
 
-// Test 5: splitter — два порта дают edges с branch 'true' и 'false'
+// Test 5: splitter — два порта дают edges с branch 'true' и 'false' (без манипулятора — тупики)
 console.log('Test 5: splitter with true and false branches');
 {
   const splitter: Entity = {
@@ -307,10 +317,10 @@ console.log('Test 6: port with no belt and no machine → no edge');
 }
 console.log('✓ Test 6 OK');
 
-// Test 7: множественные ленты от одного мiner'а к одному assembler'у
-console.log('Test 7: multiple edges from 2x2 miner to assembler');
+// Test 7: множественные ленты от одного мiner'а — одна лента через манипулятор доходит,
+// вторая без манипулятора упирается в тупик (обе ветки одного правила в одном тесте)
+console.log('Test 7: multiple ports from 2x2 miner — one via manipulator, one dead-end');
 {
-  // Мiner 2×2 имеет два выходных порта, оба соединены с assembler'ом
   const miner: Entity = {
     id: 'miner6',
     kind: 'miner',
@@ -320,16 +330,15 @@ console.log('Test 7: multiple edges from 2x2 miner to assembler');
   };
 
   // miner выходные порты: (50, 49), (51, 49)
-  // Две ленты вверх от этих портов
-  const belt1: Entity = {
-    id: 'b6a',
-    kind: 'belt',
+  const manipulator: Entity = {
+    id: 'manip4',
+    kind: 'manipulator',
     pos: { x: 50, y: 49 },
     dir: 0,
     config: {},
   };
 
-  const belt2: Entity = {
+  const beltNoManip: Entity = {
     id: 'b6b',
     kind: 'belt',
     pos: { x: 51, y: 49 },
@@ -337,7 +346,7 @@ console.log('Test 7: multiple edges from 2x2 miner to assembler');
     config: {},
   };
 
-  // Assembler где-то выше
+  // Assembler где-то выше — входит в inTiles с обеих колонок
   const assembler: Entity = {
     id: 'asm4',
     kind: 'assembler',
@@ -348,26 +357,100 @@ console.log('Test 7: multiple edges from 2x2 miner to assembler');
 
   const entities = {
     miner6: miner,
-    b6a: belt1,
-    b6b: belt2,
+    manip4: manipulator,
+    b6b: beltNoManip,
     asm4: assembler,
   };
 
   const edges = buildGraph(entities);
 
   const minerEdges = edges.filter((e) => e.from === 'miner6');
+  assert(minerEdges.length === 2, `Miner6 should have 2 edges (one per port), got ${minerEdges.length}`);
 
-  // miner 2×2 может иметь до 2 edges (по одному от каждого FRONT порта)
-  assert(minerEdges.length > 0, `Miner6 should have at least 1 edge, got ${minerEdges.length}`);
+  const toManip = minerEdges.find((e) => e.to === 'manip4');
+  const deadEnd = minerEdges.find((e) => e.to === null);
+  assert(toManip !== undefined, 'One port should reach the manipulator directly (path empty)');
+  assert(deadEnd !== undefined, 'The other port (pure belt, no manipulator) should dead-end');
 
-  // Проверяем что edges корректны (могут быть к разным целям или к одной)
-  for (const edge of minerEdges) {
-    assert(
-      edge.to === null || edge.to === 'asm4',
-      `Edge should point to asm4 or null, got ${edge.to}`
-    );
-  }
+  // манипулятор → assembler напрямую (впритык)
+  const manipEdges = edges.filter((e) => e.from === 'manip4');
+  assert(manipEdges.length === 1, `Expected 1 edge from manip4, got ${manipEdges.length}`);
+  assert(manipEdges[0].to === 'asm4', `Manipulator should reach asm4, got ${manipEdges[0].to}`);
 }
 console.log('✓ Test 7 OK');
+
+// Test 8: два «настоящих» станка вплотную друг к другу без манипулятора — edge не создаётся вообще
+console.log('Test 8: two real stations directly adjacent without manipulator → no edge');
+{
+  const furnace: Entity = {
+    id: 'furnace1',
+    kind: 'furnace',
+    pos: { x: 60, y: 60 },
+    dir: 0,
+    config: {},
+  };
+
+  // assembler вплотную к FRONT furnace (furnace 2×2 у (60,60), FRONT — y=59;
+  // assembler 3×3 c BACK-рядом на y=59 → pos.y = 59 - (3-1) = 57)
+  const assembler: Entity = {
+    id: 'asm5',
+    kind: 'assembler',
+    pos: { x: 59, y: 57 },
+    dir: 0,
+    config: {},
+  };
+
+  const entities = { furnace1: furnace, asm5: assembler };
+  const edges = buildGraph(entities);
+  const furnaceEdges = edges.filter((e) => e.from === 'furnace1');
+
+  assert(furnaceEdges.length === 0, `Direct station↔station adjacency without manipulator should yield 0 edges, got ${furnaceEdges.length}`);
+}
+console.log('✓ Test 8 OK');
+
+// Test 9: манипулятор между двумя станками вплотную (без лент вообще) — оба edge валидны, path пуст
+console.log('Test 9: manipulator sandwiched between two stations (no belts)');
+{
+  const furnace: Entity = {
+    id: 'furnace2',
+    kind: 'furnace',
+    pos: { x: 70, y: 70 },
+    dir: 0,
+    config: {},
+  };
+
+  // манипулятор вплотную к FRONT furnace (furnace 2×2, FRONT y=69)
+  const manipulator: Entity = {
+    id: 'manip5',
+    kind: 'manipulator',
+    pos: { x: 70, y: 69 },
+    dir: 0,
+    config: {},
+  };
+
+  // assembler вплотную к FRONT манипулятора (манипулятор 1×1 у (70,69), FRONT y=68;
+  // assembler 3×3 c BACK-рядом на y=68 → pos.y = 68 - (3-1) = 66)
+  const assembler: Entity = {
+    id: 'asm6',
+    kind: 'assembler',
+    pos: { x: 69, y: 66 },
+    dir: 0,
+    config: {},
+  };
+
+  const entities = { furnace2: furnace, manip5: manipulator, asm6: assembler };
+  const edges = buildGraph(entities);
+
+  const furnaceEdges = edges.filter((e) => e.from === 'furnace2');
+  assert(furnaceEdges.length === 1, `Expected 1 edge from furnace2, got ${furnaceEdges.length}`);
+  assert(furnaceEdges[0].to === 'manip5', `furnace2 should reach manip5, got ${furnaceEdges[0].to}`);
+  assert(furnaceEdges[0].path.length === 0, `furnace2→manip5 path should be empty, got ${furnaceEdges[0].path.length}`);
+
+  const manipEdges = edges.filter((e) => e.from === 'manip5');
+  assert(manipEdges.length === 1, `Expected 1 edge from manip5, got ${manipEdges.length}`);
+  assert(manipEdges[0].to === 'asm6', `manip5 should reach asm6, got ${manipEdges[0].to}`);
+  assert(manipEdges[0].path.length === 0, `manip5→asm6 path should be empty, got ${manipEdges[0].path.length}`);
+}
+console.log('✓ Test 9 OK');
 
 console.log('graph checks OK');

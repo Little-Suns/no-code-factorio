@@ -353,6 +353,23 @@ async function testFurnaceUndefinedError() {
   }
 }
 
+async function testManipulatorPassthrough() {
+  const handler = NODE_DEFS.manipulator.handler as Handler;
+  if (!handler) throw new Error('manipulator handler missing');
+
+  const ctx: NodeCtx = {
+    config: {},
+    data: { any: 'payload' },
+    tpl: (s) => s,
+    llm: mockLlm,
+    proxyFetch: mockProxyFetch,
+  };
+
+  const result = (await handler(ctx)) as { out: unknown };
+  if (result.out !== ctx.data) throw new Error('manipulator must pass data through unchanged');
+  console.log('✓ manipulator-passthrough');
+}
+
 // ============================================================================
 // AC 8: lab ветвит по PASS/REWORK (B5)
 // ============================================================================
@@ -540,6 +557,7 @@ function testRegistry() {
     'lab',
     'accumulator',
     'webhook',
+    'manipulator',
   ] as const;
 
   for (const kind of kinds) {
@@ -585,9 +603,10 @@ export async function checkNodes() {
   await testAssemblerNoMemoryWithoutModule();
   await testWebhookSuccess();
   await testWebhookError();
+  await testManipulatorPassthrough();
   testRegistry();
 
-  console.log('✓ All nodes checks passed (B4 AC 1-6, B5 AC 7-8, E2 AC 9, webhook AC 10)');
+  console.log('✓ All nodes checks passed (B4 AC 1-6, B5 AC 7-8, E2 AC 9, webhook AC 10, manipulator)');
 }
 
 // Выполнить проверки

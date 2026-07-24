@@ -17,7 +17,8 @@ export type MachineKind =
   | 'miner' | 'assembler' | 'splitter' | 'mixer' | 'silo' | 'telegram'   // MVP-ядро
   | 'furnace' | 'chest' | 'lab'                              // усиление: станки
   | 'accumulator'                                            // усиление: энергослой (вне графа лент, docs/04)
-  | 'webhook';                                                // усиление: generic HTTP-исход (Discord/Slack/GitHub/...)
+  | 'webhook'                                                 // усиление: generic HTTP-исход (Discord/Slack/GitHub/...)
+  | 'manipulator';                                            // усиление: 1×1 передаточный узел (вход "back" → выход "front")
 
 export interface Entity {
   id: string;                  // crypto.randomUUID().slice(0, 8)

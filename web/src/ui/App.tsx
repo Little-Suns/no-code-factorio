@@ -12,7 +12,7 @@ import { TopBar } from './TopBar';
 import { ConfigPanel } from './ConfigPanel';
 import { ResultPanel } from './ResultPanel';
 import { BlueprintPanel } from './BlueprintPanel';
-import { Toasts } from './Toasts';
+import { LogsPanel } from './LogsPanel';
 import './App.css';
 
 export function App() {
@@ -69,8 +69,8 @@ export function App() {
         <ConfigPanel />
         <ResultPanel />
         <BlueprintPanel />
+        <LogsPanel />
         <Hotbar />
-        <Toasts />
       </div>
     </div>
   );

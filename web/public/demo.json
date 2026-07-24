@@ -8,7 +8,8 @@
       "dir": 1,
       "config": {
         "mode": "text",
-        "text": "Great product! Fast delivery and excellent customer service."
+        "text": "Great product! Fast delivery and excellent customer service.",
+        "intervalSec": 4
       }
     },
     {
@@ -34,7 +35,7 @@
     },
     {
       "id": "b4",
-      "kind": "belt",
+      "kind": "manipulator",
       "pos": { "x": 5, "y": 5 },
       "dir": 1,
       "config": {}
@@ -62,7 +63,7 @@
     },
     {
       "id": "b8",
-      "kind": "belt",
+      "kind": "manipulator",
       "pos": { "x": 5, "y": 6 },
       "dir": 1,
       "config": {}
@@ -99,7 +100,7 @@
     },
     {
       "id": "b12",
-      "kind": "belt",
+      "kind": "manipulator",
       "pos": { "x": 12, "y": 5 },
       "dir": 1,
       "config": {}
@@ -118,7 +119,8 @@
       "dir": 1,
       "config": {
         "mode": "text",
-        "text": "Could be better. Packaging was damaged."
+        "text": "Could be better. Packaging was damaged.",
+        "intervalSec": 5
       }
     },
     {
@@ -144,7 +146,7 @@
     },
     {
       "id": "b16",
-      "kind": "belt",
+      "kind": "manipulator",
       "pos": { "x": 5, "y": 10 },
       "dir": 1,
       "config": {}
