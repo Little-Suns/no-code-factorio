@@ -218,7 +218,10 @@ function makeChevron(): Graphics {
 let flowDist = 0; // глобальная фаза потока в тайл-единицах пути
 
 export function initBelts(layers: GameLayers): void {
-  let prevEntities: Record<string, Entity> = {};
+  // См. machines.ts initMachines — тот же баг: без явного первого вызова уже
+  // загруженный persist.ts мир не отрисовывался до следующего изменения entities.
+  let prevEntities: Record<string, Entity> = useStore.getState().entities;
+  updateBelts(prevEntities, layers.belts);
   useStore.subscribe((state) => {
     if (state.entities !== prevEntities) {
       prevEntities = state.entities;
