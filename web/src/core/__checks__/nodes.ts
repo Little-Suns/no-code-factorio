@@ -1,6 +1,6 @@
 /**
  * Проверки для станков (B4 + B5 + E2).
- * B4 (6 AC): assembler-llm, splitter-expr/llm, mixer-concat/llm, miner-url, telegram.
+ * B4: assembler-llm, splitter-expr/llm, mixer-concat/llm, miner-url.
  * B5 (2 AC): furnace (return/undefined), lab (PASS/REWORK).
  * E2 (1 AC, 3 сценария): assembler-модули — tools в llm, memory в prompt, без модуля не подмешивается.
  */
@@ -64,25 +64,6 @@ const mockProxyFetch = async (req: {
   // Мок для URL-загрузки (miner)
   if (req.method === 'GET' && req.url.includes('example.com')) {
     return { status: 200, body: 'Content from URL' };
-  }
-
-  // Мок для Telegram sendMessage
-  if (req.url.includes('telegram.org') && req.method === 'POST') {
-    const body = req.body ? JSON.parse(req.body) : {};
-
-    // Успешный ответ
-    if (body.chat_id !== 'fail') {
-      return {
-        status: 200,
-        body: { ok: true, result: { message_id: 123 } },
-      };
-    }
-
-    // Ошибка (ok: false)
-    return {
-      status: 200,
-      body: { ok: false, error_code: 400, description: 'Bad Request: chat not found' },
-    };
   }
 
   // Дефолт
@@ -271,70 +252,6 @@ async function testMinerUrl() {
     throw new Error('AC4: wrong URL');
 
   console.log('✓ AC4: miner-url');
-}
-
-// ============================================================================
-// AC 5: telegram собирает URL/body и кидает на ok:false
-// ============================================================================
-
-async function testTelegramSuccess() {
-  mockProxyFetchCalls = [];
-  const handler = NODE_DEFS.telegram.handler as Handler;
-  if (!handler) throw new Error('telegram handler missing');
-
-  const ctx: NodeCtx = {
-    config: {
-      botToken: 'test-token-123',
-      chatId: '12345',
-      text: 'Done: {{text}}',
-    },
-    // Payload — голая строка (обычный случай miner/assembler с outItem 'text'), НЕ объект
-    // {text: ...} — регрессия бага "{{text}} не резолвится против строкового ctx.data".
-    data: 'result data',
-    tpl: () => { throw new Error('handler must not rely on ctx.tpl for this template'); },
-    llm: mockLlm,
-    proxyFetch: mockProxyFetch,
-  };
-
-  const result = (await handler(ctx)) as { done: boolean };
-  if (result.done !== true) throw new Error('AC5-success: must return {done:true}');
-  const call = mockProxyFetchCalls[mockProxyFetchCalls.length - 1] as any;
-  if (!call?.url.includes('test-token-123'))
-    throw new Error('AC5-success: token not in URL');
-  const sentBody = call?.body ? JSON.parse(call.body) : null;
-  if (sentBody?.text !== 'Done: result data') {
-    throw new Error(`AC5-success: {{text}} must resolve against plain-string payload, got: ${JSON.stringify(sentBody)}`);
-  }
-
-  console.log('✓ AC5a: telegram-success');
-}
-
-async function testTelegramError() {
-  mockProxyFetchCalls = [];
-  const handler = NODE_DEFS.telegram.handler as Handler;
-
-  const ctx: NodeCtx = {
-    config: {
-      botToken: 'test-token',
-      chatId: 'fail', // Это вызовет ok:false
-      text: 'Message',
-    },
-    data: 'test',
-    tpl: (s) => s,
-    llm: mockLlm,
-    proxyFetch: mockProxyFetch,
-  };
-
-  try {
-    await handler(ctx);
-    throw new Error('AC5-error: must throw on ok:false');
-  } catch (e) {
-    if (e instanceof Error && e.message.includes('telegram')) {
-      console.log('✓ AC5b: telegram-error');
-    } else {
-      throw e;
-    }
-  }
 }
 
 // ============================================================================
@@ -579,7 +496,6 @@ function testRegistry() {
     'splitter',
     'mixer',
     'silo',
-    'telegram',
     'furnace',
     'chest',
     'lab',
@@ -621,8 +537,6 @@ export async function checkNodes() {
   await testMixerConcat();
   await testMixerLlm();
   await testMinerUrl();
-  await testTelegramSuccess();
-  await testTelegramError();
   await testFurnaceTransform();
   await testFurnaceUndefinedError();
   await testLabPass();

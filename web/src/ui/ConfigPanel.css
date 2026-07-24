@@ -52,7 +52,6 @@
 .config-kind[data-kind='splitter'] { color: #e2483f; }
 .config-kind[data-kind='mixer'] { color: #a06ce0; }
 .config-kind[data-kind='silo'] { color: #ef7a3d; }
-.config-kind[data-kind='telegram'] { color: #38b6e8; }
 .config-kind[data-kind='chest'] { color: #a08a5f; }
 .config-kind[data-kind='lab'] { color: #5ecf7a; }
 .config-kind[data-kind='accumulator'] { color: #f0d43a; }

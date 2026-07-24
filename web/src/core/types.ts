@@ -14,7 +14,7 @@ export const DELTA: Record<Dir, Vec> = {
 
 export type MachineKind =
   | 'belt'
-  | 'miner' | 'assembler' | 'splitter' | 'mixer' | 'silo' | 'telegram'   // MVP-ядро
+  | 'miner' | 'assembler' | 'splitter' | 'mixer' | 'silo'   // MVP-ядро
   | 'furnace' | 'chest' | 'lab'                              // усиление: станки
   | 'accumulator'                                            // усиление: энергослой (вне графа лент, docs/04)
   | 'webhook'                                                 // усиление: generic HTTP-исход (Discord/Slack/GitHub/...)

@@ -36,7 +36,6 @@ import { assemblerHandler, assemblerSchema } from './assembler';
 import { splitterHandler, splitterSchema } from './splitter';
 import { mixerHandler, mixerSchema } from './mixer';
 import { siloHandler, siloSchema } from './silo';
-import { telegramHandler, telegramSchema } from './telegram';
 import { furnaceHandler, furnaceSchema } from './furnace';
 import { chestHandler, chestSchema } from './chest';
 import { labHandler, labSchema } from './lab';
@@ -84,13 +83,6 @@ export const NODE_DEFS: Record<MachineKind, NodeDef> = {
     size: { w: 3, h: 3 },
     schema: siloSchema,
     handler: siloHandler,
-  },
-  telegram: {
-    kind: 'telegram',
-    title: 'Антенна / Telegram',
-    size: { w: 2, h: 2 },
-    schema: telegramSchema,
-    handler: telegramHandler,
   },
 
   // Belt: без handler и schema
