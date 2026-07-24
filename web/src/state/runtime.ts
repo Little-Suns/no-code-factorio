@@ -4,6 +4,7 @@ import { buildGraph } from '../core/graph';
 import type { Entity, EngineEvent } from '../core/types';
 import { GameTransport, consumePacket, dropPacket } from '../game/packets';
 import { rocketLaunch } from '../game/fx';
+import { triggerManipulatorGrab, triggerManipulatorRelease } from '../game/machines';
 import { useStore } from './store';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? 'http://localhost:8787';
@@ -114,14 +115,23 @@ function setupEventHandler() {
     const store = useStore.getState();
 
     switch (event.t) {
-      case 'packet-spawn':
-        // Спрайт создаёт transport.move; отдельного экшена нет
+      case 'packet-spawn': {
+        // Спрайт предмета создаёт transport.move; здесь только манипулятор:
+        // событие не несёт nodeId — ищем манипулятор по совпадению позиции.
+        const source = Object.values(store.entities).find(
+          (e) => e.kind === 'manipulator' && e.pos.x === event.at.x && e.pos.y === event.at.y
+        );
+        if (source) triggerManipulatorRelease(source.id);
         break;
+      }
 
-      case 'packet-consume':
+      case 'packet-consume': {
         // Втягивание предмета в станок (scale→0)
         consumePacket(event.packetId);
+        const entity = store.entities[event.nodeId];
+        if (entity && entity.kind === 'manipulator') triggerManipulatorGrab(event.nodeId);
         break;
+      }
 
       case 'packet-drop':
         // error → лом+дым; dead-end/ttl → падение с fade (тост даёт node-status error)

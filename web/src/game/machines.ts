@@ -11,6 +11,7 @@ interface MachineSprite {
   statusLamp: Graphics;
   chargeBar?: Graphics; // только у accumulator (E1)
   lastStatus?: NodeStatus; // для edge-detection перехода в/из 'working' (см. updateMachineStatus)
+  manipulatorFlipped?: boolean; // manipulator: развёрнут на 180° между «забором» и «выкладкой»
 }
 
 const machineSprites = new Map<string, MachineSprite>();
@@ -164,7 +165,9 @@ function updateMachines(entities: Record<string, Entity>, layer: Container): voi
 
     machineSprite.sprite.pivot.set(size.w * TILE * 0.5, size.h * TILE * 0.5);
     machineSprite.sprite.position.set(rotatedSize.w * TILE * 0.5, rotatedSize.h * TILE * 0.5);
-    machineSprite.sprite.angle = entity.dir * 90;
+    // manipulator: +180° поверх dir, пока развёрнут на "выкладку" (см. triggerManipulatorGrab/Release)
+    const flip = entity.kind === 'manipulator' && machineSprite.manipulatorFlipped ? 180 : 0;
+    machineSprite.sprite.angle = entity.dir * 90 + flip;
   }
 }
 
@@ -194,6 +197,11 @@ function updateMachineStatus(
     if (machineSprite.lastStatus === status) continue;
     machineSprite.lastStatus = status;
 
+    // manipulator анимируется по своей схеме (захват/поворот/выкладка —
+    // triggerManipulatorGrab/Release, вызывается из runtime.ts по packet-consume/spawn),
+    // а не по generic idle↔working, иначе оба механизма дрались бы за один AnimatedSprite.
+    if (entity.kind === 'manipulator') continue;
+
     // Переключить спрайт на work-анимацию если working
     if (status === 'working') {
       const workTextures = getTexture(entity.kind, 'work');
@@ -219,6 +227,57 @@ function updateMachineStatus(
       }
     }
   }
+}
+
+/**
+ * Манипулятор: захват предмета — первые 8 кадров work-анимации (man.gif), затем
+ * поворот на 180° (переход от «забора» с BACK к «выкладке» на FRONT — одна и та
+ * же рука-анимация переиспользуется на обе фазы). Вызывается из runtime.ts по
+ * packet-consume (nodeId есть в событии напрямую).
+ */
+export function triggerManipulatorGrab(nodeId: string): void {
+  const machineSprite = machineSprites.get(nodeId);
+  if (!machineSprite || !(machineSprite.sprite instanceof AnimatedSprite)) return;
+
+  const frames = getTexture('manipulator', 'work');
+  if (!Array.isArray(frames) || frames.length < 16) return;
+
+  const sprite = machineSprite.sprite;
+  sprite.stop();
+  sprite.loop = false;
+  sprite.textures = frames.slice(0, 8);
+  sprite.onComplete = () => {
+    machineSprite.manipulatorFlipped = true;
+    sprite.angle += 180;
+  };
+  sprite.gotoAndPlay(0);
+}
+
+/**
+ * Манипулятор: выкладка предмета — последние 8 кадров, затем возврат в исходный
+ * поворот и статичный idle-кадр (готов к следующему циклу). Вызывается из
+ * runtime.ts по packet-spawn (у события нет nodeId — совпадение по позиции).
+ */
+export function triggerManipulatorRelease(nodeId: string): void {
+  const machineSprite = machineSprites.get(nodeId);
+  if (!machineSprite || !(machineSprite.sprite instanceof AnimatedSprite)) return;
+
+  const frames = getTexture('manipulator', 'work');
+  if (!Array.isArray(frames) || frames.length < 16) return;
+
+  const sprite = machineSprite.sprite;
+  sprite.stop();
+  sprite.loop = false;
+  sprite.textures = frames.slice(8, 16);
+  sprite.onComplete = () => {
+    machineSprite.manipulatorFlipped = false;
+    sprite.angle -= 180;
+    const idle = getTexture('manipulator', 'idle');
+    if (!Array.isArray(idle)) {
+      sprite.texture = idle;
+    }
+  };
+  sprite.gotoAndPlay(0);
 }
 
 /**
