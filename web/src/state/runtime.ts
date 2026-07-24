@@ -9,6 +9,31 @@ import { useStore } from './store';
 const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? 'http://localhost:8787';
 
 let engine: Engine | null = null;
+// TOCTOU-guard: engine присваивается только после нескольких await в startRun() —
+// пока идёт этот асинхронный запуск, `engine` всё ещё null, и повторный вызов (двойной клик
+// Run, удержание Space) проходил бы старую проверку `if (engine)` и создавал второй Engine,
+// который потом некому было бы остановить. `starting` закрывает окно синхронно.
+let starting = false;
+// Если Stop нажали именно в это окно — engine ещё не существует, stopRun() не может его
+// остановить. Флаг просит startRun() не поднимать фабрику вовсе, когда асинхронная часть
+// закончится, вместо того чтобы молча проигнорировать клик Stop.
+let stopRequestedDuringStart = false;
+
+/**
+ * Таймаут на fetch к нашему серверу — если он зависнет (не апстрим-LLM, а именно наш /llm
+ * или /proxy), await в handler'е ноды никогда не резолвится, и per-node очередь в
+ * engine.ts (enqueuePacket/processNode) блокируется навсегда для всех будущих пакетов этой
+ * ноды. Таймаут гарантирует, что запрос всегда завершится ошибкой за конечное время.
+ */
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(new Error(`Timeout after ${timeoutMs}ms`)), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 /**
  * Fetch wrapper для POST /llm (JSON request + response)
@@ -16,11 +41,14 @@ let engine: Engine | null = null;
  */
 async function createLlmFetch(): Promise<EngineDeps['llm']> {
   return async (req: LlmRequest) => {
-    const res = await fetch(`${SERVER_URL}/llm`, {
+    // Сервер сам таймаутит апстрим-LLM за 30с (server/main.py) — здесь запас в 5с,
+    // чтобы обычно первым срабатывал серверный таймаут с внятной JSON-ошибкой,
+    // а наш таймаут был просто страховкой на случай, если завис сам сервер/сеть.
+    const res = await fetchWithTimeout(`${SERVER_URL}/llm`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(req),
-    });
+    }, 35000);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.error || `LLM error: ${res.status}`);
@@ -35,11 +63,12 @@ async function createLlmFetch(): Promise<EngineDeps['llm']> {
  */
 async function createProxyFetch(): Promise<EngineDeps['proxyFetch']> {
   return async (req: ProxyRequest) => {
-    const res = await fetch(`${SERVER_URL}/proxy`, {
+    // Сервер сам таймаутит целевой URL за 20с — запас в 5с по той же логике, что у /llm.
+    const res = await fetchWithTimeout(`${SERVER_URL}/proxy`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(req),
-    });
+    }, 25000);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.error || `Proxy error: ${res.status}`);
@@ -132,58 +161,76 @@ function setupEventHandler() {
  * Запуск фабрики
  */
 export async function startRun(): Promise<void> {
-  if (engine) {
-    console.warn('Engine already running');
+  if (engine || starting) {
+    console.warn('Engine already running or starting');
     return;
   }
+  starting = true;
+  stopRequestedDuringStart = false;
 
-  const store = useStore.getState();
+  try {
+    const store = useStore.getState();
 
-  // Проверка: есть ли хотя бы одна шахта
-  const hasAnyMiner = Object.values(store.entities).some((e) => e.kind === 'miner');
-  if (!hasAnyMiner) {
-    store.toast('Поставь шахту');
-    return;
-  }
-
-  // Строим граф
-  const entities = store.entities;
-  const edges = buildGraph(entities);
-
-  // Создаём deps
-  const deps: EngineDeps = {
-    llm: await createLlmFetch(),
-    proxyFetch: await createProxyFetch(),
-    webhooks: createWebhooksSubscription,
-    // handlers будут подставлены ниже
-  };
-
-  // Импортируем NODE_DEFS чтобы собрать handlers
-  const { NODE_DEFS } = await import('../core/nodes');
-  const handlers: Partial<Record<string, any>> = {};
-  for (const [kind, def] of Object.entries(NODE_DEFS)) {
-    if (def.handler) {
-      handlers[kind] = def.handler;
+    // Проверка: есть ли хотя бы одна шахта
+    const hasAnyMiner = Object.values(store.entities).some((e) => e.kind === 'miner');
+    if (!hasAnyMiner) {
+      store.toast('Поставь шахту');
+      return;
     }
+
+    // Строим граф
+    const entities = store.entities;
+    const edges = buildGraph(entities);
+
+    // Создаём deps
+    const deps: EngineDeps = {
+      llm: await createLlmFetch(),
+      proxyFetch: await createProxyFetch(),
+      webhooks: createWebhooksSubscription,
+      // handlers будут подставлены ниже
+    };
+
+    // Импортируем NODE_DEFS чтобы собрать handlers
+    const { NODE_DEFS } = await import('../core/nodes');
+    const handlers: Partial<Record<string, any>> = {};
+    for (const [kind, def] of Object.entries(NODE_DEFS)) {
+      if (def.handler) {
+        handlers[kind] = def.handler;
+      }
+    }
+    deps.handlers = handlers;
+
+    // Stop успел прийти, пока мы асинхронно собирали deps — не поднимаем фабрику вовсе,
+    // иначе клик Stop потерялся бы (engine ещё не существовал, stopRun() был no-op'ом).
+    if (stopRequestedDuringStart) {
+      return;
+    }
+
+    // Создаём Transport из game/packets
+    const transport = new GameTransport();
+
+    // Создаём Engine
+    const emitHandler = setupEventHandler();
+    engine = new Engine(entities, edges, transport, emitHandler, deps);
+
+    // Запускаем
+    engine.start();
+    store.setRunning(true);
+  } finally {
+    starting = false;
   }
-  deps.handlers = handlers;
-
-  // Создаём Transport из game/packets
-  const transport = new GameTransport();
-
-  // Создаём Engine
-  const emitHandler = setupEventHandler();
-  engine = new Engine(entities, edges, transport, emitHandler, deps);
-
-  // Запускаем
-  engine.start();
-  store.setRunning(true);
 }
 
 /**
  * Остановка фабрики
  */
 export function stopRun(): void {
+  if (starting) {
+    // Engine ещё не создан — попросим startRun() не запускать его, когда он закончит сборку
+    stopRequestedDuringStart = true;
+    return;
+  }
+
   if (!engine) {
     console.warn('Engine not running');
     return;

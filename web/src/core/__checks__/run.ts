@@ -9,5 +9,6 @@ import './engine';
 import './nodes';
 import './demo';
 import './blueprint';
+import './stress';
 
 console.log('✓ Check runner ready');

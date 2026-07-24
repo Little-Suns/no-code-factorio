@@ -3,7 +3,7 @@ import { tpl } from './tpl';
 import { NODE_DEFS } from './nodes';
 
 // Контракты NodeCtx/Handler — ровно по docs/05 (B4 пишет хендлеры против них)
-export interface LlmRequest { system?: string; prompt: string; tools?: string[] }
+export interface LlmRequest { system?: string; prompt: string; tools?: string[]; nodeId?: string }
 export interface ProxyRequest { url: string; method?: string; headers?: Record<string, string>; body?: string }
 
 export interface NodeCtx {
@@ -76,7 +76,7 @@ export class Engine {
           // Найдём шахту с этим ID и спавним пакет с телом
           const miner = this.entities[nodeId];
           if (miner && miner.kind === 'miner') {
-            this.spawnPacket(body, miner);
+            void this.spawnPacket(body, miner);
           }
         }
       });
@@ -196,26 +196,49 @@ export class Engine {
     if (!miner || miner.kind !== 'miner') return;
     if (this.abortController.signal.aborted) return;
 
-    this.spawnPacket(undefined, miner);
+    void this.spawnPacket(undefined, miner);
   }
 
   /**
    * Создаёт пакет из шахты и для каждого исходящего edge запускает цепочку доставки.
+   * Payload определяется через minerHandler (deps.handlers.miner) — единая логика
+   * с core/nodes/miner.ts, иначе mode='url' (proxyFetch) тут же расходится с ней
+   * и остаётся нереализованным (баг: url молча улетал как сырая строка).
    */
-  private spawnPacket(webhookBody: unknown, miner: Entity): void {
-    // Определяем payload шахты
+  private async spawnPacket(webhookBody: unknown, miner: Entity): Promise<void> {
     let data: unknown;
-    const mode = (miner.config['mode'] as string) || 'text';
+    const handler = this.deps.handlers?.['miner'];
 
-    if (mode === 'text') {
-      data = miner.config['text'] || '';
-    } else if (mode === 'url') {
-      // TODO(B4): mode='url' требует proxyFetch
-      data = miner.config['url'] || '';
-    } else if (mode === 'webhook') {
-      data = webhookBody;
+    if (handler) {
+      const ctx: NodeCtx = {
+        data: webhookBody,
+        config: miner.config,
+        tpl: (s: string) => tpl(s, webhookBody),
+        llm: this.deps.llm ?? (async () => { throw new Error('LLM недоступен (нет deps.llm)'); }),
+        proxyFetch: this.deps.proxyFetch ?? (async () => { throw new Error('proxyFetch недоступен'); }),
+      };
+      this.emit({ t: 'node-status', nodeId: miner.id, status: 'working' });
+      try {
+        const result = await handler(ctx);
+        data = 'out' in result ? result.out : undefined;
+      } catch (e) {
+        if (!this.abortController.signal.aborted) {
+          this.emit({
+            t: 'node-status',
+            nodeId: miner.id,
+            status: 'error',
+            error: e instanceof Error ? e.message : String(e),
+          });
+        }
+        return;
+      }
+      if (this.abortController.signal.aborted) return;
+      this.emit({ t: 'node-status', nodeId: miner.id, status: 'ok' });
     } else {
-      data = '';
+      // Защитный фолбэк на случай отсутствия handler'а в deps (напр. тесты без него) —
+      // повторяет только text/webhook, т.к. url без proxyFetch реализовать нечем.
+      const mode = (miner.config['mode'] as string) || 'text';
+      data = mode === 'webhook' ? webhookBody : miner.config['text'] || '';
     }
 
     // Создаём базовый пакет
@@ -489,7 +512,12 @@ export class Engine {
           data: packet.data,
           config: node.config,
           tpl: (s: string) => tpl(s, packet.data),
-          llm: this.deps.llm ?? (async () => { throw new Error('LLM недоступен (нет deps.llm)'); }),
+          // nodeId подмешивается автоматически (не часть контракта Handler/NodeCtx) —
+          // серверу нужен стабильный ключ для мок-критика lab (docs/07), т.к. без него
+          // общий процесс-wide флаг гонялся между всеми lab-узлами разом
+          llm: this.deps.llm
+            ? (req: LlmRequest) => this.deps.llm!({ ...req, nodeId: node.id })
+            : (async () => { throw new Error('LLM недоступен (нет deps.llm)'); }),
           proxyFetch: this.deps.proxyFetch ?? (async () => { throw new Error('proxyFetch недоступен'); }),
         };
         // Модуль 'memory' (E2): снапшот содержимого сундуков как RAG-контекст
