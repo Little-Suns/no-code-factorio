@@ -13,6 +13,11 @@ export function BlueprintPanel() {
   const pendingSelection = useStore((state) => state.pendingSelection);
   const blueprintPanelOpen = useStore((state) => state.blueprintPanelOpen);
   const stampBlueprintId = useStore((state) => state.stampBlueprintId);
+  // Редактор объекта (ConfigPanel) — тот же правый край, что и мы. Когда он открыт
+  // (выбрана существующая сущность), сдвигаемся левее, чтобы не уезжать под него.
+  const selectedEntityId = useStore((state) => state.selectedEntityId);
+  const entities = useStore((state) => state.entities);
+  const configOpen = !!(selectedEntityId && entities[selectedEntityId]);
   const addBlueprint = useStore((state) => state.addBlueprint);
   const removeBlueprint = useStore((state) => state.removeBlueprint);
   const setStampBlueprint = useStore((state) => state.setStampBlueprint);
@@ -23,14 +28,12 @@ export function BlueprintPanel() {
   const [name, setName] = useState('');
   const [importValue, setImportValue] = useState('');
 
-  // Видимость — по клавише B (blueprintPanelOpen), плюс всегда видна форма сохранения
-  // сразу после рамки выделения (pendingSelection сама включает blueprintPanelOpen, см. store.ts).
+  // Видимость — тоглом «Чертежи» в TopBar / клавишей B (blueprintPanelOpen); плюс панель
+  // всегда всплывает под форму сохранения сразу после рамки выделения (pendingSelection
+  // сама включает blueprintPanelOpen, см. store.ts). Закрыто — панель полностью скрыта,
+  // без плашки-реоткрывашки: единственная точка показа/скрытия — кнопка в TopBar.
   if (!blueprintPanelOpen && !pendingSelection) {
-    return (
-      <button className="blueprint-reopen" onClick={() => setBlueprintPanelOpen(true)} title="Expand blueprints dock">
-        &#9637; BLUEPRINTS &#9652;
-      </button>
-    );
+    return null;
   }
 
   const handleClose = () => {
@@ -69,7 +72,7 @@ export function BlueprintPanel() {
   };
 
   return (
-    <div className="blueprint-panel">
+    <div className={`blueprint-panel ${configOpen ? 'config-open' : ''}`}>
       <div className="blueprint-header">
         <h3 className="blueprint-title">Чертежи</h3>
         <button className="blueprint-icon-btn" onClick={handleClose} title="Collapse dock (B)">
