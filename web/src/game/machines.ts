@@ -105,17 +105,26 @@ function updateMachines(entities: Record<string, Entity>, layer: Container): voi
     if (!machineSprite) {
       // Создать новый спрайт
       const container = new Container();
-      const textureOrFrames = getTexture(entity.kind, 'idle');
+      const idleTextureOrFrames = getTexture(entity.kind, 'idle');
+      const workTextureOrFrames = getTexture(entity.kind, 'work');
       let sprite: Sprite | AnimatedSprite;
 
-      if (Array.isArray(textureOrFrames)) {
-        sprite = new AnimatedSprite(textureOrFrames);
-        if (sprite instanceof AnimatedSprite) {
-          sprite.animationSpeed = 0.1; // замедляем анимацию
-          sprite.play();
-        }
+      // AnimatedSprite нужен, если ЕСТЬ анимация work — иначе status:'working' будет некому
+      // подхватить (instanceof AnimatedSprite ниже всегда false для обычного Sprite).
+      // idle почти всегда одиночный PNG (не массив), поэтому раньше сюда никогда не попадали.
+      if (Array.isArray(workTextureOrFrames)) {
+        const initialFrames = Array.isArray(idleTextureOrFrames) ? idleTextureOrFrames : [idleTextureOrFrames];
+        const animated = new AnimatedSprite(initialFrames);
+        animated.animationSpeed = 0.1; // замедляем анимацию
+        animated.gotoAndStop(0); // стоим на idle-кадре, пока status !== 'working'
+        sprite = animated;
+      } else if (Array.isArray(idleTextureOrFrames)) {
+        const animated = new AnimatedSprite(idleTextureOrFrames);
+        animated.animationSpeed = 0.1;
+        animated.play();
+        sprite = animated;
       } else {
-        sprite = new Sprite(textureOrFrames);
+        sprite = new Sprite(idleTextureOrFrames);
       }
 
       sprite.anchor.set(0, 0);
@@ -182,6 +191,9 @@ function updateMachineStatus(
       // Вернуться на idle
       const idleTexture = getTexture(entity.kind, 'idle');
       if (machineSprite.sprite instanceof AnimatedSprite) {
+        // stop() обязателен — иначе AnimatedSprite (после play() в ветке working) продолжает
+        // тикать и на следующем кадре сам перезапишет .texture текущим work-кадром.
+        machineSprite.sprite.stop();
         if (Array.isArray(idleTexture)) {
           machineSprite.sprite.textures = idleTexture;
           machineSprite.sprite.gotoAndStop(0);
