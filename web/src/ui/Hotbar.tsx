@@ -49,6 +49,12 @@ export function Hotbar() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Не перехватывать хоткеи, пока фокус в текстовом поле конфига (тот же паттерн,
+      // что уже в game/input.ts и TopBar.tsx) — иначе ввод "1"/"e"/"w"/"i" и т.д. в
+      // ConfigPanel/BlueprintPanel переключал бы инструмент постановки на карте.
+      const target = e.target as HTMLElement;
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return;
+
       const tool = KEY_TO_TOOL[e.key];
       if (tool) {
         setTool(tool);
