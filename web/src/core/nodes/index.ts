@@ -59,7 +59,7 @@ export const NODE_DEFS: Record<MachineKind, NodeDef> = {
   assembler: {
     kind: 'assembler',
     title: 'Сборочный станок / Агент',
-    size: { w: 3, h: 3 },
+    size: { w: 2, h: 2 },
     outItem: 'text',
     schema: assemblerSchema,
     handler: assemblerHandler,

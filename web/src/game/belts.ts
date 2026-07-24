@@ -53,7 +53,7 @@ interface BeltShape {
  * Поворот — если единственный вход сбоку (перпендикулярно направлению).
  * Чистая функция от entities, логику графа не трогает.
  */
-function beltShape(entity: Entity, byTile: Map<string, Entity>): BeltShape {
+export function beltShape(entity: Entity, byTile: Map<string, Entity>): BeltShape {
   const exit = entity.dir;
   const back = opposite(exit);
   let sideEnter: Dir | null = null;
@@ -80,7 +80,7 @@ function beltShape(entity: Entity, byTile: Map<string, Entity>): BeltShape {
  * Прямая — линейно; поворот — дуга радиуса TILE/2. Оба параметризованы так, что
  * тайл проходится за одинаковый «тайл-единицу» пути → шевроны выровнены на стыках.
  */
-function makePath(shape: BeltShape): (t: number) => { x: number; y: number; rot: number } {
+export function makePath(shape: BeltShape): (t: number) => { x: number; y: number; rot: number } {
   const em = EDGE_MID[shape.enter];
   const xm = EDGE_MID[shape.exit];
 
@@ -119,7 +119,7 @@ function annularSector(g: Graphics, c: Vec, rInner: number, rOuter: number, a0: 
  * Статичная дорожка с детализацией: тёмная рамка → тело → светлые рельсы-бевел по краям
  * → тёмные поперечные насечки (сегменты ленты). Рисуется один раз на форму тайла.
  */
-function drawTrack(g: Graphics, shape: BeltShape, path: (t: number) => { x: number; y: number; rot: number }) {
+export function drawTrack(g: Graphics, shape: BeltShape, path: (t: number) => { x: number; y: number; rot: number }) {
   g.clear();
   const half = TRACK_W / 2;
 
@@ -218,7 +218,10 @@ function makeChevron(): Graphics {
 let flowDist = 0; // глобальная фаза потока в тайл-единицах пути
 
 export function initBelts(layers: GameLayers): void {
-  let prevEntities: Record<string, Entity> = {};
+  // См. machines.ts initMachines — тот же баг: без явного первого вызова уже
+  // загруженный persist.ts мир не отрисовывался до следующего изменения entities.
+  let prevEntities: Record<string, Entity> = useStore.getState().entities;
+  updateBelts(prevEntities, layers.belts);
   useStore.subscribe((state) => {
     if (state.entities !== prevEntities) {
       prevEntities = state.entities;

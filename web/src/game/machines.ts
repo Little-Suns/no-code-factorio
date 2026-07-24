@@ -20,6 +20,12 @@ const machineSprites = new Map<string, MachineSprite>();
 // читалось как "дотягивается до соседних тайлов"; вылезание за границы клетки
 // тут осознанно допустимо (в отличие от остальных станков).
 export const MANIPULATOR_VISUAL_SCALE = 1.4;
+// Ракета (silo): арт занимает не весь 3×3-кадр (прозрачные поля по краям) — растягиваем
+// спрайт, чтобы заполнил клетку. Масштаб вокруг центрального пивота → остаётся по центру.
+export const SILO_VISUAL_SCALE = 1.3;
+// Арт ракеты сидит низко в кадре (щель сверху, вылезает снизу) — поднимаем спрайт вверх
+// в мировых координатах (px), поэтому корректно при любом повороте станка.
+export const SILO_Y_OFFSET = 18;
 
 const STATUS_COLORS: Record<NodeStatus, number> = {
   idle: 0x5a5445,     // тускло-жёлтый (idle, дизайн-макет Factory.exe)
@@ -29,8 +35,13 @@ const STATUS_COLORS: Record<NodeStatus, number> = {
 };
 
 export function initMachines(layers: GameLayers): void {
-  // Подписка на изменения entities
-  let prevEntities: Record<string, Entity> = {};
+  // Подписка на изменения entities. Сразу отрисовываем уже загруженный persist.ts
+  // мир (initPersist() в main.tsx отрабатывает синхронно ДО этого вызова) — subscribe
+  // реагирует только на будущие set(), поэтому без явного первого вызова уже случившаяся
+  // загрузка из localStorage молча пропускалась: поле оставалось пустым до следующего
+  // изменения entities (например, постановки станка), которое отрисовывало сразу всё разом.
+  let prevEntities: Record<string, Entity> = useStore.getState().entities;
+  updateMachines(prevEntities, layers.machines);
   useStore.subscribe((state) => {
     if (state.entities !== prevEntities) {
       prevEntities = state.entities;
@@ -77,17 +88,26 @@ function getSize(kind: MachineKind): { w: number; h: number } {
     case 'accumulator':
     case 'telegram':
     case 'webhook':
+    case 'assembler':
       return { w: 2, h: 2 };
     case 'splitter':
     case 'lab':
       return { w: 2, h: 1 };
-    case 'assembler':
     case 'mixer':
     case 'silo':
       return { w: 3, h: 3 };
     default:
       return { w: 1, h: 1 };
   }
+}
+
+// Размер ТЕКСТУРЫ в тайлах (может отличаться от футпринта getSize). У assembler спрайт
+// авторен на 3×3 с прозрачным бортиком, а футпринт ужат до 2×2 — текстура центрируется
+// на футпринте (пивот по этому размеру, позиция по футпринту), арт заполняет 2×2, поля
+// вылезают прозрачными. Для остальных станков совпадает с футпринтом.
+function getSpriteSize(kind: MachineKind): { w: number; h: number } {
+  if (kind === 'assembler') return { w: 3, h: 3 };
+  return getSize(kind);
 }
 
 function updateMachines(entities: Record<string, Entity>, layer: Container): void {
@@ -170,17 +190,23 @@ function updateMachines(entities: Record<string, Entity>, layer: Container): voi
     // Обновить позицию и поворот
     machineSprite.container.position.set(entity.pos.x * TILE, entity.pos.y * TILE);
 
-    const size = getSize(entity.kind);
+    const size = getSize(entity.kind); // футпринт (позиция/лампа)
+    const spriteSize = getSpriteSize(entity.kind); // размер текстуры в тайлах (пивот)
     const rotatedSize = entity.dir === 1 || entity.dir === 3 ? { w: size.h, h: size.w } : size;
 
-    machineSprite.sprite.pivot.set(size.w * TILE * 0.5, size.h * TILE * 0.5);
+    // Пивот — центр ТЕКСТУРЫ, позиция — центр ФУТПРИНТА: текстура центрируется на футпринте
+    // (у assembler 3×3-арт садится по центру 2×2, лишний прозрачный бортик вылезает наружу).
+    machineSprite.sprite.pivot.set(spriteSize.w * TILE * 0.5, spriteSize.h * TILE * 0.5);
     machineSprite.sprite.position.set(rotatedSize.w * TILE * 0.5, rotatedSize.h * TILE * 0.5);
+    if (entity.kind === 'silo') machineSprite.sprite.position.y -= SILO_Y_OFFSET;
     machineSprite.sprite.angle = entity.dir * 90;
     // manipulator: зеркалим по Y, пока развёрнут на "выкладку" (см. triggerManipulatorGrab/Release) —
     // поворот на 180° ставил руку "вверх ногами", зеркало держит её в исходной ориентации.
     if (entity.kind === 'manipulator') {
       const mirrored = machineSprite.manipulatorFlipped ? -1 : 1;
       machineSprite.sprite.scale.set(MANIPULATOR_VISUAL_SCALE, mirrored * MANIPULATOR_VISUAL_SCALE);
+    } else if (entity.kind === 'silo') {
+      machineSprite.sprite.scale.set(SILO_VISUAL_SCALE);
     }
   }
 }

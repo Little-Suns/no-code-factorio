@@ -2,10 +2,11 @@ import { Sprite, Point, Graphics } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { TILE } from './app';
 import { getTexture } from './assets';
-import { MANIPULATOR_VISUAL_SCALE } from './machines';
+import { MANIPULATOR_VISUAL_SCALE, SILO_VISUAL_SCALE, SILO_Y_OFFSET } from './machines';
 import { useStore } from '../state/store';
 import { footprintTiles, canPlace } from '../core/grid';
 import { instantiateBlueprint, canPlaceBlueprint } from '../core/blueprint';
+import { beltShape, makePath, drawTrack } from './belts';
 import { rasterizeLine } from './rasterize';
 import type { Dir, Entity, MachineKind, Vec } from '../core/types';
 import type { GameLayers } from './app';
@@ -19,7 +20,7 @@ const ENTITY_HL_COLOR = 0x5ad1ff;
 
 // Размеры при dir=0 — для пивота ghost (дублирует core/grid, там getSize приватный)
 const SIZES: Record<MachineKind, [number, number]> = {
-  belt: [1, 1], miner: [2, 2], furnace: [2, 2], assembler: [3, 3],
+  belt: [1, 1], miner: [2, 2], furnace: [2, 2], assembler: [2, 2],
   splitter: [2, 1], mixer: [3, 3], chest: [1, 1], lab: [2, 1],
   silo: [3, 3], telegram: [2, 2], accumulator: [2, 2], webhook: [2, 2],
   manipulator: [1, 1],
@@ -41,6 +42,9 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
   // E4: групповой ghost при постановке чертежа (store.stampBlueprintId)
   let groupGhostSprites: Sprite[] = [];
   let groupGhostBlueprintId: string | null = null;
+
+  // Процедурный ghost ленты (тот же рендер, что belts.ts): пул Graphics-тайлов.
+  let beltGhostPool: Graphics[] = [];
 
   const toTile = (clientX: number, clientY: number): Vec => {
     const world = viewport.toWorld(new Point(clientX, clientY));
@@ -169,6 +173,53 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
     });
   };
 
+  const clearBeltGhost = () => {
+    for (const g of beltGhostPool) g.visible = false;
+  };
+
+  // Ghost ленты процедурным рендером belts.ts: одиночный тайл на ховере (форма
+  // считается с учётом уже стоящих лент → сразу показывает поворот), или вся линия
+  // с углами при протяжке. ok → обычные цвета ленты (alpha), bad → красный тинт.
+  const updateBeltGhost = (tiles: { pos: Vec; dir: Dir }[]) => {
+    const store = useStore.getState();
+
+    // byTile: существующие ленты мира + сами ghost-тайлы (ghost поверх) — чтобы
+    // форма учитывала стыковку и с миром, и внутри линии.
+    const byTile = new Map<string, Entity>();
+    for (const e of Object.values(store.entities)) {
+      if (e.kind === 'belt') byTile.set(`${e.pos.x},${e.pos.y}`, e);
+    }
+    for (const t of tiles) {
+      byTile.set(`${t.pos.x},${t.pos.y}`, { id: 'ghost', kind: 'belt', pos: t.pos, dir: t.dir, config: {} });
+    }
+
+    let ok = true;
+    for (const t of tiles) {
+      const test: Entity = { id: 'ghost', kind: 'belt', pos: t.pos, dir: t.dir, config: {} };
+      if (!(canPlace(store.entities, test) || beltAt(t.pos) !== null)) {
+        ok = false;
+        break;
+      }
+    }
+
+    tiles.forEach((t, i) => {
+      let g = beltGhostPool[i];
+      if (!g) {
+        g = new Graphics();
+        g.alpha = GHOST_ALPHA;
+        layers.ghost.addChild(g);
+        beltGhostPool[i] = g;
+      }
+      const ent: Entity = { id: 'ghost', kind: 'belt', pos: t.pos, dir: t.dir, config: {} };
+      const shape = beltShape(ent, byTile);
+      drawTrack(g, shape, makePath(shape));
+      g.position.set(t.pos.x * TILE, t.pos.y * TILE);
+      g.tint = ok ? 0xffffff : TINT_BAD;
+      g.visible = true;
+    });
+    for (let i = tiles.length; i < beltGhostPool.length; i++) beltGhostPool[i].visible = false;
+  };
+
   // Ghost пересоздаётся при смене инструмента, позиция/тинт — на каждый вызов
   const updateGhost = () => {
     const store = useStore.getState();
@@ -176,6 +227,7 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
 
     if (store.stampBlueprintId) {
       if (ghostSprite) ghostSprite.visible = false;
+      clearBeltGhost();
       updateGroupGhost(store.stampBlueprintId);
       return;
     }
@@ -183,8 +235,27 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
 
     if (!tool) {
       if (ghostSprite) ghostSprite.visible = false;
+      clearBeltGhost();
       return;
     }
+
+    // Лента — свой процедурный ghost (одиночный тайл или вся протянутая линия)
+    if (tool === 'belt') {
+      if (ghostSprite) ghostSprite.visible = false;
+      const end = toTile(lastMouse.x, lastMouse.y);
+      let tiles: { pos: Vec; dir: Dir }[];
+      if (dragStart) {
+        const steps = rasterizeLine(dragStart, end);
+        tiles = steps.length === 0
+          ? [{ pos: dragStart, dir: ghostDir }]
+          : [{ pos: dragStart, dir: steps[0].dir }, ...steps.map((s) => ({ pos: s.tile, dir: s.dir }))];
+      } else {
+        tiles = [{ pos: end, dir: ghostDir }];
+      }
+      updateBeltGhost(tiles);
+      return;
+    }
+    clearBeltGhost();
 
     if (!ghostSprite || ghostTool !== tool) {
       ghostSprite?.destroy();
@@ -199,22 +270,24 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
     const [w, h] = SIZES[tool];
     const rw = ghostDir % 2 === 1 ? h : w;
     const rh = ghostDir % 2 === 1 ? w : h;
+    // Текстура может быть больше футпринта (assembler: спрайт 3×3, футпринт 2×2) —
+    // пивот по размеру текстуры, позиция по футпринту → текстура центрируется на клетках.
+    const [sw, sh] = tool === 'assembler' ? [3, 3] : [w, h];
 
     ghostSprite.visible = true;
-    // Пивот — центр базовой текстуры, позиция — центр повёрнутого footprint
-    ghostSprite.pivot.set((w * TILE) / 2, (h * TILE) / 2);
+    ghostSprite.pivot.set((sw * TILE) / 2, (sh * TILE) / 2);
     ghostSprite.position.set(tile.x * TILE + (rw * TILE) / 2, tile.y * TILE + (rh * TILE) / 2);
+    if (tool === 'silo') ghostSprite.position.y -= SILO_Y_OFFSET;
     ghostSprite.angle = ghostDir * 90;
     // manipulator: тот же увеличенный масштаб + дефолтное зеркало, что и у реально
     // поставленного станка (machines.ts) — иначе ghost выглядит как старый мелкий спрайт
     ghostSprite.scale.set(
-      tool === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : 1,
-      tool === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : 1
+      tool === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : tool === 'silo' ? SILO_VISUAL_SCALE : 1,
+      tool === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : tool === 'silo' ? SILO_VISUAL_SCALE : 1
     );
 
     const test: Entity = { id: 'ghost', kind: tool, pos: tile, dir: ghostDir, config: {} };
-    // Лента поверх ленты — валидно (перезапись)
-    const ok = canPlace(store.entities, test) || (tool === 'belt' && beltAt(tile) !== null);
+    const ok = canPlace(store.entities, test); // лента обрабатывается отдельным ghost выше
     ghostSprite.tint = ok ? TINT_OK : TINT_BAD;
   };
 

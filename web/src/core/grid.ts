@@ -12,11 +12,11 @@ function getSize(kind: MachineKind): { w: number; h: number } {
     case 'accumulator':
     case 'telegram':
     case 'webhook':
+    case 'assembler':
       return { w: 2, h: 2 };
     case 'splitter':
     case 'lab':
       return { w: 2, h: 1 };
-    case 'assembler':
     case 'mixer':
     case 'silo':
       return { w: 3, h: 3 };
@@ -207,11 +207,11 @@ export function inTiles(entity: Entity): Set<string> {
       break;
 
     case 'assembler':
-      // BACK входы (весь нижний ряд)
+      // BACK входы (весь нижний ряд, 2×2)
       inputDirs = [
         {
           side: 'back',
-          localTiles: [[0, baseSize.h - 1], [1, baseSize.h - 1], [2, baseSize.h - 1]],
+          localTiles: [[0, baseSize.h - 1], [1, baseSize.h - 1]],
         },
       ];
       break;
