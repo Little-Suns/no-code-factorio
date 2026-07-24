@@ -58,7 +58,16 @@
       "idle": "telegram_idle.png",
       "work": {
         "file": "telegram_work.png",
-        "frames": 4,
+        "frames": 8,
+        "fps": 8
+      }
+    },
+    "webhook": {
+      "size": [2, 2],
+      "idle": "webhook_idle.png",
+      "work": {
+        "file": "webhook_work.png",
+        "frames": 8,
         "fps": 8
       }
     },
