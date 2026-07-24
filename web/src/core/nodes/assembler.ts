@@ -40,7 +40,16 @@ export const assemblerSchema: Field[] = [
  * подмешивается в prompt как RAG-контекст.
  */
 export const assemblerHandler: Handler = async (ctx: NodeCtx) => {
-  const system = (ctx.config['system'] as string) || '';
+  // system — источник правды для LLM, но в загруженных мирах (demo.json / Import) его
+  // может не быть: loadWorld грузит config как есть, не заполняя дефолты схемы (в отличие
+  // от постановки мышью). Тогда резолвим system из рецепта — recipe остаётся источником,
+  // а config.system лишь необязательный оверрайд поверх пресета. typeof-проверка (не `||`):
+  // у рецепта 'custom' system легитимно пустой, и это НЕ повод падать в фолбэк.
+  let system = ctx.config['system'] as string | undefined;
+  if (typeof system !== 'string') {
+    const recipe = RECIPES.find((r) => r.value === ctx.config['recipe']);
+    system = recipe?.system ?? '';
+  }
   const modules = (ctx.config['modules'] as string[]) || [];
   let prompt = typeof ctx.data === 'string' ? ctx.data : JSON.stringify(ctx.data);
 

@@ -3,6 +3,7 @@ import { useStore } from '../state/store';
 import { NODE_DEFS } from '../core/nodes';
 import { triggerMiner, rechargeAccumulator } from '../state/runtime';
 import { MODULE_DEFS } from '../core/nodes/modules';
+import { RECIPES } from '../core/nodes/recipes';
 import { JsonView } from './JsonView';
 import './ConfigPanel.css';
 
@@ -151,14 +152,20 @@ export function ConfigPanel() {
                   value={(entity.config[field.key] as string) || ''}
                   onChange={(e) => {
                     const value = e.target.value;
-                    handleConfigChange(field.key, value);
-                    // Если это выбор рецепта, подставить system-промпт
+                    // Выбор рецепта у assembler: handler читает config.system, а не config.recipe,
+                    // поэтому подставляем system-промпт пресета ОДНИМ обновлением (recipe+system
+                    // вместе — два раздельных handleConfigChange затёрли бы друг друга из-за
+                    // устаревшего entity.config в замыкании). Для 'custom' system не трогаем —
+                    // у него пустой пресет, и это стёрло бы то, что пользователь уже написал.
                     if (field.key === 'recipe' && entity.kind === 'assembler') {
-                      const selectedOption = field.options?.find((opt) => opt.value === value);
-                      if (selectedOption?.label) {
-                        // Извлекаем system из опции (это лучше сделать в NODE_DEFS если поддерживается)
-                        // Пока просто обновляем рецепт
+                      const recipe = RECIPES.find((r) => r.value === value);
+                      if (recipe && recipe.value !== 'custom') {
+                        setConfig(entity.id, { ...entity.config, recipe: value, system: recipe.system });
+                      } else {
+                        handleConfigChange('recipe', value);
                       }
+                    } else {
+                      handleConfigChange(field.key, value);
                     }
                   }}
                   disabled={running}
