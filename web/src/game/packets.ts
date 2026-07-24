@@ -1,6 +1,6 @@
 // Transport (контракт docs/01) — реализация в A4
 import type { Application } from 'pixi.js';
-import { Sprite, AnimatedSprite, Ticker } from 'pixi.js';
+import { Sprite, AnimatedSprite, Graphics, Ticker } from 'pixi.js';
 import type { Transport, ItemType, Vec } from '../core/types';
 import { TILE } from './app';
 import { getTexture } from './assets';
@@ -34,6 +34,44 @@ function removeTween(tick: TickFn): void {
   Ticker.shared.remove(tick);
   const idx = tweens.findIndex((t) => t.tick === tick);
   if (idx !== -1) tweens.splice(idx, 1);
+}
+
+/**
+ * Заглушка-манипулятор: у нас нет отдельного спрайта «руки» (в присланном паке его нет) —
+ * рисуем код-заглушку (Graphics): два «пальца»-клешни, которые смыкаются вокруг точки
+ * захвата/выгрузки предмета и исчезают. Вызывается в момент, когда предмет появляется
+ * на ленте (выгрузка станком) и когда его забирает станок с ленты (packet-consume).
+ */
+function manipulatorFlash(worldX: number, worldY: number): void {
+  if (!layers) return;
+
+  const arm = new Graphics();
+  const armLen = TILE * 0.32;
+  arm.moveTo(-armLen, -armLen);
+  arm.lineTo(0, 0);
+  arm.lineTo(armLen, -armLen);
+  arm.stroke({ width: 4, color: 0xc9cdd3 });
+  arm.position.set(worldX, worldY - TILE * 0.1);
+  layers.items.addChild(arm);
+
+  let elapsed = 0;
+  const duration = 220;
+
+  const tick: TickFn = (ticker) => {
+    elapsed += ticker.deltaMS;
+    if (elapsed >= duration) {
+      removeTween(tick);
+      layers?.items.removeChild(arm);
+      return;
+    }
+    const progress = elapsed / duration;
+    // Смыкание «пальцев» — сжатие по X (1.4 → 0.6 → назад), имитация захвата
+    const pinch = 1.4 - Math.sin(progress * Math.PI) * 0.8;
+    arm.scale.set(pinch, 1);
+    arm.alpha = 1 - progress * 0.3;
+  };
+
+  trackTick('manipulator', tick);
 }
 
 export function initPackets(appInstance: Application, gameLayers: GameLayers): void {
@@ -93,6 +131,7 @@ export class GameTransport implements Transport {
     sprite.position.set((startPos.x + 0.5) * TILE, (startPos.y + 0.5) * TILE);
 
     layers.items.addChild(sprite);
+    manipulatorFlash(sprite.position.x, sprite.position.y); // выгрузка манипулятором на ленту
 
     // Анимация по полилинии — колбэк на общем Ticker.shared, не отдельный Ticker
     const duration = path.length * TILE_MS; // мс на весь путь
@@ -166,6 +205,8 @@ export function consumePacket(packetId: string, nodePos?: Vec): void {
   if (ps.tick) {
     removeTween(ps.tick);
   }
+
+  manipulatorFlash(sprite.position.x, sprite.position.y); // захват манипулятором со станка
 
   // Tween втягивания: scale→0 за 150 мс
   let elapsed = 0;

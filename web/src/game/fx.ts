@@ -1,7 +1,8 @@
 // FX — дым, ракета, частицы, реализация в A4-A5
-import { Graphics, Ticker } from 'pixi.js';
+import { AnimatedSprite, Graphics, Ticker } from 'pixi.js';
 import type { Application } from 'pixi.js';
 import { TILE } from './app';
+import { getTexture } from './assets';
 import type { Entity } from '../core/types';
 import type { GameLayers } from './app';
 
@@ -93,13 +94,14 @@ export function rocketLaunch(entity: Entity): Promise<void> {
     // Размер ракеты: ~1.5 тайла = 96px
     const rocketSize = TILE * 1.5;
 
-    // Создать спрайт ракеты (треугольник, указывает вверх)
-    const rocket = new Graphics();
-    rocket.moveTo(0, -rocketSize / 2); // вершина вверх
-    rocket.lineTo(rocketSize / 2, rocketSize / 2); // нижний правый
-    rocket.lineTo(-rocketSize / 2, rocketSize / 2); // нижний левый
-    rocket.closePath();
-    rocket.fill(0xff4444); // красный цвет ракеты
+    // Спрайт ракеты — реальная work-анимация silo (не плейсхолдер-треугольник)
+    const rocketFrames = getTexture('silo', 'work');
+    const rocket = new AnimatedSprite(Array.isArray(rocketFrames) ? rocketFrames : [rocketFrames]);
+    rocket.anchor.set(0.5, 0.5);
+    rocket.width = rocketSize;
+    rocket.height = rocketSize;
+    rocket.animationSpeed = 0.3;
+    rocket.play();
     rocket.position.set(centerWorldX, centerWorldY);
 
     if (!layers) {
