@@ -49,25 +49,25 @@ export function smoke(worldX: number, worldY: number): void {
 
     layers.fx.addChild(particle);
 
-    // Анимация: подъём + fade 1с
-    const ticker = new Ticker();
+    // Анимация: подъём + fade 1с — колбэк на общем Ticker.shared (не отдельный Ticker
+    // на каждую частицу, дорого под нагрузкой — дым сыплется пачками по 5-8 штук разом)
     let elapsed = 0;
     const duration = 1000;
     const startY = particle.position.y;
 
-    ticker.add(() => {
-      elapsed += ticker.deltaMS;
+    const tick = (t: Ticker) => {
+      elapsed += t.deltaMS;
       if (elapsed >= duration) {
-        ticker.stop();
+        Ticker.shared.remove(tick);
         layers?.fx.removeChild(particle);
         return;
       }
       const progress = elapsed / duration;
       particle.position.y = startY - progress * TILE * 0.5; // подъём
       particle.alpha = 1 - progress; // fade
-    });
+    };
 
-    ticker.start();
+    Ticker.shared.add(tick);
   }
 }
 
@@ -110,24 +110,23 @@ export function rocketLaunch(entity: Entity): Promise<void> {
 
     layers.fx.addChild(rocket);
 
-    // Этап 1: Тряска (200 мс)
-    const shakePhase = new Ticker();
+    // Этап 1: Тряска (200 мс) — все фазы ракеты тоже на Ticker.shared, не на своих Ticker
     let shakeDuration = 0;
     const shakeTime = 200;
 
-    shakePhase.add(() => {
-      shakeDuration += shakePhase.deltaMS;
+    const shakeTick = (t: Ticker) => {
+      shakeDuration += t.deltaMS;
       if (shakeDuration >= shakeTime) {
-        shakePhase.stop();
+        Ticker.shared.remove(shakeTick);
         startLiftoff();
         return;
       }
       // Небольшой jitter: ±4 пикселя
       rocket.position.x = centerWorldX + (Math.random() - 0.5) * 8;
       rocket.position.y = centerWorldY + (Math.random() - 0.5) * 8;
-    });
+    };
 
-    shakePhase.start();
+    Ticker.shared.add(shakeTick);
 
     // Этап 2: Улёт (1.2 сек)
     function startLiftoff(): void {
@@ -138,16 +137,15 @@ export function rocketLaunch(entity: Entity): Promise<void> {
       // Дым в начале улёта
       smoke(centerWorldX, centerWorldY);
 
-      const liftoffPhase = new Ticker();
       let liftoffDuration = 0;
       const liftoffTime = 1200; // 1.2 сек
       let lastFireTime = 0;
 
-      liftoffPhase.add(() => {
-        liftoffDuration += liftoffPhase.deltaMS;
+      const liftoffTick = (t: Ticker) => {
+        liftoffDuration += t.deltaMS;
 
         if (liftoffDuration >= liftoffTime) {
-          liftoffPhase.stop();
+          Ticker.shared.remove(liftoffTick);
           // Ракета скрылась за кадром, ждём 1 сек перед возвращением
           rocket.visible = false;
           setTimeout(() => {
@@ -164,7 +162,7 @@ export function rocketLaunch(entity: Entity): Promise<void> {
         rocket.position.y = centerWorldY - easeProgress * maxHeight;
 
         // Огонь каждые ~50 мс
-        lastFireTime += liftoffPhase.deltaMS;
+        lastFireTime += t.deltaMS;
         if (lastFireTime >= 50) {
           lastFireTime = 0;
           const fireParticles = 2 + Math.floor(Math.random() * 2);
@@ -182,27 +180,26 @@ export function rocketLaunch(entity: Entity): Promise<void> {
             layers?.fx.addChild(fire);
 
             // Быстрое затухание огня за 300 мс
-            const fireTicker = new Ticker();
             let fireElapsed = 0;
             const fireDuration = 300;
 
-            fireTicker.add(() => {
-              fireElapsed += fireTicker.deltaMS;
+            const fireTick = (ft: Ticker) => {
+              fireElapsed += ft.deltaMS;
               if (fireElapsed >= fireDuration) {
-                fireTicker.stop();
+                Ticker.shared.remove(fireTick);
                 layers?.fx.removeChild(fire);
                 return;
               }
               fire.alpha = 1 - fireElapsed / fireDuration;
-              fire.position.y += fireTicker.deltaMS / 20; // слегка оседает
-            });
+              fire.position.y += ft.deltaMS / 20; // слегка оседает
+            };
 
-            fireTicker.start();
+            Ticker.shared.add(fireTick);
           }
         }
-      });
+      };
 
-      liftoffPhase.start();
+      Ticker.shared.add(liftoffTick);
     }
 
     // Этап 3: Спуск (0.6 сек) — после 1 сек паузы
@@ -219,15 +216,14 @@ export function rocketLaunch(entity: Entity): Promise<void> {
       rocket.visible = true;
       rocket.alpha = 1;
 
-      const descentPhase = new Ticker();
       let descentDuration = 0;
       const descentTime = 600; // 0.6 сек
 
-      descentPhase.add(() => {
-        descentDuration += descentPhase.deltaMS;
+      const descentTick = (t: Ticker) => {
+        descentDuration += t.deltaMS;
 
         if (descentDuration >= descentTime) {
-          descentPhase.stop();
+          Ticker.shared.remove(descentTick);
           layers?.fx.removeChild(rocket);
           activeRockets.delete(entity.id);
           resolve();
@@ -235,9 +231,9 @@ export function rocketLaunch(entity: Entity): Promise<void> {
         }
 
         rocket.position.y = topY + (descentDuration / descentTime) * (TILE * 3);
-      });
+      };
 
-      descentPhase.start();
+      Ticker.shared.add(descentTick);
     }
   });
 }

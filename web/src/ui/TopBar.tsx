@@ -28,6 +28,7 @@ export function TopBar() {
 
       if (e.code === 'Space' && !isInput) {
         e.preventDefault();
+        if (e.repeat) return; // автоповтор ОС при удержании — иначе спам startRun()/stopRun()
         if (running) {
           stopRun();
         } else {

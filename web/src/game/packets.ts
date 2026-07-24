@@ -8,15 +8,33 @@ import type { GameLayers } from './app';
 
 export const TILE_MS = 400; // скорость ленты: 400мс за тайл
 
+type TickFn = (ticker: Ticker) => void;
+
 interface PacketSprite {
   sprite: Sprite;
-  ticker?: Ticker;
+  tick?: TickFn;
 }
 
 let app: Application | null = null;
 let layers: GameLayers | null = null;
 const packetSprites = new Map<string, PacketSprite>();
-const tweens: Array<{ id: string; ticker: Ticker }> = [];
+// Единый реестр активных tween-колбэков на Ticker.shared (вместо отдельного `new Ticker()`
+// на каждый пакет — раньше плодили десятки-сотни независимых тикеров под нагрузкой).
+// Нужен, чтобы clear() (Stop) мог снять разом все анимации, а не только "движение по ленте".
+const tweens: Array<{ id: string; tick: TickFn }> = [];
+
+function trackTick(id: string, tick: TickFn): void {
+  Ticker.shared.add(tick);
+  tweens.push({ id, tick });
+}
+
+// Снимает tween и с Ticker.shared, и из реестра — без этого запись в tweens пережила бы
+// свой tick (утечка: массив рос бы неограниченно за долгий прогон без остановки).
+function removeTween(tick: TickFn): void {
+  Ticker.shared.remove(tick);
+  const idx = tweens.findIndex((t) => t.tick === tick);
+  if (idx !== -1) tweens.splice(idx, 1);
+}
 
 export function initPackets(appInstance: Application, gameLayers: GameLayers): void {
   app = appInstance;
@@ -48,8 +66,8 @@ export class GameTransport implements Transport {
       if (old?.sprite) {
         layers.items.removeChild(old.sprite);
       }
-      if (old?.ticker) {
-        old.ticker.stop();
+      if (old?.tick) {
+        removeTween(old.tick);
       }
       packetSprites.delete(packetId);
     }
@@ -76,20 +94,19 @@ export class GameTransport implements Transport {
 
     layers.items.addChild(sprite);
 
-    // Создать ticker для анимации по полилинии
-    const ticker = new Ticker();
+    // Анимация по полилинии — колбэк на общем Ticker.shared, не отдельный Ticker
     const duration = path.length * TILE_MS; // мс на весь путь
     let elapsed = 0;
 
     return new Promise<void>((resolve) => {
-      ticker.add(() => {
+      const tick: TickFn = (ticker) => {
         elapsed += ticker.deltaMS;
 
         if (elapsed >= duration) {
           // Финальная позиция — центр последнего тайла
           const endPos = path[path.length - 1];
           sprite.position.set((endPos.x + 0.5) * TILE, (endPos.y + 0.5) * TILE);
-          ticker.stop();
+          removeTween(tick);
           packetSprites.set(packetId, { sprite });
           resolve();
           return;
@@ -112,26 +129,25 @@ export class GameTransport implements Transport {
           const y = (from.y + (to.y - from.y) * segmentProgress + 0.5) * TILE;
           sprite.position.set(x, y);
         }
-      });
+      };
 
-      ticker.start();
-      packetSprites.set(packetId, { sprite, ticker });
-      tweens.push({ id: packetId, ticker });
+      packetSprites.set(packetId, { sprite, tick });
+      trackTick(packetId, tick);
     });
   }
 
   clear(): void {
     if (!layers) return;
 
-    // Остановить все тикеры
-    for (const { ticker } of tweens) {
-      ticker.stop();
+    // Снять все активные tween-колбэки с Ticker.shared
+    for (const { tick } of tweens) {
+      Ticker.shared.remove(tick);
     }
     tweens.length = 0;
 
-    // Удалить все спрайты
-    for (const { sprite, ticker } of packetSprites.values()) {
-      if (ticker) ticker.stop();
+    // Удалить все спрайты (на случай, если чей-то tick не попал в реестр)
+    for (const { sprite, tick } of packetSprites.values()) {
+      if (tick) Ticker.shared.remove(tick);
       layers.items.removeChild(sprite);
     }
     packetSprites.clear();
@@ -147,29 +163,29 @@ export function consumePacket(packetId: string, nodePos?: Vec): void {
   if (!ps) return;
 
   const sprite = ps.sprite;
-  if (ps.ticker) {
-    ps.ticker.stop();
+  if (ps.tick) {
+    removeTween(ps.tick);
   }
 
   // Tween втягивания: scale→0 за 150 мс
-  const ticker = new Ticker();
   let elapsed = 0;
   const duration = 150;
   const startScale = sprite.scale.x;
 
-  ticker.add(() => {
+  const tick: TickFn = (ticker) => {
     elapsed += ticker.deltaMS;
     if (elapsed >= duration) {
-      ticker.stop();
+      removeTween(tick);
       layers?.items.removeChild(sprite);
       packetSprites.delete(packetId);
       return;
     }
     const progress = elapsed / duration;
     sprite.scale.set(startScale * (1 - progress));
-  });
+  };
 
-  ticker.start();
+  packetSprites.set(packetId, { sprite, tick });
+  trackTick(packetId, tick);
 }
 
 export function dropPacket(packetId: string, reason: 'error' | 'dead-end' | 'ttl'): void {
@@ -179,8 +195,8 @@ export function dropPacket(packetId: string, reason: 'error' | 'dead-end' | 'ttl
   if (!ps) return;
 
   const sprite = ps.sprite;
-  if (ps.ticker) {
-    ps.ticker.stop();
+  if (ps.tick) {
+    removeTween(ps.tick);
   }
 
   if (reason === 'error') {
@@ -191,6 +207,7 @@ export function dropPacket(packetId: string, reason: 'error' | 'dead-end' | 'ttl
     sprite.texture = tex;
     sprite.width = side;
     sprite.height = side;
+    packetSprites.set(packetId, { sprite });
 
     // Удалить через 2с
     setTimeout(() => {
@@ -201,16 +218,15 @@ export function dropPacket(packetId: string, reason: 'error' | 'dead-end' | 'ttl
     }, 2000);
   } else {
     // dead-end / ttl — падение с затуханием
-    const ticker = new Ticker();
     let elapsed = 0;
     const duration = 1000; // 1 сек
     const startY = sprite.position.y;
     const startAlpha = sprite.alpha;
 
-    ticker.add(() => {
+    const tick: TickFn = (ticker) => {
       elapsed += ticker.deltaMS;
       if (elapsed >= duration) {
-        ticker.stop();
+        removeTween(tick);
         layers?.items.removeChild(sprite);
         packetSprites.delete(packetId);
         return;
@@ -218,9 +234,10 @@ export function dropPacket(packetId: string, reason: 'error' | 'dead-end' | 'ttl
       const progress = elapsed / duration;
       sprite.position.y = startY + progress * TILE; // падение на тайл
       sprite.alpha = startAlpha * (1 - progress);
-    });
+    };
 
-    ticker.start();
+    packetSprites.set(packetId, { sprite, tick });
+    trackTick(packetId, tick);
   }
 }
 
