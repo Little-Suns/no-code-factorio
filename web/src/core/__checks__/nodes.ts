@@ -120,6 +120,29 @@ async function testAssemblerLlm() {
   console.log('✓ AC1: assembler-llm');
 }
 
+// AC1b: system отсутствует в config (мир из demo.json/Import) → резолвится из recipe.
+// Регрессия бага: у demo-ассемблера config={recipe:'translator'} без system, handler
+// раньше слал пустой system и модель просто эхом отдавала текст (не переводила).
+async function testAssemblerRecipeFallback() {
+  mockLlmCalls = [];
+  const handler = NODE_DEFS.assembler.handler as Handler;
+
+  const ctx: NodeCtx = {
+    config: { recipe: 'translator' }, // system НЕ задан — как в demo.json
+    data: 'Привет',
+    tpl: (s) => s,
+    llm: mockLlm,
+    proxyFetch: mockProxyFetch,
+  };
+
+  await handler(ctx);
+  const sentSystem = mockLlmCalls[0]?.system ?? '';
+  if (!sentSystem.includes('английский')) {
+    throw new Error(`AC1b: system должен резолвиться из recipe 'translator', получен: ${JSON.stringify(sentSystem)}`);
+  }
+  console.log('✓ AC1b: assembler-recipe-fallback (system из recipe при отсутствии в config)');
+}
+
 // ============================================================================
 // AC 2: splitter-expr ветвит по условию, splitter-llm парсит YES/NO
 // ============================================================================
@@ -592,6 +615,7 @@ function testRegistry() {
 
 export async function checkNodes() {
   await testAssemblerLlm();
+  await testAssemblerRecipeFallback();
   await testSplitterExpr();
   await testSplitterLlm();
   await testMixerConcat();

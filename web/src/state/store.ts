@@ -204,7 +204,7 @@ export const useStore = create<Store>((set, get) => ({
 
   toast: (text: string) => {
     set((s) => ({
-      toasts: [...s.toasts, { id: crypto.randomUUID().slice(0, 8), text, at: Date.now() }].slice(-50),
+      toasts: [...s.toasts, { id: crypto.randomUUID().slice(0, 8), text, at: Date.now() }].slice(-200),
       logsUnread: !s.logsPanelOpen, // «загорается» кнопка в TopBar, пока панель закрыта
     }));
   },
