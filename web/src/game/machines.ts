@@ -11,10 +11,15 @@ interface MachineSprite {
   statusLamp: Graphics;
   chargeBar?: Graphics; // только у accumulator (E1)
   lastStatus?: NodeStatus; // для edge-detection перехода в/из 'working' (см. updateMachineStatus)
-  manipulatorFlipped?: boolean; // manipulator: развёрнут на 180° между «забором» и «выкладкой»
+  manipulatorFlipped?: boolean; // manipulator: зеркальное (дефолт/idle) vs обычное (между захватом и выкладкой)
 }
 
 const machineSprites = new Map<string, MachineSprite>();
+
+// manipulator визуально крупнее своего 1×1 footprint — руке нужен размах, чтобы
+// читалось как "дотягивается до соседних тайлов"; вылезание за границы клетки
+// тут осознанно допустимо (в отличие от остальных станков).
+const MANIPULATOR_VISUAL_SCALE = 1.4;
 
 const STATUS_COLORS: Record<NodeStatus, number> = {
   idle: 0x5a5445,     // тускло-жёлтый (idle, дизайн-макет Factory.exe)
@@ -154,6 +159,11 @@ function updateMachines(entities: Record<string, Entity>, layer: Container): voi
       layer.addChild(container);
 
       machineSprite = { container, sprite, statusLamp, chargeBar };
+      // manipulator: изначально зеркальное положение — обычное (немирорированное) появляется
+      // только между захватом и выкладкой (см. triggerManipulatorGrab/Release)
+      if (entity.kind === 'manipulator') {
+        machineSprite.manipulatorFlipped = true;
+      }
       machineSprites.set(id, machineSprite);
     }
 
@@ -165,9 +175,13 @@ function updateMachines(entities: Record<string, Entity>, layer: Container): voi
 
     machineSprite.sprite.pivot.set(size.w * TILE * 0.5, size.h * TILE * 0.5);
     machineSprite.sprite.position.set(rotatedSize.w * TILE * 0.5, rotatedSize.h * TILE * 0.5);
-    // manipulator: +180° поверх dir, пока развёрнут на "выкладку" (см. triggerManipulatorGrab/Release)
-    const flip = entity.kind === 'manipulator' && machineSprite.manipulatorFlipped ? 180 : 0;
-    machineSprite.sprite.angle = entity.dir * 90 + flip;
+    machineSprite.sprite.angle = entity.dir * 90;
+    // manipulator: зеркалим по Y, пока развёрнут на "выкладку" (см. triggerManipulatorGrab/Release) —
+    // поворот на 180° ставил руку "вверх ногами", зеркало держит её в исходной ориентации.
+    if (entity.kind === 'manipulator') {
+      const mirrored = machineSprite.manipulatorFlipped ? -1 : 1;
+      machineSprite.sprite.scale.set(MANIPULATOR_VISUAL_SCALE, mirrored * MANIPULATOR_VISUAL_SCALE);
+    }
   }
 }
 
@@ -229,11 +243,17 @@ function updateMachineStatus(
   }
 }
 
+// Заметно быстрее общего animationSpeed 0.1 (миnер/assembler/silo) — короткий
+// резкий жест захвата/выкладки, а не медленная работа станка (GRAB_MS в
+// core/nodes/manipulator.ts подогнан под эту же скорость).
+const MANIPULATOR_ANIM_SPEED = 0.4;
+
 /**
  * Манипулятор: захват предмета — первые 8 кадров work-анимации (man.gif), затем
- * поворот на 180° (переход от «забора» с BACK к «выкладке» на FRONT — одна и та
- * же рука-анимация переиспользуется на обе фазы). Вызывается из runtime.ts по
- * packet-consume (nodeId есть в событии напрямую).
+ * зеркалим по X (переход от «забора» с BACK к «выкладке» на FRONT — одна и та же
+ * рука-анимация переиспользуется на обе фазы; зеркало вместо поворота на 180°,
+ * иначе рука встаёт "вверх ногами"). Вызывается из runtime.ts по packet-consume
+ * (nodeId есть в событии напрямую).
  */
 export function triggerManipulatorGrab(nodeId: string): void {
   const machineSprite = machineSprites.get(nodeId);
@@ -245,10 +265,12 @@ export function triggerManipulatorGrab(nodeId: string): void {
   const sprite = machineSprite.sprite;
   sprite.stop();
   sprite.loop = false;
+  sprite.animationSpeed = MANIPULATOR_ANIM_SPEED;
   sprite.textures = frames.slice(0, 8);
   sprite.onComplete = () => {
-    machineSprite.manipulatorFlipped = true;
-    sprite.angle += 180;
+    // Дефолт (idle) — зеркальное положение; после захвата — обычное (см. создание спрайта выше)
+    machineSprite.manipulatorFlipped = false;
+    sprite.scale.y = Math.abs(sprite.scale.y);
   };
   sprite.gotoAndPlay(0);
 }
@@ -268,10 +290,12 @@ export function triggerManipulatorRelease(nodeId: string): void {
   const sprite = machineSprite.sprite;
   sprite.stop();
   sprite.loop = false;
+  sprite.animationSpeed = MANIPULATOR_ANIM_SPEED;
   sprite.textures = frames.slice(8, 16);
   sprite.onComplete = () => {
-    machineSprite.manipulatorFlipped = false;
-    sprite.angle -= 180;
+    // Возврат к дефолтному зеркальному положению — готов к следующему циклу
+    machineSprite.manipulatorFlipped = true;
+    sprite.scale.y = -Math.abs(sprite.scale.y);
     const idle = getTexture('manipulator', 'idle');
     if (!Array.isArray(idle)) {
       sprite.texture = idle;

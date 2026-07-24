@@ -12,8 +12,8 @@ export const manipulatorSchema: Field[] = [];
 
 // Визуальная пауза «захвата» — без неё handler резолвится мгновенно, и фаза
 // грэба (первые 8 кадров man.gif, machines.ts:triggerManipulatorGrab) не успевает
-// доиграть до поворота на выкладку. 8 кадров × animationSpeed 0.1 (~6 кадров/с) ≈ 1.35с.
-const GRAB_MS = 1350;
+// доиграть до поворота на выкладку. 8 кадров × animationSpeed 0.4 (~24 кадра/с) ≈ 0.35с.
+const GRAB_MS = 350;
 
 export const manipulatorHandler: Handler = async (ctx: NodeCtx) => {
   await new Promise((resolve) => setTimeout(resolve, GRAB_MS));
