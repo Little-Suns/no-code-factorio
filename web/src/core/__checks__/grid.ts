@@ -145,4 +145,28 @@ assert(beltTiles[0].x === 5 && beltTiles[0].y === 10, 'belt at (5,10) should occ
 
 console.log('✓ footprint boundaries OK');
 
+// manipulator: 1×1, единственный вход (BACK) + единственный выход (FRONT), меняется с dir
+console.log('Testing manipulator ports (1×1)...');
+const manipDir0: Entity = { id: 'man0', kind: 'manipulator', pos: { x: 10, y: 10 }, dir: 0, config: {} };
+assert(footprintTiles(manipDir0).length === 1, 'manipulator footprint должен быть 1 тайл');
+
+const manipOutDir0 = outPorts(manipDir0);
+assert(manipOutDir0.length === 1, `manipulator dir=0 должен иметь 1 выход, получили ${manipOutDir0.length}`);
+assert(
+  manipOutDir0[0].tile.x === 10 && manipOutDir0[0].tile.y === 9,
+  `manipulator dir=0 выход должен быть на (10,9), получили (${manipOutDir0[0].tile.x},${manipOutDir0[0].tile.y})`
+);
+assert(inTiles(manipDir0).has('10,10'), 'manipulator dir=0 должен принимать вход на своём тайле');
+
+// dir=1 (восток) — выход должен повернуться на восток от той же позиции
+const manipDir1: Entity = { id: 'man1', kind: 'manipulator', pos: { x: 10, y: 10 }, dir: 1, config: {} };
+const manipOutDir1 = outPorts(manipDir1);
+assert(manipOutDir1.length === 1, `manipulator dir=1 должен иметь 1 выход, получили ${manipOutDir1.length}`);
+assert(
+  manipOutDir1[0].tile.x === 11 && manipOutDir1[0].tile.y === 10,
+  `manipulator dir=1 выход должен быть на (11,10), получили (${manipOutDir1[0].tile.x},${manipOutDir1[0].tile.y})`
+);
+
+console.log('✓ manipulator ports OK');
+
 console.log('grid checks OK');

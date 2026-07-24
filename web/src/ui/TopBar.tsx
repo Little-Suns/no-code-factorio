@@ -15,6 +15,9 @@ export function TopBar() {
   const setBlueprintPanelOpen = useStore((state) => state.setBlueprintPanelOpen);
   const resultPanelOpen = useStore((state) => state.resultPanelOpen);
   const setResultPanelOpen = useStore((state) => state.setResultPanelOpen);
+  const logsPanelOpen = useStore((state) => state.logsPanelOpen);
+  const setLogsPanelOpen = useStore((state) => state.setLogsPanelOpen);
+  const logsUnread = useStore((state) => state.logsUnread);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const entityCount = Object.keys(entities).length;
@@ -145,6 +148,13 @@ export function TopBar() {
       </div>
 
       <div className="top-bar-right">
+        <button
+          className={`icon-button ${logsPanelOpen ? 'active' : ''} ${logsUnread ? 'unread' : ''}`}
+          onClick={() => setLogsPanelOpen(!logsPanelOpen)}
+          title="Показать/скрыть логи"
+        >
+          ⚠ Логи
+        </button>
         <button
           className={`icon-button ${blueprintPanelOpen ? 'active' : ''}`}
           onClick={() => setBlueprintPanelOpen(!blueprintPanelOpen)}

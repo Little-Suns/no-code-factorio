@@ -63,6 +63,7 @@ function getSize(kind: MachineKind): { w: number; h: number } {
   switch (kind) {
     case 'belt':
     case 'chest':
+    case 'manipulator':
       return { w: 1, h: 1 };
     case 'miner':
     case 'furnace':

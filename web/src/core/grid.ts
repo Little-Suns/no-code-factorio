@@ -5,6 +5,7 @@ function getSize(kind: MachineKind): { w: number; h: number } {
   switch (kind) {
     case 'belt':
     case 'chest':
+    case 'manipulator':
       return { w: 1, h: 1 };
     case 'miner':
     case 'furnace':
@@ -159,6 +160,15 @@ export function outPorts(entity: Entity): { tile: Vec; branch: Branch }[] {
       });
       break;
 
+    case 'manipulator':
+      // FRONT (единственный выход, 1×1) — передаёт предмет со входа (BACK) без изменений
+      const manipulatorOffset = rotOffset(0, -1, baseSize.w, baseSize.h, entity.dir);
+      ports.push({
+        tile: { x: entity.pos.x + manipulatorOffset.x, y: entity.pos.y + manipulatorOffset.y },
+        branch: 'out',
+      });
+      break;
+
     // silo, telegram, webhook, accumulator — нет выходов
   }
 
@@ -257,6 +267,12 @@ export function inTiles(entity: Entity): Set<string> {
     case 'webhook':
       // BACK оба тайла
       inputDirs = [{ side: 'back', localTiles: [[0, baseSize.h - 1], [1, baseSize.h - 1]] }];
+      break;
+
+    case 'manipulator':
+      // BACK (1×1, как chest — при единственном тайле footprint сторона номинальна:
+      // вход физически принимается с любого соседнего тайла, наружу отдаёт только FRONT)
+      inputDirs = [{ side: 'back', localTiles: [[0, 0]] }];
       break;
   }
 

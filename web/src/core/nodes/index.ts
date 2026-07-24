@@ -41,6 +41,7 @@ import { furnaceHandler, furnaceSchema } from './furnace';
 import { chestHandler, chestSchema } from './chest';
 import { labHandler, labSchema } from './lab';
 import { webhookHandler, webhookSchema } from './webhook';
+import { manipulatorHandler, manipulatorSchema } from './manipulator';
 
 /**
  * Реестр всех станков. Belt не включен (у него нет handler и schema).
@@ -132,6 +133,15 @@ export const NODE_DEFS: Record<MachineKind, NodeDef> = {
     size: { w: 2, h: 2 },
     schema: webhookSchema,
     handler: webhookHandler,
+  },
+
+  // Усиление: 1×1 передаточный узел (лента↔станок там, где порты не примыкают впритык)
+  manipulator: {
+    kind: 'manipulator',
+    title: 'Манипулятор',
+    size: { w: 1, h: 1 },
+    schema: manipulatorSchema,
+    handler: manipulatorHandler,
   },
 
   // Усиление (E1): энергия

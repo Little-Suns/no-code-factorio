@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 // @ts-expect-error: Node.js built-in modules used in check runner (tsx)
 import { dirname, join } from 'path';
 import { buildGraph } from '../graph';
-import type { Entity, MachineKind } from '../types';
+import type { Entity, MachineKind, Edge } from '../types';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -13,7 +13,7 @@ const __dirname = dirname(__filename);
 // Список допустимых типов машин
 const VALID_KINDS: Set<MachineKind> = new Set([
   'belt', 'miner', 'assembler', 'splitter', 'mixer', 'silo', 'telegram',
-  'furnace', 'chest', 'lab', 'accumulator'
+  'furnace', 'chest', 'lab', 'accumulator', 'webhook', 'manipulator',
 ]);
 
 // Список допустимых направлений
@@ -76,7 +76,7 @@ export function checkDemo() {
   console.log(`✓ All ${entities.length} entities are valid`);
 
   // Извлечь граф
-  let edges;
+  let edges: Edge[];
   try {
     edges = buildGraph(entityMap);
   } catch (error) {
@@ -93,7 +93,9 @@ export function checkDemo() {
   }
   console.log(`✓ Found ${connectedEdges.length} connected edges`);
 
-  // Найти цепочку miner → assembler → silo
+  // Найти цепочку miner → assembler → silo. Манипулятор обязателен для любой передачи
+  // станок↔станок (docs/03), поэтому каждый «хоп» здесь на деле miner→manipulator→assembler
+  // и assembler→manipulator→silo — используем BFS по edges, не завязываясь на число хопов.
   const miners = Object.values(entityMap).filter(e => e.kind === 'miner');
   const assemblers = Object.values(entityMap).filter(e => e.kind === 'assembler');
   const silos = Object.values(entityMap).filter(e => e.kind === 'silo');
@@ -102,54 +104,39 @@ export function checkDemo() {
   if (assemblers.length === 0) throw new Error('No assemblers in demo.json');
   if (silos.length === 0) throw new Error('No silos in demo.json');
 
-  // Проверить, что есть edge: miner → X и X → silo, где X может быть assembler
-  let chainFound = false;
-  for (const miner of miners) {
-    const minerEdges = edges.filter(e => e.from === miner.id && e.to !== null);
-    for (const minerEdge of minerEdges) {
-      // minerEdge.to — узел после шахты
-      if (minerEdge.to === null) continue;
-      const downstreamNode = entityMap[minerEdge.to];
-      if (!downstreamNode) continue;
-
-      // Проверить есть ли path к silo через этот узел
-      const sloEdges = edges.filter(e => e.to !== null);
-      for (const sloEdge of sloEdges) {
-        if (sloEdge.to === null) continue;
-        const targetNode = entityMap[sloEdge.to];
-        if (targetNode && targetNode.kind === 'silo') {
-          // Проверить есть ли edge из downstreamNode в silo
-          const pathEdges = edges.filter(e => e.from === minerEdge.to && e.to === sloEdge.to);
-          if (pathEdges.length > 0) {
-            chainFound = true;
-            console.log(`✓ Found chain: ${miner.id} → ${minerEdge.to} → ${sloEdge.to}`);
-            break;
-          }
-        }
+  // BFS: достижим ли узел kind=targetKind от startId по цепочке edges (любая длина)
+  function reachesKind(startId: string, targetKind: MachineKind): string | null {
+    const visited = new Set<string>([startId]);
+    const queue: string[] = [startId];
+    while (queue.length > 0) {
+      const cur = queue.shift()!;
+      for (const edge of edges) {
+        if (edge.from !== cur || edge.to === null || visited.has(edge.to)) continue;
+        const node = entityMap[edge.to];
+        if (!node) continue;
+        if (node.kind === targetKind) return edge.to;
+        visited.add(edge.to);
+        queue.push(edge.to);
       }
-      if (chainFound) break;
     }
-    if (chainFound) break;
+    return null;
+  }
+
+  let chainFound: { miner: string; assembler: string; silo: string } | null = null;
+  for (const miner of miners) {
+    const reachedAssembler = reachesKind(miner.id, 'assembler');
+    if (!reachedAssembler) continue;
+    const reachedSilo = reachesKind(reachedAssembler, 'silo');
+    if (reachedSilo) {
+      chainFound = { miner: miner.id, assembler: reachedAssembler, silo: reachedSilo };
+      break;
+    }
   }
 
   if (!chainFound) {
-    // Более простая проверка: есть ли хотя бы miner → assembler и assembler → silo
-    const minerToAssembler = edges.some(e => {
-      const from = entityMap[e.from];
-      const to = entityMap[e.to ?? ''];
-      return from?.kind === 'miner' && to?.kind === 'assembler';
-    });
-    const assemblerToSilo = edges.some(e => {
-      const from = entityMap[e.from];
-      const to = entityMap[e.to ?? ''];
-      return from?.kind === 'assembler' && to?.kind === 'silo';
-    });
-    if (!minerToAssembler || !assemblerToSilo) {
-      throw new Error(
-        `Missing chain: minerToAssembler=${minerToAssembler}, assemblerToSilo=${assemblerToSilo}`
-      );
-    }
+    throw new Error('Missing chain: no miner →(…manipulator…)→ assembler →(…manipulator…)→ silo');
   }
+  console.log(`✓ Found chain: ${chainFound.miner} → ${chainFound.assembler} → ${chainFound.silo}`);
 
   console.log('✓ Demo.json validation passed');
 }

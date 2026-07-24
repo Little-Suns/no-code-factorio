@@ -12,7 +12,7 @@ export interface Store {
   selectedEntityId: string | null;
   nodeStatus: Record<string, { status: NodeStatus; error?: string; lastIn?: unknown; lastOut?: unknown }>;
   results: Record<string, { at: number; data: unknown }[]>;
-  toasts: { id: string; text: string }[];
+  toasts: { id: string; text: string; at: number }[];
   energy: { charge: number; capacity: number } | null; // E1: null — энергослой выключен (нет аккумулятора)
   // E4: чертежи. pendingSelection — эфемерно (не персистится), ждёт имени в UI;
   // stampBlueprintId — какой чертёж «на кисти» для постановки, взаимоисключающе с selectedTool.
@@ -21,6 +21,8 @@ export interface Store {
   stampBlueprintId: string | null;
   blueprintPanelOpen: boolean; // видимость списка чертежей — переключается клавишей B
   resultPanelOpen: boolean; // видимость дока результатов — переключается кнопкой в TopBar
+  logsPanelOpen: boolean; // видимость панели логов — переключается кнопкой в TopBar
+  logsUnread: boolean; // новый лог пришёл, пока панель закрыта — «загорается» кнопка в TopBar
   // actions
   place: (entity: Entity) => boolean;
   remove: (entityId: string) => void;
@@ -44,6 +46,8 @@ export interface Store {
   setPendingSelection: (entities: Entity[] | null) => void;
   setBlueprintPanelOpen: (open: boolean) => void;
   setResultPanelOpen: (open: boolean) => void;
+  setLogsPanelOpen: (open: boolean) => void;
+  clearLogs: () => void;
   loadBlueprints: (blueprints: Blueprint[]) => void;
 }
 
@@ -61,13 +65,13 @@ export const useStore = create<Store>((set, get) => ({
   stampBlueprintId: null,
   blueprintPanelOpen: false,
   resultPanelOpen: false,
+  logsPanelOpen: false,
+  logsUnread: false,
 
   place: (entity: Entity) => {
     const state = get();
     if (state.running) {
-      set((s) => ({
-        toasts: [...s.toasts, { id: crypto.randomUUID().slice(0, 8), text: 'Останови фабрику' }],
-      }));
+      get().toast('Останови фабрику');
       return false;
     }
     if (!canPlace(state.entities, entity)) {
@@ -97,9 +101,7 @@ export const useStore = create<Store>((set, get) => ({
   remove: (entityId: string) => {
     const state = get();
     if (state.running) {
-      set((s) => ({
-        toasts: [...s.toasts, { id: crypto.randomUUID().slice(0, 8), text: 'Останови фабрику' }],
-      }));
+      get().toast('Останови фабрику');
       return;
     }
     set((s) => {
@@ -117,9 +119,7 @@ export const useStore = create<Store>((set, get) => ({
   removeMany: (entityIds: string[]) => {
     const state = get();
     if (state.running) {
-      set((s) => ({
-        toasts: [...s.toasts, { id: crypto.randomUUID().slice(0, 8), text: 'Останови фабрику' }],
-      }));
+      get().toast('Останови фабрику');
       return;
     }
     const idSet = new Set(entityIds);
@@ -204,7 +204,8 @@ export const useStore = create<Store>((set, get) => ({
 
   toast: (text: string) => {
     set((s) => ({
-      toasts: [...s.toasts, { id: crypto.randomUUID().slice(0, 8), text }],
+      toasts: [...s.toasts, { id: crypto.randomUUID().slice(0, 8), text, at: Date.now() }].slice(-50),
+      logsUnread: !s.logsPanelOpen, // «загорается» кнопка в TopBar, пока панель закрыта
     }));
   },
 
@@ -233,9 +234,7 @@ export const useStore = create<Store>((set, get) => ({
   placeMany: (entities: Entity[]) => {
     const state = get();
     if (state.running) {
-      set((s) => ({
-        toasts: [...s.toasts, { id: crypto.randomUUID().slice(0, 8), text: 'Останови фабрику' }],
-      }));
+      get().toast('Останови фабрику');
       return false;
     }
     if (!canPlaceBlueprint(state.entities, entities)) {
@@ -275,6 +274,15 @@ export const useStore = create<Store>((set, get) => ({
 
   setResultPanelOpen: (open: boolean) => {
     set({ resultPanelOpen: open });
+  },
+
+  setLogsPanelOpen: (open: boolean) => {
+    // Открыли — считаем всё прочитанным, гасим индикатор
+    set({ logsPanelOpen: open, logsUnread: open ? false : get().logsUnread });
+  },
+
+  clearLogs: () => {
+    set({ toasts: [] });
   },
 
   loadBlueprints: (blueprints: Blueprint[]) => {
