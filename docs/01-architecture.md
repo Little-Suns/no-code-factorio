@@ -143,7 +143,7 @@ interface Store {
 
 ## Персистентность
 
-- Автосейв `entities` в `localStorage` под ключом `ncf.world.v1` (debounce 500 мс), восстановление при старте. Чертежи (E4) — ключ `ncf.blueprints.v1`.
+- Автосейв `entities` в `localStorage` под ключом `ncf.world.v1` (debounce 500 мс), восстановление при старте. Чертежи (E4, реализовано) — отдельный ключ `ncf.blueprints.v1`, формат `Blueprint[]` где `Blueprint = { id, name, entities: Entity[] }` (`entities` — координаты относительно bounding box, не мировые; см. `core/blueprint.ts`).
 - Export/Import JSON и Load demo (`web/public/demo.json`). Формат: `{ version: 1, entities: Entity[] }`.
 
 ## Задачи и acceptance criteria

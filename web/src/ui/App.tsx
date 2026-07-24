@@ -11,6 +11,7 @@ import { Hotbar } from './Hotbar';
 import { TopBar } from './TopBar';
 import { ConfigPanel } from './ConfigPanel';
 import { ResultPanel } from './ResultPanel';
+import { BlueprintPanel } from './BlueprintPanel';
 import { Toasts } from './Toasts';
 import './App.css';
 
@@ -67,6 +68,7 @@ export function App() {
         <TopBar />
         <ConfigPanel />
         <ResultPanel />
+        <BlueprintPanel />
         <Hotbar />
         <Toasts />
       </div>

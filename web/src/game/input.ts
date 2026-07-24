@@ -1,9 +1,10 @@
-import { Sprite, Point } from 'pixi.js';
+import { Sprite, Point, Graphics } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { TILE } from './app';
 import { getTexture } from './assets';
 import { useStore } from '../state/store';
 import { footprintTiles, canPlace } from '../core/grid';
+import { instantiateBlueprint, canPlaceBlueprint } from '../core/blueprint';
 import { rasterizeLine } from './rasterize';
 import type { Dir, Entity, MachineKind, Vec } from '../core/types';
 import type { GameLayers } from './app';
@@ -12,6 +13,8 @@ const GHOST_ALPHA = 0.5;
 const TINT_OK = 0x00ff00;
 const TINT_BAD = 0xff0000;
 const PAN_THRESHOLD = 6; // px: ПКМ с движением больше — это пан, не снос
+const DRAG_THRESHOLD = 6; // px: ЛКМ с движением больше — это рамка выделения, не клик по станку
+const ENTITY_HL_COLOR = 0x5ad1ff;
 
 // Размеры при dir=0 — для пивота ghost (дублирует core/grid, там getSize приватный)
 const SIZES: Record<MachineKind, [number, number]> = {
@@ -26,7 +29,16 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
   let ghostDir: Dir = 0;
   let lastMouse = { x: 0, y: 0 };
   let dragStart: Vec | null = null;
+  let leftDownPx: { x: number; y: number } | null = null; // для отличия клика от драга рамки (px, не тайлы)
   let rightDown: { x: number; y: number } | null = null;
+
+  // E4: выделение рамкой — просто зажим+растягивание ЛКМ без инструмента/чертежа на кисти
+  let selectionBox: Graphics | null = null;
+  let entityHighlight: Graphics | null = null;
+
+  // E4: групповой ghost при постановке чертежа (store.stampBlueprintId)
+  let groupGhostSprites: Sprite[] = [];
+  let groupGhostBlueprintId: string | null = null;
 
   const toTile = (clientX: number, clientY: number): Vec => {
     const world = viewport.toWorld(new Point(clientX, clientY));
@@ -41,10 +53,127 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
     return null;
   };
 
+  // E4: прямоугольник выделения — рисуется только пока dragStart есть (кнопка зажата)
+  const updateSelectionBox = (start: Vec, end: Vec) => {
+    if (!selectionBox) {
+      selectionBox = new Graphics();
+      layers.ghost.addChild(selectionBox);
+    }
+    const minX = Math.min(start.x, end.x);
+    const minY = Math.min(start.y, end.y);
+    const w = Math.abs(end.x - start.x) + 1;
+    const h = Math.abs(end.y - start.y) + 1;
+    selectionBox.clear();
+    selectionBox.rect(minX * TILE, minY * TILE, w * TILE, h * TILE);
+    selectionBox.fill({ color: 0xd9a441, alpha: 0.12 });
+    selectionBox.stroke({ width: 2, color: 0xd9a441, alpha: 0.9 });
+  };
+
+  const clearSelectionBox = () => {
+    selectionBox?.destroy();
+    selectionBox = null;
+  };
+
+  // E4: подсветка станков, попавших в рамку — иначе непонятно, что именно захватилось.
+  // Один Graphics на всю подсветку, перерисовывается целиком (как selectionBox).
+  const updateEntityHighlight = (entities: Entity[]) => {
+    if (entities.length === 0) {
+      clearEntityHighlight();
+      return;
+    }
+    if (!entityHighlight) {
+      entityHighlight = new Graphics();
+      layers.ghost.addChild(entityHighlight);
+    }
+    entityHighlight.clear();
+    for (const e of entities) {
+      const tiles = footprintTiles(e);
+      const minX = Math.min(...tiles.map((t) => t.x));
+      const maxX = Math.max(...tiles.map((t) => t.x));
+      const minY = Math.min(...tiles.map((t) => t.y));
+      const maxY = Math.max(...tiles.map((t) => t.y));
+      entityHighlight.rect(minX * TILE, minY * TILE, (maxX - minX + 1) * TILE, (maxY - minY + 1) * TILE);
+      entityHighlight.fill({ color: ENTITY_HL_COLOR, alpha: 0.22 });
+      entityHighlight.stroke({ width: 2, color: ENTITY_HL_COLOR, alpha: 0.95 });
+    }
+  };
+
+  const clearEntityHighlight = () => {
+    entityHighlight?.destroy();
+    entityHighlight = null;
+  };
+
+  // Сущность попадает в чертёж, только если весь её footprint внутри рамки —
+  // иначе задетый краем станок сохранился бы «обрезанным» без части входов/выходов.
+  const collectSelection = (a: Vec, b: Vec): Entity[] => {
+    const minX = Math.min(a.x, b.x);
+    const maxX = Math.max(a.x, b.x);
+    const minY = Math.min(a.y, b.y);
+    const maxY = Math.max(a.y, b.y);
+    const { entities } = useStore.getState();
+    return Object.values(entities).filter((e) =>
+      footprintTiles(e).every((t) => t.x >= minX && t.x <= maxX && t.y >= minY && t.y <= maxY)
+    );
+  };
+
+  const clearGroupGhost = () => {
+    for (const s of groupGhostSprites) s.destroy();
+    groupGhostSprites = [];
+    groupGhostBlueprintId = null;
+  };
+
+  // Групповой ghost чертежа: набор спрайтов вместо одного, тинт общий по canPlaceBlueprint.
+  // Спрайты пересоздаются только при смене чертежа — на каждый pointermove просто
+  // переставляем позиции (как и одиночный ghost).
+  const updateGroupGhost = (blueprintId: string) => {
+    const store = useStore.getState();
+    const bp = store.blueprints.find((b) => b.id === blueprintId);
+    if (!bp) {
+      clearGroupGhost();
+      return;
+    }
+
+    if (groupGhostBlueprintId !== blueprintId) {
+      clearGroupGhost();
+      for (const e of bp.entities) {
+        const texture = getTexture(e.kind, 'idle');
+        const sprite = new Sprite(Array.isArray(texture) ? texture[0] : texture);
+        sprite.alpha = GHOST_ALPHA;
+        layers.ghost.addChild(sprite);
+        groupGhostSprites.push(sprite);
+      }
+      groupGhostBlueprintId = blueprintId;
+    }
+
+    const origin = toTile(lastMouse.x, lastMouse.y);
+    const instantiated = instantiateBlueprint(bp, origin);
+    const ok = canPlaceBlueprint(store.entities, instantiated);
+
+    instantiated.forEach((e, i) => {
+      const sprite = groupGhostSprites[i];
+      if (!sprite) return;
+      const [w, h] = SIZES[e.kind];
+      const rw = e.dir % 2 === 1 ? h : w;
+      const rh = e.dir % 2 === 1 ? w : h;
+      sprite.visible = true;
+      sprite.pivot.set((w * TILE) / 2, (h * TILE) / 2);
+      sprite.position.set(e.pos.x * TILE + (rw * TILE) / 2, e.pos.y * TILE + (rh * TILE) / 2);
+      sprite.angle = e.dir * 90;
+      sprite.tint = ok ? TINT_OK : TINT_BAD;
+    });
+  };
+
   // Ghost пересоздаётся при смене инструмента, позиция/тинт — на каждый вызов
   const updateGhost = () => {
     const store = useStore.getState();
     const tool = store.selectedTool;
+
+    if (store.stampBlueprintId) {
+      if (ghostSprite) ghostSprite.visible = false;
+      updateGroupGhost(store.stampBlueprintId);
+      return;
+    }
+    clearGroupGhost();
 
     if (!tool) {
       if (ghostSprite) ghostSprite.visible = false;
@@ -86,12 +215,24 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
 
   canvas.addEventListener('pointermove', (e: PointerEvent) => {
     lastMouse = { x: e.clientX, y: e.clientY };
-    updateGhost();
+    const store = useStore.getState();
+    // Рамка выделения — просто зажатая ЛКМ без инструмента/чертежа на кисти, без отдельного режима
+    if (dragStart && !store.selectedTool && !store.stampBlueprintId) {
+      const dragEnd = toTile(e.clientX, e.clientY);
+      updateSelectionBox(dragStart, dragEnd);
+      updateEntityHighlight(collectSelection(dragStart, dragEnd));
+    } else {
+      updateGhost();
+    }
   });
 
   canvas.addEventListener('pointerdown', (e: PointerEvent) => {
     if (e.button === 0) {
       dragStart = toTile(e.clientX, e.clientY);
+      leftDownPx = { x: e.clientX, y: e.clientY };
+      const store = useStore.getState();
+      // Новый драг рамкой — сбросить подсветку прошлого выделения, если она ещё висела
+      if (!store.selectedTool && !store.stampBlueprintId) clearEntityHighlight();
     } else if (e.button === 2) {
       rightDown = { x: e.clientX, y: e.clientY };
     }
@@ -102,6 +243,49 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
 
     if (e.button === 0 && dragStart) {
       const dragEnd = toTile(e.clientX, e.clientY);
+
+      if (!store.selectedTool && !store.stampBlueprintId) {
+        // Отличаем клик от драга рамки по пиксельному смещению (как ПКМ снос/пан ниже) —
+        // иначе одиночный клик по 1x1 станку (belt/chest) захватывался бы рамкой из одного тайла.
+        const movedPx = leftDownPx ? Math.hypot(e.clientX - leftDownPx.x, e.clientY - leftDownPx.y) : 0;
+        clearSelectionBox();
+
+        if (movedPx >= DRAG_THRESHOLD) {
+          const selected = collectSelection(dragStart, dragEnd);
+          if (selected.length === 0) {
+            store.toast('Пустая область — нечего сохранять в чертёж');
+            clearEntityHighlight();
+          } else {
+            store.setPendingSelection(selected);
+            updateEntityHighlight(selected); // подсветка остаётся, пока открыта форма сохранения
+          }
+        } else {
+          clearEntityHighlight();
+          store.select(findEntityAtTile(dragEnd)); // клик без движения — выделение станка под курсором
+        }
+
+        dragStart = null;
+        leftDownPx = null;
+        updateGhost();
+        return;
+      }
+
+      if (store.stampBlueprintId) {
+        // Постановка чертежа — origin, как и у обычных станков, берём по началу
+        // клика (dragStart), не по release: клик без драга даёт ожидаемый результат,
+        // а поведение симметрично store.place() ниже.
+        const bp = store.blueprints.find((b) => b.id === store.stampBlueprintId);
+        if (bp) {
+          const instantiated = instantiateBlueprint(bp, dragStart);
+          store.placeMany(instantiated);
+          // stampBlueprintId намеренно не сбрасываем — как и selectedTool у обычных
+          // станков, чертёж остаётся «на кисти» для повторной постановки подряд.
+        }
+        dragStart = null;
+        leftDownPx = null;
+        updateGhost();
+        return;
+      }
 
       if (store.selectedTool === 'belt') {
         const steps = rasterizeLine(dragStart, dragEnd);
@@ -119,12 +303,10 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
           dir: ghostDir,
           config: {},
         });
-      } else {
-        // Без инструмента — выделение станка под курсором
-        store.select(findEntityAtTile(dragEnd));
       }
 
       dragStart = null;
+      leftDownPx = null;
       updateGhost(); // перевалидировать тинт после изменения мира
     } else if (e.button === 2 && rightDown) {
       // Снос ПКМ только без движения (движение = пан вьюпорта)
@@ -144,8 +326,12 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
     const store = useStore.getState();
 
     if (e.key === 'Escape') {
-      store.setTool(null);
-      store.select(null);
+      store.setTool(null); // сбрасывает selectedTool + stampBlueprintId + selectedEntityId
+      store.setPendingSelection(null);
+      dragStart = null;
+      leftDownPx = null;
+      clearSelectionBox();
+      clearEntityHighlight();
       updateGhost();
     } else if (e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К') {
       if (store.selectedTool) {
@@ -155,10 +341,28 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
         store.rotate(store.selectedEntityId);
       }
     } else if (e.key === 'Delete' || e.key === 'Backspace') {
-      if (store.selectedEntityId) {
+      if (store.pendingSelection && store.pendingSelection.length > 0) {
+        // Рамка выделения на кисти (форма сохранения чертежа открыта) — снести всё разом
+        store.removeMany(store.pendingSelection.map((ent) => ent.id));
+        store.setPendingSelection(null);
+        clearEntityHighlight();
+      } else if (store.selectedEntityId) {
         store.remove(store.selectedEntityId);
         store.select(null);
       }
+    } else if (e.key === 'b' || e.key === 'B' || e.key === 'и' || e.key === 'И') {
+      // Панель чертежей — переключатель по B (независимо от рамки выделения, которая тоже на ЛКМ)
+      store.setBlueprintPanelOpen(!store.blueprintPanelOpen);
+    }
+  });
+
+  // Отмена сохранения/закрытие формы (BlueprintPanel) не проходит через события canvas —
+  // подсветку снимаем по изменению pendingSelection в сторе.
+  let prevPendingSelection = useStore.getState().pendingSelection;
+  useStore.subscribe((state) => {
+    if (state.pendingSelection !== prevPendingSelection) {
+      prevPendingSelection = state.pendingSelection;
+      if (!state.pendingSelection) clearEntityHighlight();
     }
   });
 }

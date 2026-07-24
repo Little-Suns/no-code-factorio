@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import type { Entity, NodeStatus, MachineKind } from '../core/types';
 import { canPlace } from '../core/grid';
 import { NODE_DEFS } from '../core/nodes';
+import type { Blueprint } from '../core/blueprint';
+import { canPlaceBlueprint } from '../core/blueprint';
 
 export interface Store {
   entities: Record<string, Entity>;
@@ -12,9 +14,16 @@ export interface Store {
   results: Record<string, { at: number; data: unknown }[]>;
   toasts: { id: string; text: string }[];
   energy: { charge: number; capacity: number } | null; // E1: null — энергослой выключен (нет аккумулятора)
+  // E4: чертежи. pendingSelection — эфемерно (не персистится), ждёт имени в UI;
+  // stampBlueprintId — какой чертёж «на кисти» для постановки, взаимоисключающе с selectedTool.
+  blueprints: Blueprint[];
+  pendingSelection: Entity[] | null;
+  stampBlueprintId: string | null;
+  blueprintPanelOpen: boolean; // видимость списка чертежей — переключается клавишей B
   // actions
   place: (entity: Entity) => boolean;
   remove: (entityId: string) => void;
+  removeMany: (entityIds: string[]) => void;
   rotate: (entityId: string) => void;
   setConfig: (entityId: string, config: Record<string, unknown>) => void;
   select: (entityId: string | null) => void;
@@ -26,6 +35,13 @@ export interface Store {
   toast: (text: string) => void;
   loadWorld: (entities: Entity[]) => void;
   setEnergy: (charge: number, capacity: number) => void;
+  placeMany: (entities: Entity[]) => boolean;
+  addBlueprint: (blueprint: Blueprint) => void;
+  removeBlueprint: (id: string) => void;
+  setStampBlueprint: (id: string | null) => void;
+  setPendingSelection: (entities: Entity[] | null) => void;
+  setBlueprintPanelOpen: (open: boolean) => void;
+  loadBlueprints: (blueprints: Blueprint[]) => void;
 }
 
 export const useStore = create<Store>((set, get) => ({
@@ -37,6 +53,10 @@ export const useStore = create<Store>((set, get) => ({
   results: {},
   toasts: [],
   energy: null,
+  blueprints: [],
+  pendingSelection: null,
+  stampBlueprintId: null,
+  blueprintPanelOpen: false,
 
   place: (entity: Entity) => {
     const state = get();
@@ -88,6 +108,27 @@ export const useStore = create<Store>((set, get) => ({
     });
   },
 
+  // E4: массовое удаление станков, захваченных рамкой выделения (Del) — одна проверка running
+  // и один set на всю группу, а не N тостов от remove() при работающей фабрике.
+  removeMany: (entityIds: string[]) => {
+    const state = get();
+    if (state.running) {
+      set((s) => ({
+        toasts: [...s.toasts, { id: crypto.randomUUID().slice(0, 8), text: 'Останови фабрику' }],
+      }));
+      return;
+    }
+    const idSet = new Set(entityIds);
+    set((s) => {
+      const newEntities = { ...s.entities };
+      for (const id of idSet) delete newEntities[id];
+      return {
+        entities: newEntities,
+        selectedEntityId: s.selectedEntityId && idSet.has(s.selectedEntityId) ? null : s.selectedEntityId,
+      };
+    });
+  },
+
   rotate: (entityId: string) => {
     const state = get();
     const entity = state.entities[entityId];
@@ -121,6 +162,7 @@ export const useStore = create<Store>((set, get) => ({
     set((s) => ({
       selectedTool: s.selectedTool === tool ? null : tool,
       selectedEntityId: null,
+      stampBlueprintId: null, // выбор обычного инструмента отменяет постановку чертежа
     }));
   },
 
@@ -172,5 +214,58 @@ export const useStore = create<Store>((set, get) => ({
 
   setEnergy: (charge: number, capacity: number) => {
     set({ energy: { charge, capacity } });
+  },
+
+  /**
+   * Атомарная постановка группы (E4: постановка чертежа) — либо вся группа целиком,
+   * либо ничего; canPlaceBlueprint уже проверяет коллизии и внутри группы, и с миром.
+   * В отличие от place() конфиги не дозаполняются дефолтами — сущности чертежа
+   * уже полностью сконфигурированы (скопированы из момента сохранения).
+   */
+  placeMany: (entities: Entity[]) => {
+    const state = get();
+    if (state.running) {
+      set((s) => ({
+        toasts: [...s.toasts, { id: crypto.randomUUID().slice(0, 8), text: 'Останови фабрику' }],
+      }));
+      return false;
+    }
+    if (!canPlaceBlueprint(state.entities, entities)) {
+      return false;
+    }
+    set((s) => {
+      const newEntities = { ...s.entities };
+      for (const entity of entities) newEntities[entity.id] = entity;
+      return { entities: newEntities };
+    });
+    return true;
+  },
+
+  addBlueprint: (blueprint: Blueprint) => {
+    set((s) => ({ blueprints: [...s.blueprints, blueprint] }));
+  },
+
+  removeBlueprint: (id: string) => {
+    set((s) => ({
+      blueprints: s.blueprints.filter((b) => b.id !== id),
+      stampBlueprintId: s.stampBlueprintId === id ? null : s.stampBlueprintId,
+    }));
+  },
+
+  setStampBlueprint: (id: string | null) => {
+    set({ stampBlueprintId: id, selectedTool: null, selectedEntityId: null });
+  },
+
+  setPendingSelection: (entities: Entity[] | null) => {
+    // Рамкой захватили станки — открываем панель заодно, иначе форму сохранения не видно
+    set((s) => ({ pendingSelection: entities, blueprintPanelOpen: entities ? true : s.blueprintPanelOpen }));
+  },
+
+  setBlueprintPanelOpen: (open: boolean) => {
+    set({ blueprintPanelOpen: open });
+  },
+
+  loadBlueprints: (blueprints: Blueprint[]) => {
+    set({ blueprints });
   },
 }));

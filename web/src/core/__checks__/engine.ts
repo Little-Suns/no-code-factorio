@@ -898,6 +898,64 @@ async function testAssemblerMemorySnapshot() {
 }
 
 /**
+ * AC12 (фикс бага E1): cost > capacity — ждать нечего, recharge не поможет
+ * (заряжает только до capacity). Должна быть мгновенная ошибка станка,
+ * а не бесконечный ретрай «Нет питания».
+ */
+async function testEnergyCapacityInsufficient() {
+  const events: EngineEvent[] = [];
+
+  const entities: Record<string, Entity> = {
+    // capacity=50 заведомо меньше cost assembler-а даже на короткий текст (sizeHint/4+400 > 400)
+    acc1: { id: 'acc1', kind: 'accumulator', pos: { x: 0, y: 5 }, dir: 0, config: { capacity: 50 } },
+    miner1: { id: 'miner1', kind: 'miner', pos: { x: 0, y: 0 }, dir: 0, config: { mode: 'text', text: 'x' } },
+    assembler1: { id: 'assembler1', kind: 'assembler', pos: { x: 0, y: 2 }, dir: 0, config: { modules: [] } },
+  };
+
+  const edges: Edge[] = [
+    { id: 'e1:out:0', from: 'miner1', branch: 'out', to: 'assembler1', path: [{ x: 0, y: 1 }] },
+  ];
+
+  const handlers: Record<string, (ctx: NodeCtx) => Promise<HandlerResult>> = {
+    assembler: async (ctx) => ({ out: `echo:${ctx.data}` }),
+  };
+
+  const engine = new Engine(entities, edges, fakeTransport, (e) => events.push(e), {
+    llm: async () => 'unused',
+    handlers: handlers as any,
+  });
+
+  engine.start();
+  engine.triggerMiner('miner1');
+
+  // Без capacity-guard'а тут был бы бесконечный цикл 2с-ретраев; ждём заведомо
+  // меньше одного ретрая, чтобы убедиться, что ошибка пришла сразу, а не через retry-loop.
+  await new Promise((r) => setTimeout(r, 300));
+  engine.stop();
+
+  const noPowerRetries = events.filter(
+    (e) => e.t === 'node-status' && e.status === 'error' && e.error === 'Нет питания'
+  );
+  if (noPowerRetries.length > 0) {
+    throw new Error('AC12: недостаточная ёмкость не должна уходить в ретрай-цикл "Нет питания"');
+  }
+
+  const capacityErrors = events.filter(
+    (e) => e.t === 'node-status' && e.status === 'error' && e.error?.includes('ёмкости аккумулятора')
+  );
+  if (capacityErrors.length !== 1) {
+    throw new Error(`AC12: ожидалась ровно одна ошибка про ёмкость аккумулятора, получено ${capacityErrors.length}`);
+  }
+
+  const drops = events.filter((e) => e.t === 'packet-drop' && e.reason === 'error');
+  if (drops.length !== 1) {
+    throw new Error(`AC12: пакет должен дропнуться с reason:'error', drops=${drops.length}`);
+  }
+
+  console.log('✓ AC12: недобор ёмкости (не только заряда) — мгновенная ошибка, не вечный ретрай');
+}
+
+/**
  * Запуск всех проверок
  */
 (async () => {
@@ -913,8 +971,9 @@ async function testAssemblerMemorySnapshot() {
     await testChestBatch();
     await testEnergyLayer();
     await testAssemblerMemorySnapshot();
+    await testEnergyCapacityInsufficient();
 
-    console.log('\n✅ engine checks OK — все 11 AC пройдены');
+    console.log('\n✅ engine checks OK — все 12 AC пройдены');
   } catch (e) {
     console.error('\n❌ engine checks FAILED:', e);
     throw e;

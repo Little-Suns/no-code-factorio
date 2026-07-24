@@ -122,9 +122,21 @@ export class Engine {
    * Пакет держится в очереди узла (мьютекс уже держит caller, docs/04) — честный
    * видимый backpressure, «Нет питания» на лампе вместо тихого зависания.
    * Возвращает false, если stop() прервал ожидание.
+   *
+   * Если cost > capacity — ждать бессмысленно: rechargeEnergy() заряжает только
+   * до capacity, зарядить выше некуда. Без этой проверки станок висел бы в ретраях
+   * навечно (баг, найденный на дефолтной capacity=1000 и обычном тексте статьи —
+   * cost для assembler легко превышает 1000). Кидаем — попадёт в общий catch
+   * callHandler и обработается как любая другая ошибка хендлера (node-status error
+   * + packet-drop), ровно как furnace/lab.
    */
   private async awaitPower(node: Entity, packet: Packet): Promise<boolean> {
     const cost = this.getEnergyCost(node, packet);
+    if (cost > this.energy.capacity) {
+      throw new Error(
+        `Не хватает ёмкости аккумулятора: нужно ~${Math.round(cost)}, есть ${Math.round(this.energy.capacity)}`
+      );
+    }
     while (this.energy.charge < cost) {
       if (this.abortController.signal.aborted) return false;
       this.emit({ t: 'node-status', nodeId: node.id, status: 'error', error: 'Нет питания' });

@@ -8,5 +8,6 @@ import './tpl';
 import './engine';
 import './nodes';
 import './demo';
+import './blueprint';
 
 console.log('✓ Check runner ready');
