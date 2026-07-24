@@ -4,7 +4,10 @@
     {
       "id": "m1abcd01",
       "kind": "miner",
-      "pos": { "x": 0, "y": 5 },
+      "pos": {
+        "x": 0,
+        "y": 5
+      },
       "dir": 1,
       "config": {
         "mode": "text",
@@ -15,63 +18,90 @@
     {
       "id": "b1",
       "kind": "belt",
-      "pos": { "x": 2, "y": 5 },
+      "pos": {
+        "x": 2,
+        "y": 5
+      },
       "dir": 1,
       "config": {}
     },
     {
       "id": "b2",
       "kind": "belt",
-      "pos": { "x": 3, "y": 5 },
+      "pos": {
+        "x": 3,
+        "y": 5
+      },
       "dir": 1,
       "config": {}
     },
     {
       "id": "b3",
       "kind": "belt",
-      "pos": { "x": 4, "y": 5 },
+      "pos": {
+        "x": 4,
+        "y": 5
+      },
       "dir": 1,
       "config": {}
     },
     {
       "id": "b4",
       "kind": "manipulator",
-      "pos": { "x": 5, "y": 5 },
+      "pos": {
+        "x": 5,
+        "y": 5
+      },
       "dir": 1,
       "config": {}
     },
     {
       "id": "b5",
       "kind": "belt",
-      "pos": { "x": 2, "y": 6 },
+      "pos": {
+        "x": 2,
+        "y": 6
+      },
       "dir": 1,
       "config": {}
     },
     {
       "id": "b6",
       "kind": "belt",
-      "pos": { "x": 3, "y": 6 },
+      "pos": {
+        "x": 3,
+        "y": 6
+      },
       "dir": 1,
       "config": {}
     },
     {
       "id": "b7",
       "kind": "belt",
-      "pos": { "x": 4, "y": 6 },
+      "pos": {
+        "x": 4,
+        "y": 6
+      },
       "dir": 1,
       "config": {}
     },
     {
       "id": "b8",
       "kind": "manipulator",
-      "pos": { "x": 5, "y": 6 },
+      "pos": {
+        "x": 5,
+        "y": 6
+      },
       "dir": 1,
       "config": {}
     },
     {
       "id": "a1abcd02",
       "kind": "assembler",
-      "pos": { "x": 6, "y": 5 },
+      "pos": {
+        "x": 6,
+        "y": 5
+      },
       "dir": 1,
       "config": {
         "recipe": "summarizer"
@@ -80,42 +110,60 @@
     {
       "id": "b9",
       "kind": "belt",
-      "pos": { "x": 9, "y": 5 },
+      "pos": {
+        "x": 9,
+        "y": 5
+      },
       "dir": 1,
       "config": {}
     },
     {
       "id": "b10",
       "kind": "belt",
-      "pos": { "x": 10, "y": 5 },
+      "pos": {
+        "x": 10,
+        "y": 5
+      },
       "dir": 1,
       "config": {}
     },
     {
       "id": "b11",
       "kind": "belt",
-      "pos": { "x": 11, "y": 5 },
+      "pos": {
+        "x": 11,
+        "y": 5
+      },
       "dir": 1,
       "config": {}
     },
     {
       "id": "b12",
       "kind": "manipulator",
-      "pos": { "x": 12, "y": 5 },
+      "pos": {
+        "x": 12,
+        "y": 5
+      },
       "dir": 1,
       "config": {}
     },
     {
       "id": "s1abcd03",
       "kind": "silo",
-      "pos": { "x": 13, "y": 5 },
+      "pos": {
+        "x": 13,
+        "y": 5
+      },
       "dir": 1,
       "config": {}
     },
     {
       "id": "m2abcd04",
       "kind": "miner",
-      "pos": { "x": 0, "y": 10 },
+      "pos": {
+        "x": 0,
+        "y": 10
+      },
       "dir": 1,
       "config": {
         "mode": "text",
@@ -126,40 +174,65 @@
     {
       "id": "b13",
       "kind": "belt",
-      "pos": { "x": 2, "y": 10 },
+      "pos": {
+        "x": 2,
+        "y": 10
+      },
       "dir": 1,
       "config": {}
     },
     {
       "id": "b14",
       "kind": "belt",
-      "pos": { "x": 3, "y": 10 },
+      "pos": {
+        "x": 3,
+        "y": 10
+      },
       "dir": 1,
       "config": {}
     },
     {
       "id": "b15",
       "kind": "belt",
-      "pos": { "x": 4, "y": 10 },
+      "pos": {
+        "x": 4,
+        "y": 10
+      },
       "dir": 1,
       "config": {}
     },
     {
       "id": "b16",
       "kind": "manipulator",
-      "pos": { "x": 5, "y": 10 },
+      "pos": {
+        "x": 5,
+        "y": 10
+      },
       "dir": 1,
       "config": {}
     },
     {
       "id": "t1abcd05",
       "kind": "telegram",
-      "pos": { "x": 6, "y": 10 },
+      "pos": {
+        "x": 6,
+        "y": 10
+      },
       "dir": 1,
       "config": {
         "token": "",
         "chatId": ""
       }
+    },
+    {
+      "id": "bbridge",
+      "kind": "belt",
+      "pos": {
+        "x": 8,
+        "y": 5
+      },
+      "dir": 1,
+      "config": {}
     }
   ]
 }
