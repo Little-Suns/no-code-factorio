@@ -2,6 +2,7 @@ import { Sprite, Point, Graphics } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { TILE } from './app';
 import { getTexture } from './assets';
+import { MANIPULATOR_VISUAL_SCALE } from './machines';
 import { useStore } from '../state/store';
 import { footprintTiles, canPlace } from '../core/grid';
 import { instantiateBlueprint, canPlaceBlueprint } from '../core/blueprint';
@@ -160,6 +161,10 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
       sprite.pivot.set((w * TILE) / 2, (h * TILE) / 2);
       sprite.position.set(e.pos.x * TILE + (rw * TILE) / 2, e.pos.y * TILE + (rh * TILE) / 2);
       sprite.angle = e.dir * 90;
+      sprite.scale.set(
+        e.kind === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : 1,
+        e.kind === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : 1
+      );
       sprite.tint = ok ? TINT_OK : TINT_BAD;
     });
   };
@@ -200,6 +205,12 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
     ghostSprite.pivot.set((w * TILE) / 2, (h * TILE) / 2);
     ghostSprite.position.set(tile.x * TILE + (rw * TILE) / 2, tile.y * TILE + (rh * TILE) / 2);
     ghostSprite.angle = ghostDir * 90;
+    // manipulator: тот же увеличенный масштаб + дефолтное зеркало, что и у реально
+    // поставленного станка (machines.ts) — иначе ghost выглядит как старый мелкий спрайт
+    ghostSprite.scale.set(
+      tool === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : 1,
+      tool === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : 1
+    );
 
     const test: Entity = { id: 'ghost', kind: tool, pos: tile, dir: ghostDir, config: {} };
     // Лента поверх ленты — валидно (перезапись)
