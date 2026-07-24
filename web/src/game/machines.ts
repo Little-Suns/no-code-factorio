@@ -10,6 +10,7 @@ interface MachineSprite {
   sprite: Sprite | AnimatedSprite;
   statusLamp: Graphics;
   chargeBar?: Graphics; // только у accumulator (E1)
+  lastStatus?: NodeStatus; // для edge-detection перехода в/из 'working' (см. updateMachineStatus)
 }
 
 const machineSprites = new Map<string, MachineSprite>();
@@ -183,6 +184,15 @@ function updateMachineStatus(
     machineSprite.statusLamp.clear();
     machineSprite.statusLamp.circle(4, 4, 4);
     machineSprite.statusLamp.fill(STATUS_COLORS[status]);
+
+    // nodeStatus — общий объект на ВСЕ станки; store пересоздаёт его при событии
+    // у ЛЮБОГО узла (setStatus всегда делает новый объект), а эта функция вызывается
+    // на каждое такое изменение и проходит по ВСЕМ entries — включая те, чей статус
+    // не менялся. Без этой проверки чужой packet-consume/working/ok посреди фабрики
+    // раз за разом заново дёргал .play()/сброс кадра у уже работающего станка —
+    // анимация постоянно перезапускалась с нуля и не успевала доиграть до конца.
+    if (machineSprite.lastStatus === status) continue;
+    machineSprite.lastStatus = status;
 
     // Переключить спрайт на work-анимацию если working
     if (status === 'working') {
