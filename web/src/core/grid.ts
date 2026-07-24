@@ -10,7 +10,6 @@ function getSize(kind: MachineKind): { w: number; h: number } {
     case 'miner':
     case 'furnace':
     case 'accumulator':
-    case 'telegram':
     case 'webhook':
     case 'assembler':
       return { w: 2, h: 2 };
@@ -169,7 +168,7 @@ export function outPorts(entity: Entity): { tile: Vec; branch: Branch }[] {
       });
       break;
 
-    // silo, telegram, webhook, accumulator — нет выходов
+    // silo, webhook, accumulator — нет выходов
   }
 
   return ports;
@@ -263,7 +262,6 @@ export function inTiles(entity: Entity): Set<string> {
       inputDirs = [{ side: 'back', localTiles: siloBack }];
       break;
 
-    case 'telegram':
     case 'webhook':
       // BACK оба тайла
       inputDirs = [{ side: 'back', localTiles: [[0, baseSize.h - 1], [1, baseSize.h - 1]] }];

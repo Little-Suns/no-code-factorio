@@ -2,7 +2,10 @@
   "tileSize": 64,
   "sprites": {
     "belt": {
-      "size": [1, 1],
+      "size": [
+        1,
+        1
+      ],
       "work": {
         "file": "belt.png",
         "frames": 12,
@@ -10,7 +13,10 @@
       }
     },
     "miner": {
-      "size": [2, 2],
+      "size": [
+        2,
+        2
+      ],
       "idle": "miner_idle.png",
       "work": {
         "file": "miner_work.png",
@@ -19,7 +25,10 @@
       }
     },
     "assembler": {
-      "size": [3, 3],
+      "size": [
+        3,
+        3
+      ],
       "idle": "assembler_idle.png",
       "work": {
         "file": "assembler_work.png",
@@ -28,7 +37,10 @@
       }
     },
     "splitter": {
-      "size": [2, 1],
+      "size": [
+        2,
+        1
+      ],
       "work": {
         "file": "splitter_work.png",
         "frames": 16,
@@ -36,7 +48,10 @@
       }
     },
     "mixer": {
-      "size": [3, 3],
+      "size": [
+        3,
+        3
+      ],
       "idle": "mixer_idle.png",
       "work": {
         "file": "mixer_work.png",
@@ -45,7 +60,10 @@
       }
     },
     "silo": {
-      "size": [3, 3],
+      "size": [
+        3,
+        3
+      ],
       "idle": "silo_idle.png",
       "work": {
         "file": "silo_work.png",
@@ -53,17 +71,11 @@
         "fps": 8
       }
     },
-    "telegram": {
-      "size": [2, 2],
-      "idle": "telegram_idle.png",
-      "work": {
-        "file": "telegram_work.png",
-        "frames": 8,
-        "fps": 8
-      }
-    },
     "webhook": {
-      "size": [2, 2],
+      "size": [
+        2,
+        2
+      ],
       "idle": "webhook_idle.png",
       "work": {
         "file": "webhook_work.png",
@@ -72,7 +84,10 @@
       }
     },
     "furnace": {
-      "size": [2, 2],
+      "size": [
+        2,
+        2
+      ],
       "idle": "furnace_idle.png",
       "work": {
         "file": "furnace_work.png",
@@ -81,11 +96,17 @@
       }
     },
     "chest": {
-      "size": [1, 1],
+      "size": [
+        1,
+        1
+      ],
       "idle": "chest_idle.png"
     },
     "lab": {
-      "size": [2, 1],
+      "size": [
+        2,
+        1
+      ],
       "idle": "lab_idle.png",
       "work": {
         "file": "lab_work.png",
@@ -94,11 +115,17 @@
       }
     },
     "accumulator": {
-      "size": [2, 2],
+      "size": [
+        2,
+        2
+      ],
       "idle": "accumulator_idle.png"
     },
     "manipulator": {
-      "size": [1, 1],
+      "size": [
+        1,
+        1
+      ],
       "idle": "manipulator_idle.png",
       "work": {
         "file": "manipulator_work.png",
@@ -107,31 +134,52 @@
       }
     },
     "item.text": {
-      "size": [0.45, 0.45],
+      "size": [
+        0.45,
+        0.45
+      ],
       "idle": "item_text.png"
     },
     "item.json": {
-      "size": [0.45, 0.45],
+      "size": [
+        0.45,
+        0.45
+      ],
       "idle": "item_json.png"
     },
     "item.image": {
-      "size": [0.45, 0.45],
+      "size": [
+        0.45,
+        0.45
+      ],
       "idle": "item_image.png"
     },
     "item.verdict": {
-      "size": [0.45, 0.45],
+      "size": [
+        0.45,
+        0.45
+      ],
       "idle": "item_verdict.png"
     },
     "item.batch": {
-      "size": [0.45, 0.45],
+      "size": [
+        0.45,
+        0.45
+      ],
       "idle": "item_batch.png"
     },
     "item.scrap": {
-      "size": [0.45, 0.45],
+      "size": [
+        0.45,
+        0.45
+      ],
       "idle": "item_scrap.png"
     },
     "fx.smoke": {
-      "size": [0.5, 0.5],
+      "size": [
+        0.5,
+        0.5
+      ],
       "idle": "fx_smoke.png"
     }
   }
