@@ -107,6 +107,17 @@ function createWebhooksSubscription(
 }
 
 /**
+ * Превью значения для лога: строка как есть, объект — JSON; всё усекается,
+ * чтобы длинный текст/документ не разносил панель логов и консоль.
+ */
+function logPreview(value: unknown, max = 160): string {
+  if (value === undefined) return '∅';
+  const s = typeof value === 'string' ? value : JSON.stringify(value);
+  const oneLine = s.replace(/\s+/g, ' ').trim();
+  return oneLine.length > max ? oneLine.slice(0, max) + '…' : oneLine;
+}
+
+/**
  * Маппинг EngineEvent на store-actions и сайд-эффекты
  */
 function setupEventHandler() {
@@ -126,19 +137,35 @@ function setupEventHandler() {
       case 'packet-drop':
         // error → лом+дым; dead-end/ttl → падение с fade (тост даёт node-status error)
         dropPacket(event.packetId, event.reason);
+        if (event.reason !== 'error') {
+          store.toast(`✕ пакет упал (${event.reason})`);
+          console.log('[drop]', event.packetId, event.reason);
+        }
         break;
 
       case 'node-status':
         store.setStatus(event.nodeId, event.status, event.error);
         if (event.status === 'error' && event.error) {
-          // Тост только на node-status error
-          store.toast(`Node error: ${event.error}`);
+          const kind = store.entities[event.nodeId]?.kind ?? '?';
+          store.toast(`⚠ ${kind} #${event.nodeId}: ${event.error}`);
+          console.warn('[node error]', kind, event.nodeId, event.error);
         }
         break;
 
-      case 'node-io':
+      case 'node-io': {
         store.setIO(event.nodeId, event.lastIn, event.lastOut);
+        // Лог вход→выход каждого станка: в панель логов (LogsPanel) и в консоль.
+        const kind = store.entities[event.nodeId]?.kind ?? '?';
+        const label = `${kind} #${event.nodeId}`;
+        const parts: string[] = [];
+        if (event.lastIn !== undefined) parts.push(`IN ${logPreview(event.lastIn)}`);
+        if (event.lastOut !== undefined) parts.push(`OUT ${logPreview(event.lastOut)}`);
+        if (parts.length > 0) {
+          store.toast(`${label}: ${parts.join('  →  ')}`);
+          console.log('[io]', label, { in: event.lastIn, out: event.lastOut });
+        }
         break;
+      }
 
       case 'result': {
         // Результат от silo или chest → pushResult и запустить rocketLaunch

@@ -28,6 +28,21 @@ def err(status: int, msg: str) -> JSONResponse:
     # Контракт docs/07: ошибки провайдера/сети → { "error": ... }
     return JSONResponse(status_code=status, content={"error": msg})
 
+
+def _short(value, limit: int = 200) -> str:
+    """Однострочное усечённое превью для логов — длинный текст/JSON не разносит вывод."""
+    if value is None:
+        return "∅"
+    s = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
+    s = " ".join(s.split())
+    return s if len(s) <= limit else s[:limit] + "…"
+
+
+def log(tag: str, **fields) -> None:
+    """Единый формат логов эндпоинтов: [tag] k=v k=v ... (flush — сразу в /tmp/server.log)."""
+    parts = " ".join(f"{k}={_short(v)}" for k, v in fields.items())
+    print(f"[{tag}] {parts}", flush=True)
+
 # FastAPI app
 app = FastAPI()
 
@@ -70,6 +85,8 @@ async def llm_endpoint(request: Request):
     if not prompt:
         raise HTTPException(status_code=400, detail="prompt is required")
 
+    log("llm→in", node=node_id, tools=tools, system=system, prompt=prompt)
+
     # Check if we have an API key for real calls
     if not LLM_API_KEY:
         # Mock mode
@@ -87,6 +104,7 @@ async def llm_endpoint(request: Request):
         else:
             text = f"[mock] {prompt[:200]}"
 
+        log("llm←out", node=node_id, mock=True, text=text)
         return {"text": text, "mock": True}
 
     # Real API call
@@ -127,16 +145,19 @@ async def llm_endpoint(request: Request):
                     error_detail = error_json.get("error", {}).get("message", error_detail)
                 except Exception:
                     pass
+                log("llm←ERR", node=node_id, model=model, status=response.status_code, error=error_detail)
                 return err(502, f"LLM error: {error_detail}")
 
             data = response.json()
             text = data.get("choices", [{}])[0].get("message", {}).get("content", "")
 
+            log("llm←out", node=node_id, model=model, text=text)
             return {"text": text}
 
     except HTTPException:
         raise
     except Exception as e:
+        log("llm←ERR", node=node_id, error=str(e))
         return err(502, f"LLM error: {str(e)}")
 
 
@@ -169,6 +190,9 @@ async def proxy_endpoint(request: Request):
         raise HTTPException(status_code=400, detail="headers must be an object")
     req_body = body.get("body")
 
+    # url может содержать секрет (напр. bot-token telegram в пути) — усекается _short'ом.
+    log("proxy→in", method=method, url=url, body=req_body)
+
     try:
         async with httpx.AsyncClient(timeout=20) as client:
             if method == "GET":
@@ -188,11 +212,13 @@ async def proxy_endpoint(request: Request):
             except Exception:
                 resp_body = response.text
 
+            log("proxy←out", status=response.status_code, body=resp_body)
             return {"status": response.status_code, "body": resp_body}
 
     except HTTPException:
         raise
     except Exception as e:
+        log("proxy←ERR", url=url, error=str(e))
         return err(502, f"Proxy error: {str(e)}")
 
 
@@ -209,6 +235,8 @@ async def webhook_endpoint(node_id: str, request: Request):
     except Exception:
         # Fall back to raw text
         body = {"raw": (await request.body()).decode("utf-8", errors="replace")}
+
+    log("webhook→in", node=node_id, body=body)
 
     # Broadcast to all SSE clients
     event_data = {
