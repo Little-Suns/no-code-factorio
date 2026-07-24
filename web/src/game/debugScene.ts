@@ -5,8 +5,8 @@ import type { GameLayers } from './app';
 import type { MachineKind } from '../core/types';
 
 const MACHINE_KINDS: MachineKind[] = [
-  'belt', 'miner', 'assembler', 'splitter', 'mixer', 'silo', 'telegram',
-  'furnace', 'chest', 'lab', 'accumulator', 'manipulator',
+  'belt', 'miner', 'assembler', 'splitter', 'mixer', 'silo',
+  'furnace', 'chest', 'lab', 'accumulator', 'webhook', 'manipulator',
 ];
 
 // Размеры каждой машины в тайлах
@@ -17,7 +17,6 @@ const MACHINE_SIZES: Record<MachineKind, [number, number]> = {
   splitter: [2, 1],
   mixer: [3, 3],
   silo: [3, 3],
-  telegram: [2, 2],
   furnace: [2, 2],
   chest: [1, 1],
   lab: [2, 1],

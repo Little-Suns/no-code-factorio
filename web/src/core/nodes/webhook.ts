@@ -1,10 +1,9 @@
 /**
  * Антенна / Webhook (HTTP) (2×2, терминал).
- * Универсальный исходящий HTTP-запрос — тот же proxyFetch, что у telegram.ts,
- * но url/method/headers/body настраиваются, а не зашиты под один сервис.
- * Один узел закрывает Discord (Incoming Webhook), Slack (Incoming Webhook),
- * GitHub API (issues/comments, с Authorization-заголовком) и любой другой REST API —
- * см. docs/05 примеры конфигов.
+ * Универсальный исходящий HTTP-запрос через proxyFetch: url/method/headers/body
+ * настраиваются, а не зашиты под один сервис. Один узел закрывает Telegram (bot API),
+ * Discord/Slack (Incoming Webhook), GitHub API (с Authorization-заголовком) и любой
+ * другой REST API — см. docs/05 примеры конфигов.
  */
 
 import { Handler, NodeCtx } from '../engine';
@@ -48,7 +47,7 @@ export const webhookSchema: Field[] = [
 ];
 
 /**
- * Handler: рендерит body по шаблону (как telegram) и шлёт через proxyFetch.
+ * Handler: рендерит body по шаблону и шлёт через proxyFetch.
  * {{text}} доступен независимо от формы payload'а — если ctx.data пришла строкой
  * (обычный случай для outItem 'text' у miner/assembler), она подставляется под ключ
  * text; если объектом — используется как есть (тогда доступны и её собственные поля).

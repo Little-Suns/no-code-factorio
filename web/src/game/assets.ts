@@ -29,7 +29,6 @@ const PLACEHOLDER_COLORS: Record<string, number> = {
   chest: 0xa08a5f,
   lab: 0x5ecf7a,
   silo: 0xef7a3d,
-  telegram: 0x38b6e8,
   accumulator: 0xf0d43a,
   webhook: 0xd64f9b,
   manipulator: 0x6fa8c9,
