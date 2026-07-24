@@ -19,7 +19,7 @@ const machineSprites = new Map<string, MachineSprite>();
 // manipulator визуально крупнее своего 1×1 footprint — руке нужен размах, чтобы
 // читалось как "дотягивается до соседних тайлов"; вылезание за границы клетки
 // тут осознанно допустимо (в отличие от остальных станков).
-const MANIPULATOR_VISUAL_SCALE = 1.4;
+export const MANIPULATOR_VISUAL_SCALE = 1.4;
 
 const STATUS_COLORS: Record<NodeStatus, number> = {
   idle: 0x5a5445,     // тускло-жёлтый (idle, дизайн-макет Factory.exe)
