@@ -34,6 +34,7 @@ export interface Store {
   setIO: (nodeId: string, lastIn?: unknown, lastOut?: unknown) => void;
   pushResult: (nodeId: string, data: unknown) => void;
   toast: (text: string) => void;
+  dismissToast: (id: string) => void;
   loadWorld: (entities: Entity[]) => void;
   setEnergy: (charge: number, capacity: number) => void;
   placeMany: (entities: Entity[]) => boolean;
@@ -205,6 +206,10 @@ export const useStore = create<Store>((set, get) => ({
     set((s) => ({
       toasts: [...s.toasts, { id: crypto.randomUUID().slice(0, 8), text }],
     }));
+  },
+
+  dismissToast: (id: string) => {
+    set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
   },
 
   loadWorld: (entities: Entity[]) => {

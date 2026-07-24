@@ -31,6 +31,7 @@ const PLACEHOLDER_COLORS: Record<string, number> = {
   silo: 0xef7a3d,
   telegram: 0x38b6e8,
   accumulator: 0xf0d43a,
+  webhook: 0xd64f9b,
   // предметы
   'item.text': 0xe8e4d8,
   'item.json': 0x4ade80,

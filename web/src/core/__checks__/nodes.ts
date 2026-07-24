@@ -463,6 +463,67 @@ async function testAssemblerNoMemoryWithoutModule() {
 }
 
 // ============================================================================
+// AC 10: webhook — генерик HTTP-исход (Discord/Slack/GitHub/... одним узлом)
+// ============================================================================
+
+async function testWebhookSuccess() {
+  mockProxyFetchCalls = [];
+  const handler = NODE_DEFS.webhook.handler as Handler;
+  if (!handler) throw new Error('webhook handler missing');
+
+  const ctx: NodeCtx = {
+    config: {
+      url: 'https://discord.com/api/webhooks/test',
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{"content": "{{text}}"}',
+    },
+    data: 'hello from factory',
+    tpl: (s) => s,
+    llm: mockLlm,
+    proxyFetch: mockProxyFetch,
+  };
+
+  const result = (await handler(ctx)) as { done: boolean };
+  if (result.done !== true) throw new Error('AC10a: must return {done:true}');
+  const call = mockProxyFetchCalls[mockProxyFetchCalls.length - 1] as any;
+  if (!call || call.url !== 'https://discord.com/api/webhooks/test') {
+    throw new Error('AC10a: proxyFetch not called with configured url');
+  }
+  const parsedBody = JSON.parse(call.body);
+  if (parsedBody.content !== 'hello from factory') {
+    throw new Error('AC10a: {{text}} must resolve against a plain-string payload');
+  }
+
+  console.log('✓ AC10a: webhook-success');
+}
+
+async function testWebhookError() {
+  const handler = NODE_DEFS.webhook.handler as Handler;
+
+  const failingProxyFetch = async () => ({ status: 500, body: { error: 'boom' } });
+
+  const ctx: NodeCtx = {
+    config: { url: 'https://example.com/hook', method: 'POST', headers: {}, body: '' },
+    data: 'x',
+    tpl: (s) => s,
+    llm: mockLlm,
+    proxyFetch: failingProxyFetch,
+  };
+
+  try {
+    await handler(ctx);
+    throw new Error('AC10b: must throw on non-2xx status');
+  } catch (e) {
+    if (e instanceof Error && e.message.includes('webhook')) {
+      console.log('✓ AC10b: webhook-error');
+    } else {
+      throw e;
+    }
+  }
+}
+
+// ============================================================================
 // AC 6: реестр покрывает все MachineKind кроме belt
 // ============================================================================
 
@@ -478,6 +539,7 @@ function testRegistry() {
     'chest',
     'lab',
     'accumulator',
+    'webhook',
   ] as const;
 
   for (const kind of kinds) {
@@ -521,9 +583,11 @@ export async function checkNodes() {
   await testAssemblerModulesTools();
   await testAssemblerMemoryModule();
   await testAssemblerNoMemoryWithoutModule();
+  await testWebhookSuccess();
+  await testWebhookError();
   testRegistry();
 
-  console.log('✓ All nodes checks passed (B4 AC 1-6, B5 AC 7-8, E2 AC 9)');
+  console.log('✓ All nodes checks passed (B4 AC 1-6, B5 AC 7-8, E2 AC 9, webhook AC 10)');
 }
 
 // Выполнить проверки

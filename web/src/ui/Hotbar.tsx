@@ -6,7 +6,7 @@ import './Hotbar.css';
 // Аккумулятор (E1) вне графа лент, но всё равно ставится мышью как обычный станок.
 const ALL_TOOLS: MachineKind[] = [
   'belt', 'miner', 'assembler', 'splitter', 'mixer', 'silo', 'telegram',
-  'furnace', 'chest', 'lab', 'accumulator',
+  'furnace', 'chest', 'lab', 'accumulator', 'webhook',
 ];
 const HOTKEYS: Record<MachineKind, string> = {
   belt: '1',
@@ -20,6 +20,7 @@ const HOTKEYS: Record<MachineKind, string> = {
   chest: '9',
   lab: '0',
   accumulator: 'e',
+  webhook: 'w',
 };
 const KEY_TO_TOOL: Partial<Record<string, MachineKind>> = Object.fromEntries(
   ALL_TOOLS.map((tool) => [HOTKEYS[tool], tool])
@@ -37,6 +38,7 @@ const TOOL_NAMES: Record<MachineKind, string> = {
   chest: 'Chest',
   lab: 'Lab',
   accumulator: 'Accumulator',
+  webhook: 'Webhook',
 };
 
 export function Hotbar() {

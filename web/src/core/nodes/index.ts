@@ -40,6 +40,7 @@ import { telegramHandler, telegramSchema } from './telegram';
 import { furnaceHandler, furnaceSchema } from './furnace';
 import { chestHandler, chestSchema } from './chest';
 import { labHandler, labSchema } from './lab';
+import { webhookHandler, webhookSchema } from './webhook';
 
 /**
  * Реестр всех станков. Belt не включен (у него нет handler и schema).
@@ -122,6 +123,15 @@ export const NODE_DEFS: Record<MachineKind, NodeDef> = {
     size: { w: 2, h: 1 },
     schema: labSchema,
     handler: labHandler,
+  },
+
+  // Усиление: generic HTTP-исход (закрывает Discord/Slack/GitHub/email и т.д. одним узлом)
+  webhook: {
+    kind: 'webhook',
+    title: 'Антенна / Webhook (HTTP)',
+    size: { w: 2, h: 2 },
+    schema: webhookSchema,
+    handler: webhookHandler,
   },
 
   // Усиление (E1): энергия

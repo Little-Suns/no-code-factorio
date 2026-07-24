@@ -22,6 +22,7 @@ const MACHINE_SIZES: Record<MachineKind, [number, number]> = {
   chest: [1, 1],
   lab: [2, 1],
   accumulator: [2, 2],
+  webhook: [2, 2],
 };
 
 export function mountDebugScene(layers: GameLayers): void {

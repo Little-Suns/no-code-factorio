@@ -61,6 +61,7 @@
 .hotbar-icon[data-tool='chest'] { color: #a08a5f; }
 .hotbar-icon[data-tool='lab'] { color: #5ecf7a; }
 .hotbar-icon[data-tool='accumulator'] { color: #f0d43a; }
+.hotbar-icon[data-tool='webhook'] { color: #d64f9b; }
 
 .hotbar-hotkey {
   position: absolute;

@@ -17,8 +17,11 @@ LLM_MODEL = os.getenv("LLM_MODEL", "openai/gpt-4o-mini")
 # Shared state for SSE
 event_queues: set = set()
 
-# Мок-критик чередует PASS/REWORK (docs/07), не random — демо предсказуемо
-_critic_toggle = False
+# Мок-критик чередует PASS/REWORK (docs/07), не random — демо предсказуемо.
+# Ключ — nodeId (движок подмешивает его в каждый /llm-запрос, web/src/core/engine.ts):
+# один общий булев флаг на процесс гонялся бы между всеми lab-узлами конкурентно,
+# ломая чередование внутри каждого узла по отдельности.
+_critic_toggles: dict[str, bool] = {}
 
 
 def err(status: int, msg: str) -> JSONResponse:
@@ -50,9 +53,19 @@ async def llm_endpoint(request: Request):
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid JSON")
 
-    prompt = body.get("prompt", "").strip()
-    system = body.get("system", "").strip()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Body must be a JSON object")
+
+    prompt = body.get("prompt", "")
+    system = body.get("system", "")
+    node_id = body.get("nodeId")
     tools = body.get("tools", [])
+
+    if not isinstance(prompt, str) or not isinstance(system, str):
+        raise HTTPException(status_code=400, detail="prompt/system must be strings")
+
+    prompt = prompt.strip()
+    system = system.strip()
 
     if not prompt:
         raise HTTPException(status_code=400, detail="prompt is required")
@@ -60,13 +73,13 @@ async def llm_endpoint(request: Request):
     # Check if we have an API key for real calls
     if not LLM_API_KEY:
         # Mock mode
-        global _critic_toggle
         await asyncio.sleep(1.5)
 
         if system and "PASS" in system:
-            # Критик: чередуем PASS/REWORK (docs/07)
-            _critic_toggle = not _critic_toggle
-            text = "PASS" if _critic_toggle else "REWORK: needs improvement"
+            # Критик: чередуем PASS/REWORK на узел (docs/07)
+            toggle_key = node_id if isinstance(node_id, str) else "default"
+            _critic_toggles[toggle_key] = not _critic_toggles.get(toggle_key, False)
+            text = "PASS" if _critic_toggles[toggle_key] else "REWORK: needs improvement"
         elif "YES or NO" in prompt or "YES или NO" in prompt:
             text = random.choice(["YES", "NO"])
         elif "web-search" in tools:
@@ -140,12 +153,20 @@ async def proxy_endpoint(request: Request):
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid JSON")
 
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Body must be a JSON object")
+
     url = body.get("url")
-    if not url:
+    if not isinstance(url, str) or not url:
         raise HTTPException(status_code=400, detail="url is required")
 
-    method = body.get("method", "GET").upper()
-    headers = body.get("headers", {})
+    method = body.get("method", "GET")
+    if not isinstance(method, str):
+        raise HTTPException(status_code=400, detail="method must be a string")
+    method = method.upper()
+    headers = body.get("headers") or {}
+    if not isinstance(headers, dict):
+        raise HTTPException(status_code=400, detail="headers must be an object")
     req_body = body.get("body")
 
     try:

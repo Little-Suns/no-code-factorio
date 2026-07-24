@@ -16,7 +16,7 @@ n8n — только образец. **Агентам не нужно откры
 | IF node | одно условие → два выхода (true/false) | `splitter` (branch `true`/`false`); LLM-режим — наше расширение | docs/05 |
 | Merge node | режимы append (поток) и combine (ждать пары со всех входов) | append = физическое слияние лент; combine = `mixer` (ждёт по ингредиенту с каждой входящей ленты) | docs/03, 04 |
 | Code node | пользовательский JS: `items` → return items | `furnace`: `new Function('data', code)` над одним item | docs/05 |
-| HTTP Request node | универсальный запрос с шаблонами в url/body | режим URL у шахты + `proxyFetch` в NodeCtx | docs/05, 07 |
+| HTTP Request node | универсальный запрос с шаблонами в url/body | режим URL у шахты (вход) + узел `webhook` (исход, url/method/headers/body-tpl настраиваемые — закрывает Discord/Slack/GitHub одним узлом) | docs/05, 07 |
 | AI/LLM-ноды | цепочки агентов, модели, инструменты | `assembler` (рецепт = system prompt) + модули-MCP | docs/05 |
 | Статус исполнения ноды | иконки running/success/error на канвасе, у ноды видны последний вход/выход | `node-status` + лампа на станке; `lastIn`/`lastOut` в ConfigPanel | docs/04, 06 |
 | Ошибка ноды | стоп ветки или continue-on-fail | всегда «continue»: пакет → лом + дым, фабрика живёт | docs/04 |
