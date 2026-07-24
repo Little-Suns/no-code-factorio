@@ -227,6 +227,15 @@ export class Engine {
       ttl: 64,
     };
 
+    // Пульс working → ok у самой шахты (иначе спрайт станка никогда не переключается
+    // на work-анимацию — до этой правки status для miner вообще не эмитился).
+    this.emit({ t: 'node-status', nodeId: miner.id, status: 'working' });
+    setTimeout(() => {
+      if (!this.abortController.signal.aborted) {
+        this.emit({ t: 'node-status', nodeId: miner.id, status: 'ok' });
+      }
+    }, 600);
+
     this.emit({
       t: 'packet-spawn',
       packet,
