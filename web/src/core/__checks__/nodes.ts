@@ -265,18 +265,23 @@ async function testTelegramSuccess() {
       chatId: '12345',
       text: 'Done: {{text}}',
     },
+    // Payload — голая строка (обычный случай miner/assembler с outItem 'text'), НЕ объект
+    // {text: ...} — регрессия бага "{{text}} не резолвится против строкового ctx.data".
     data: 'result data',
-    tpl: (s) => s.replace('{{text}}', 'result data'),
+    tpl: () => { throw new Error('handler must not rely on ctx.tpl for this template'); },
     llm: mockLlm,
     proxyFetch: mockProxyFetch,
   };
 
   const result = (await handler(ctx)) as { done: boolean };
   if (result.done !== true) throw new Error('AC5-success: must return {done:true}');
-  if (!mockProxyFetchCalls[0]?.url.includes('test-token-123'))
+  const call = mockProxyFetchCalls[mockProxyFetchCalls.length - 1] as any;
+  if (!call?.url.includes('test-token-123'))
     throw new Error('AC5-success: token not in URL');
-  const body = mockProxyFetchCalls[0]?.url; // URL call
-  if (!body) throw new Error('AC5-success: no proxy call');
+  const sentBody = call?.body ? JSON.parse(call.body) : null;
+  if (sentBody?.text !== 'Done: result data') {
+    throw new Error(`AC5-success: {{text}} must resolve against plain-string payload, got: ${JSON.stringify(sentBody)}`);
+  }
 
   console.log('✓ AC5a: telegram-success');
 }
