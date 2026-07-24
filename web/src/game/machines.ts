@@ -29,8 +29,13 @@ const STATUS_COLORS: Record<NodeStatus, number> = {
 };
 
 export function initMachines(layers: GameLayers): void {
-  // Подписка на изменения entities
-  let prevEntities: Record<string, Entity> = {};
+  // Подписка на изменения entities. Сразу отрисовываем уже загруженный persist.ts
+  // мир (initPersist() в main.tsx отрабатывает синхронно ДО этого вызова) — subscribe
+  // реагирует только на будущие set(), поэтому без явного первого вызова уже случившаяся
+  // загрузка из localStorage молча пропускалась: поле оставалось пустым до следующего
+  // изменения entities (например, постановки станка), которое отрисовывало сразу всё разом.
+  let prevEntities: Record<string, Entity> = useStore.getState().entities;
+  updateMachines(prevEntities, layers.machines);
   useStore.subscribe((state) => {
     if (state.entities !== prevEntities) {
       prevEntities = state.entities;
