@@ -11,7 +11,9 @@ export const siloSchema: Field[] = [];
 // Визуальная пауза «запуска» — без неё handler резолвится за один тик, working
 // сменяется на ok быстрее одного кадра рендера, и work-анимация (silo_work.png)
 // физически не успевает отрисоваться (machines.ts переключает спрайт по status).
-const LAUNCH_MS = 1500;
+// 16 кадров × animationSpeed 0.1 (machines.ts) ≈ 6 кадров/с при 60fps → полный
+// цикл ~2.7с — держим working хотя бы на этот срок, иначе анимация обрежется.
+const LAUNCH_MS = 2700;
 
 /**
  * Handler для silo: держит working LAUNCH_MS (даёт отыграть анимацию), затем
