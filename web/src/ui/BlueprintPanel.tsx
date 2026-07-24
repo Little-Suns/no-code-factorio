@@ -26,7 +26,11 @@ export function BlueprintPanel() {
   // Видимость — по клавише B (blueprintPanelOpen), плюс всегда видна форма сохранения
   // сразу после рамки выделения (pendingSelection сама включает blueprintPanelOpen, см. store.ts).
   if (!blueprintPanelOpen && !pendingSelection) {
-    return null;
+    return (
+      <button className="blueprint-reopen" onClick={() => setBlueprintPanelOpen(true)} title="Expand blueprints dock">
+        &#9637; BLUEPRINTS &#9652;
+      </button>
+    );
   }
 
   const handleClose = () => {
@@ -68,11 +72,12 @@ export function BlueprintPanel() {
     <div className="blueprint-panel">
       <div className="blueprint-header">
         <h3 className="blueprint-title">Чертежи</h3>
-        <span className="blueprint-hint">Выделить: зажми и потяни ЛКМ</span>
-        <button className="blueprint-icon-btn" onClick={handleClose} title="Закрыть (B)">
-          ✕
+        <button className="blueprint-icon-btn" onClick={handleClose} title="Collapse dock (B)">
+          &#9662;
         </button>
       </div>
+
+      <div className="blueprint-hint">Выделить: зажми и потяни ЛКМ по полю фабрики</div>
 
       {pendingSelection && (
         <div className="blueprint-save-form">
@@ -93,9 +98,11 @@ export function BlueprintPanel() {
         </div>
       )}
 
-      {blueprints.length > 0 && (
-        <div className="blueprint-list">
-          {blueprints.map((bp) => (
+      <div className="blueprint-list">
+        {blueprints.length === 0 ? (
+          <div className="blueprint-empty">Нет чертежей</div>
+        ) : (
+          blueprints.map((bp) => (
             <div key={bp.id} className={`blueprint-item ${stampBlueprintId === bp.id ? 'active' : ''}`}>
               <span className="blueprint-name" title={`${bp.entities.length} станков`}>
                 {bp.name}
@@ -116,9 +123,9 @@ export function BlueprintPanel() {
                 </button>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
 
       <div className="blueprint-import">
         <input

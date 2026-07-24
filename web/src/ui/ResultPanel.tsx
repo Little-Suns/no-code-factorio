@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useStore } from '../state/store';
 import { JsonView } from './JsonView';
 import './ResultPanel.css';
 
 export function ResultPanel() {
-  const [isOpen, setIsOpen] = useState(false);
+  const isOpen = useStore((state) => state.resultPanelOpen);
+  const setIsOpen = useStore((state) => state.setResultPanelOpen);
   const results = useStore((state) => state.results);
   const selectedEntityId = useStore((state) => state.selectedEntityId);
   const entities = useStore((state) => state.entities);
@@ -18,7 +19,7 @@ export function ResultPanel() {
         break;
       }
     }
-  }, [results, entities]);
+  }, [results, entities, setIsOpen]);
 
   // Получить результаты активного silo
   const activeSilo =
@@ -42,7 +43,11 @@ export function ResultPanel() {
   };
 
   if (!isOpen) {
-    return null;
+    return (
+      <button className="result-reopen" onClick={() => setIsOpen(true)} title="Expand results dock">
+        &#9636; RESULTS &#9652;
+      </button>
+    );
   }
 
   return (
@@ -58,8 +63,8 @@ export function ResultPanel() {
           >
             Clear
           </button>
-          <button className="result-close" onClick={handleClose} title="Close">
-            ✕
+          <button className="result-close" onClick={handleClose} title="Collapse dock">
+            &#9662;
           </button>
         </div>
       </div>

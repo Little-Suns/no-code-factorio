@@ -15,10 +15,10 @@ interface MachineSprite {
 const machineSprites = new Map<string, MachineSprite>();
 
 const STATUS_COLORS: Record<NodeStatus, number> = {
-  idle: 0xb6bac0,     // серый (idle)
-  working: 0xc8933a,  // золотой акцент (working)
-  ok: 0x3f9d64,       // зелёный
-  error: 0xd94f68,    // красный
+  idle: 0x5a5445,     // тускло-жёлтый (idle, дизайн-макет Factory.exe)
+  working: 0xf0a030,  // акцентный оранжевый (working)
+  ok: 0x5ecf7a,       // зелёный
+  error: 0xe2483f,    // красный
 };
 
 export function initMachines(layers: GameLayers): void {

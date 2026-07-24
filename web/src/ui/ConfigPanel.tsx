@@ -28,8 +28,10 @@ export function ConfigPanel() {
     return null;
   }, [entity, selectedEntityId]);
 
+  // Задвижка: полностью съезжает за экран, когда ничего не выбрано (дизайн-макет Factory.exe) —
+  // не занимает место фабрики впустую, в отличие от прежнего варианта с плейсхолдером-заглушкой.
   if (!entity || !def) {
-    return <div className="config-panel empty">Выберите станок</div>;
+    return <div className="config-panel" />;
   }
 
   const handleConfigChange = (key: string, value: unknown) => {
@@ -67,10 +69,10 @@ export function ConfigPanel() {
   };
 
   return (
-    <div className="config-panel">
+    <div className="config-panel open">
       <div className="config-header">
         <div className="config-title">
-          <span className="config-kind">{def.title}</span>
+          <span className="config-kind" data-kind={entity.kind}>{def.title}</span>
           <span className="config-type">{entity.kind}</span>
         </div>
         <button className="config-close" onClick={() => select(null)} title="Close (Esc)">

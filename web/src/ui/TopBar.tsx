@@ -4,14 +4,21 @@ import { startRun, stopRun } from '../state/runtime';
 import type { Entity } from '../core/types';
 import './TopBar.css';
 
+const ENERGY_SEGMENTS = 10;
+
 export function TopBar() {
   const running = useStore((state) => state.running);
   const entities = useStore((state) => state.entities);
   const loadWorld = useStore((state) => state.loadWorld);
   const energy = useStore((state) => state.energy);
+  const blueprintPanelOpen = useStore((state) => state.blueprintPanelOpen);
+  const setBlueprintPanelOpen = useStore((state) => state.setBlueprintPanelOpen);
+  const resultPanelOpen = useStore((state) => state.resultPanelOpen);
+  const setResultPanelOpen = useStore((state) => state.setResultPanelOpen);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const entityCount = Object.keys(entities).length;
+  const litSegments = energy ? Math.round((energy.charge / energy.capacity) * ENERGY_SEGMENTS) : 0;
 
   // Хоткей Space для Run/Stop (не в input'ах)
   useEffect(() => {
@@ -111,7 +118,8 @@ export function TopBar() {
         </button>
 
         <span className="entity-counter" title={`Entities: ${entityCount}`}>
-          {entityCount}
+          <span>ENTITIES</span>
+          <span className="entity-counter-value">{entityCount}</span>
         </span>
 
         <div className={`status-indicator ${running ? 'active' : ''}`} />
@@ -123,12 +131,9 @@ export function TopBar() {
           >
             <span className="energy-bar-icon">⚡</span>
             <div className="energy-bar-track">
-              <div
-                className="energy-bar-fill"
-                style={{
-                  width: `${Math.max(0, Math.min(100, (energy.charge / energy.capacity) * 100))}%`,
-                }}
-              />
+              {Array.from({ length: ENERGY_SEGMENTS }, (_, i) => (
+                <div key={i} className={`energy-segment ${i < litSegments ? 'lit' : ''}`} />
+              ))}
             </div>
           </div>
         )}
@@ -139,14 +144,28 @@ export function TopBar() {
       </div>
 
       <div className="top-bar-right">
+        <button
+          className={`icon-button ${blueprintPanelOpen ? 'active' : ''}`}
+          onClick={() => setBlueprintPanelOpen(!blueprintPanelOpen)}
+          title="Показать/скрыть панель чертежей (B)"
+        >
+          ▤ Чертежи
+        </button>
+        <button
+          className={`icon-button ${resultPanelOpen ? 'active' : ''}`}
+          onClick={() => setResultPanelOpen(!resultPanelOpen)}
+          title="Показать/скрыть панель результатов"
+        >
+          ▥ Результаты
+        </button>
         <button className="icon-button" onClick={handleExport} title="Export (JSON)">
-          ↓
+          ↓ Export
         </button>
         <button className="icon-button" onClick={handleImport} title="Import (JSON)">
-          ↑
+          ↑ Import
         </button>
         <button className="icon-button" onClick={handleLoadDemo} title="Load demo">
-          🎲
+          🎲 Demo
         </button>
 
         <input

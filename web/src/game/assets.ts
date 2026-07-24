@@ -20,17 +20,17 @@ interface Manifest {
 
 // Палитра цветов для плейсхолдеров (шестнадцатеричный формат)
 const PLACEHOLDER_COLORS: Record<string, number> = {
-  belt: 0x8a8f98,
-  miner: 0xd9a441,
-  furnace: 0xc0653a,
-  assembler: 0x4a90d9,
-  splitter: 0xd94a6a,
-  mixer: 0x9b59d0,
-  chest: 0x7f8c8d,
-  lab: 0x2abfa4,
-  silo: 0xe74c3c,
-  telegram: 0x2aabee,
-  accumulator: 0xf39c12,
+  belt: 0x7d8a94,
+  miner: 0xf0a030,
+  furnace: 0xd97b2e,
+  assembler: 0x3aa0e0,
+  splitter: 0xe2483f,
+  mixer: 0xa06ce0,
+  chest: 0xa08a5f,
+  lab: 0x5ecf7a,
+  silo: 0xef7a3d,
+  telegram: 0x38b6e8,
+  accumulator: 0xf0d43a,
   // предметы
   'item.text': 0xe8e4d8,
   'item.json': 0x4ade80,
@@ -163,8 +163,8 @@ function generatePlaceholder(key: string): Texture {
   const graphics = new Graphics();
   graphics.roundRect(0, 0, width, height, 12);
   if (isMachine) {
-    graphics.fill(0xf1f2f5);
-    graphics.stroke({ width: 1.5, color: 0xb9bec6 });
+    graphics.fill(0x24272d);
+    graphics.stroke({ width: 1.5, color: 0x454b53 });
   } else {
     graphics.fill(color);
   }

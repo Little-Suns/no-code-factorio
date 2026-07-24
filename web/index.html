@@ -7,24 +7,27 @@
     <title>No Code Factorio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
-      href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <style>
       :root {
-        --bg: #eef0f3; --dirt: #eceef1; --dirt-dark: #e2e5e9;
-        --panel-bg: #ffffff; --panel-bg-2: #f7f8fa; --panel-border: #dde1e6;
-        --metal: #d9dce1; --metal-light: #f1f2f5; --rivet: #b9bec6;
-        --rust: #cdd1d7; --rust-dark: #aeb3bb;
-        --accent: #c8933a; --accent-dim: #a9762e; --accent-bright: #dba852;
-        --text: #262a30; --text-muted: #7d828b; --text-dim: #a3a7ae;
-        --ok: #3f9d64; --error: #d94f68; --idle: #b6bac0; --node-icon: #8f95a0;
-        --f-disp: 'Big Shoulders', sans-serif;
-        --f-body: 'Manrope', sans-serif;
+        /* Тёмная терминальная палитра "Factory.exe" (docs/06) */
+        --bg: #0e1013; --dirt: #1b1e23; --dirt-dark: #1b1e23;
+        --panel-bg: #24272d; --panel-bg-2: #2f343b; --panel-border: #0a0c0e;
+        --accent: #f0a030; --accent-dim: #b8791f; --accent-bright: #f5b860;
+        --text: #eef1f4; --text-muted: #9aa0a8; --text-dim: #7d838c;
+        --ok: #5ecf7a; --error: #e2483f; --idle: #5a5445; --node-icon: #7d8a94;
+        --f-disp: 'Press Start 2P', 'IBM Plex Mono', monospace; /* Press Start 2P не знает кириллицу — фоллбэк на Plex Mono */
+        --f-body: 'IBM Plex Mono', monospace;
         --f-mono: 'IBM Plex Mono', monospace;
       }
       html, body { margin: 0; overflow: hidden; }
       body { background: var(--bg); color: var(--text); font-family: var(--f-body); }
+      ::-webkit-scrollbar { width: 10px; height: 10px; }
+      ::-webkit-scrollbar-track { background: var(--dirt); }
+      ::-webkit-scrollbar-thumb { background: var(--text-dim); border: 2px solid var(--dirt); }
+      @keyframes blinkDot { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
     </style>
   </head>
   <body>

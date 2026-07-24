@@ -1,8 +1,7 @@
 .json-view {
   position: relative;
   background: var(--dirt-dark);
-  border: 1px solid var(--panel-border);
-  border-radius: 8px;
+  border: 2px solid var(--panel-border);
   padding: 8px 10px;
   font-family: var(--f-mono);
   font-size: 11px;
@@ -27,9 +26,8 @@
   font-family: var(--f-mono);
   font-size: 11px;
   background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
+  color: #1b1e23;
+  border: 2px solid var(--accent-dim);
   cursor: pointer;
   font-weight: 600;
 }

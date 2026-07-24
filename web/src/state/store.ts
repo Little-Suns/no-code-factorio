@@ -20,6 +20,7 @@ export interface Store {
   pendingSelection: Entity[] | null;
   stampBlueprintId: string | null;
   blueprintPanelOpen: boolean; // видимость списка чертежей — переключается клавишей B
+  resultPanelOpen: boolean; // видимость дока результатов — переключается кнопкой в TopBar
   // actions
   place: (entity: Entity) => boolean;
   remove: (entityId: string) => void;
@@ -41,6 +42,7 @@ export interface Store {
   setStampBlueprint: (id: string | null) => void;
   setPendingSelection: (entities: Entity[] | null) => void;
   setBlueprintPanelOpen: (open: boolean) => void;
+  setResultPanelOpen: (open: boolean) => void;
   loadBlueprints: (blueprints: Blueprint[]) => void;
 }
 
@@ -57,6 +59,7 @@ export const useStore = create<Store>((set, get) => ({
   pendingSelection: null,
   stampBlueprintId: null,
   blueprintPanelOpen: false,
+  resultPanelOpen: false,
 
   place: (entity: Entity) => {
     const state = get();
@@ -263,6 +266,10 @@ export const useStore = create<Store>((set, get) => ({
 
   setBlueprintPanelOpen: (open: boolean) => {
     set({ blueprintPanelOpen: open });
+  },
+
+  setResultPanelOpen: (open: boolean) => {
+    set({ resultPanelOpen: open });
   },
 
   loadBlueprints: (blueprints: Blueprint[]) => {

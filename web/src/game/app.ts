@@ -17,7 +17,7 @@ export async function createApp(canvas: HTMLCanvasElement): Promise<{ app: Appli
   await app.init({
     canvas,
     resizeTo: window,
-    backgroundColor: 0xeef0f3, // светлый грунт (дизайн-макет)
+    backgroundColor: 0x181b1f, // тёмный грунт terminal-темы (дизайн-макет Factory.exe)
     antialias: true,
     resolution: window.devicePixelRatio || 1,
     autoDensity: true,
@@ -67,6 +67,6 @@ function drawGrid(container: Container): void {
   for (let y = -size; y <= size; y++) {
     grid.moveTo(-size * TILE, y * TILE).lineTo(size * TILE, y * TILE);
   }
-  grid.stroke({ width: 1, color: 0x969ba5, alpha: 0.22 });
+  grid.stroke({ width: 1, color: 0x262b31, alpha: 0.9 });
   container.addChild(grid);
 }
