@@ -56,6 +56,7 @@
 .config-kind[data-kind='chest'] { color: #a08a5f; }
 .config-kind[data-kind='lab'] { color: #5ecf7a; }
 .config-kind[data-kind='accumulator'] { color: #f0d43a; }
+.config-kind[data-kind='webhook'] { color: #d64f9b; }
 
 .config-type {
   color: var(--text-dim);

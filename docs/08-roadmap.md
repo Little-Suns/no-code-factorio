@@ -153,6 +153,16 @@ D1 (в любой момент после A2)
 - [ ] `pnpm -r typecheck` чист, консоль браузера без красного
 - [ ] Гифка/скрин в README (по возможности)
 
+## Интеграции (усиление, после «живой фабрики»)
+
+- [x] **F1. Баг-фиксы + generic webhook-узел** (найдено ревью, issue #2 на GitHub): 4 бага пофикшены (`fix/bugs-and-http-node`):
+  1. `miner mode='url'` не фетчил — `engine.spawnPacket` формировал payload сам, в обход `minerHandler`/`proxyFetch` (мёртвый код). Теперь `spawnPacket` вызывает `deps.handlers.miner` напрямую (та же логика, что и остальные узлы через `callHandler`); добавлен регрессионный `AC13` в `__checks__/engine.ts`.
+  2. Уведомления (`toasts`) копились в сторе бесконечно — `Toasts.tsx` только визуально прятал, не удалял. Добавлен `store.dismissToast(id)`, зовётся из таймера после CSS-transition.
+  3. Мок-критик лаборатории (`server/main.py`) гонялся между всеми `lab`-узлами через один общий `_critic_toggle: bool` — теперь `_critic_toggles: dict[nodeId, bool]`; `nodeId` подмешивается в `ctx.llm` автоматически в `engine.ts callHandler` (не часть контракта `Handler`/`NodeCtx`, только внутренняя сборка).
+  4. `/llm`/`/proxy` падали в необработанный 500 на валидном не-объектном JSON — добавлена валидация типов тела запроса, ошибка → `400 {error}`.
+  - Новый узел **webhook** (Антенна / Webhook, HTTP, 2×2): обобщение `telegram` — `url`/`method`/`headers`/`body`(tpl) настраиваемые, закрывает Discord/Slack/GitHub/email одним узлом вместо пяти специализированных. `{{text}}` резолвится и для голого строкового payload'а (см. docs/05).
+  - `pnpm typecheck` ✓, `pnpm check` ✓ (+3 новых AC: webhook-success/error, miner-url regression), `pnpm build` ✓. Браузером не проверял в этой сессии.
+
 ## Риски/блокеры
 
 _(агенты пишут сюда)_

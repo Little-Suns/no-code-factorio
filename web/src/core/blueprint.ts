@@ -94,7 +94,7 @@ export function exportBlueprintString(blueprint: Blueprint): string {
 
 const VALID_KINDS = new Set<MachineKind>([
   'belt', 'miner', 'assembler', 'splitter', 'mixer', 'silo', 'telegram',
-  'furnace', 'chest', 'lab', 'accumulator',
+  'furnace', 'chest', 'lab', 'accumulator', 'webhook',
 ]);
 
 function isValidEntityShape(e: unknown): e is Entity {

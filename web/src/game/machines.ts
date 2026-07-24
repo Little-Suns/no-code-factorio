@@ -68,6 +68,7 @@ function getSize(kind: MachineKind): { w: number; h: number } {
     case 'furnace':
     case 'accumulator':
     case 'telegram':
+    case 'webhook':
       return { w: 2, h: 2 };
     case 'splitter':
     case 'lab':

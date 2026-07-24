@@ -1,5 +1,6 @@
 import { Engine, HandlerResult, NodeCtx } from '../engine';
 import { Transport, Entity, Edge, Packet, EngineEvent } from '../types';
+import { minerHandler } from '../nodes/miner';
 
 // FakeTransport: мгновенная доставка
 const fakeTransport: Transport = {
@@ -956,6 +957,77 @@ async function testEnergyCapacityInsufficient() {
 }
 
 /**
+ * AC13: регрессия бага "miner mode='url' не фетчит, шлёт сырую строку URL как данные".
+ * spawnPacket раньше формировал payload сам (config.url как строка), в обход
+ * deps.handlers.miner (реальный minerHandler с proxyFetch) — здесь используем
+ * настоящий minerHandler через deps.handlers, как это делает runtime.ts в браузере.
+ */
+async function testMinerUrlThroughSpawnPacket() {
+  const events: EngineEvent[] = [];
+
+  const entities: Record<string, Entity> = {
+    miner1: {
+      id: 'miner1',
+      kind: 'miner',
+      pos: { x: 0, y: 0 },
+      dir: 0,
+      config: { mode: 'url', url: 'https://example.com/data' },
+    },
+    assembler1: {
+      id: 'assembler1',
+      kind: 'assembler',
+      pos: { x: 5, y: 0 },
+      dir: 0,
+      config: {},
+    },
+  };
+
+  const edges: Edge[] = [
+    { id: 'e1:out:0', from: 'miner1', branch: 'out', to: 'assembler1', path: [{ x: 1, y: 0 }] },
+  ];
+
+  let receivedByAssembler: unknown;
+  const handlers: Record<string, (ctx: NodeCtx) => Promise<HandlerResult>> = {
+    miner: minerHandler,
+    assembler: async (ctx) => {
+      receivedByAssembler = ctx.data;
+      return { out: 'ok' };
+    },
+  };
+
+  const engine = new Engine(entities, edges, fakeTransport, (e) => events.push(e), {
+    proxyFetch: async (req) => {
+      if (req.url === 'https://example.com/data' && req.method === 'GET') {
+        return { status: 200, body: 'Content from URL' };
+      }
+      return { status: 404, body: null };
+    },
+    handlers: handlers as any,
+  });
+
+  engine.start();
+  engine.triggerMiner('miner1');
+
+  await new Promise((r) => setTimeout(r, 50));
+  engine.stop();
+
+  if (receivedByAssembler !== 'Content from URL') {
+    throw new Error(
+      `AC13: assembler должен получить содержимое URL через proxyFetch, получил: ${JSON.stringify(receivedByAssembler)}`
+    );
+  }
+
+  const minerOkStatus = events.some(
+    (e) => e.t === 'node-status' && e.nodeId === 'miner1' && e.status === 'ok'
+  );
+  if (!minerOkStatus) {
+    throw new Error('AC13: miner должен получить node-status ok после успешного fetch');
+  }
+
+  console.log("✓ AC13: miner mode='url' идёт через реальный proxyFetch (регрессия бага)");
+}
+
+/**
  * Запуск всех проверок
  */
 (async () => {
@@ -972,8 +1044,9 @@ async function testEnergyCapacityInsufficient() {
     await testEnergyLayer();
     await testAssemblerMemorySnapshot();
     await testEnergyCapacityInsufficient();
+    await testMinerUrlThroughSpawnPacket();
 
-    console.log('\n✅ engine checks OK — все 12 AC пройдены');
+    console.log('\n✅ engine checks OK — все 13 AC пройдены');
   } catch (e) {
     console.error('\n❌ engine checks FAILED:', e);
     throw e;

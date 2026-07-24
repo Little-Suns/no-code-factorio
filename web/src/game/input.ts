@@ -20,7 +20,7 @@ const ENTITY_HL_COLOR = 0x5ad1ff;
 const SIZES: Record<MachineKind, [number, number]> = {
   belt: [1, 1], miner: [2, 2], furnace: [2, 2], assembler: [3, 3],
   splitter: [2, 1], mixer: [3, 3], chest: [1, 1], lab: [2, 1],
-  silo: [3, 3], telegram: [2, 2], accumulator: [2, 2],
+  silo: [3, 3], telegram: [2, 2], accumulator: [2, 2], webhook: [2, 2],
 };
 
 export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers: GameLayers): void {

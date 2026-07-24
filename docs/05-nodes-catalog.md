@@ -91,6 +91,13 @@ export type Handler = (ctx: NodeCtx) => Promise<HandlerResult>;
 - schema: `criteria` (textarea, placeholder «Текст вежлив, без воды, до 500 знаков»), outItem на ветке rework: verdict.
 - handler: `llm({ system: 'Ты критик. По критериям ответь первой строкой PASS или REWORK, далее замечания.', prompt: criteria + текст })`. PASS → `{ branch: 'pass', out: data }`; иначе → `{ branch: 'rework', out: { draft: data, critique } }` — лента rework строится назад в assembler: петля «написал → проверил → переписал». От вечного круга защищает ttl.
 
+### webhook — Антенна / Webhook, HTTP (2×2, терминал)
+- schema: `url` (text), `method` (select GET/POST/PUT/DELETE, дефолт POST), `headers` (json, дефолт `{"content-type":"application/json"}`), `body` (textarea, tpl-шаблон, дефолт `{"content": "{{text}}"}`).
+- Обобщение telegram: тот же `proxyFetch`, но без зашитого под один сервис URL/формата тела. Один узел закрывает Discord (Incoming Webhook: `{"content": "..."}`), Slack (Incoming Webhook: `{"text": "..."}`), GitHub API (issues/comments — `url: api.github.com/repos/.../issues`, `headers: {authorization: "Bearer ..."}`), email-провайдеры (Resend/SendGrid) и любой REST API.
+- `{{text}}` в body резолвится, даже если payload пришёл голой строкой (обычный случай для outItem `text` у miner/assembler) — handler оборачивает такую строку в `{ text: ... }` перед рендером шаблона, только объект — используется как есть (доступны его собственные поля через `{{path.to.field}}`).
+- handler: не-2xx статус ответа → throw (лом+дым, как у остальных узлов).
+- Токен/URL живут в config (localStorage) — тот же принцип, что у telegram (docs/09: без credentials-системы).
+
 ## Безопасность (осознанные хакатон-допущения)
 
 `new Function` исполняет код пользователя в его же браузере — приемлемо. `/proxy` — открытый SSRF, только localhost (docs/07). Ключ LLM живёт на сервере, в браузер не попадает.
