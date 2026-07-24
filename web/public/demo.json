@@ -8,7 +8,8 @@
       "dir": 1,
       "config": {
         "mode": "text",
-        "text": "Great product! Fast delivery and excellent customer service."
+        "text": "Great product! Fast delivery and excellent customer service.",
+        "intervalSec": 4
       }
     },
     {
@@ -118,7 +119,8 @@
       "dir": 1,
       "config": {
         "mode": "text",
-        "text": "Could be better. Packaging was damaged."
+        "text": "Could be better. Packaging was damaged.",
+        "intervalSec": 5
       }
     },
     {
