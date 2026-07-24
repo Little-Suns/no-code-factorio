@@ -2,7 +2,7 @@ import { Sprite, Point, Graphics } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { TILE } from './app';
 import { getTexture } from './assets';
-import { MANIPULATOR_VISUAL_SCALE } from './machines';
+import { MANIPULATOR_VISUAL_SCALE, SILO_VISUAL_SCALE, SILO_Y_OFFSET } from './machines';
 import { useStore } from '../state/store';
 import { footprintTiles, canPlace } from '../core/grid';
 import { instantiateBlueprint, canPlaceBlueprint } from '../core/blueprint';
@@ -277,12 +277,13 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
     ghostSprite.visible = true;
     ghostSprite.pivot.set((sw * TILE) / 2, (sh * TILE) / 2);
     ghostSprite.position.set(tile.x * TILE + (rw * TILE) / 2, tile.y * TILE + (rh * TILE) / 2);
+    if (tool === 'silo') ghostSprite.position.y -= SILO_Y_OFFSET;
     ghostSprite.angle = ghostDir * 90;
     // manipulator: тот же увеличенный масштаб + дефолтное зеркало, что и у реально
     // поставленного станка (machines.ts) — иначе ghost выглядит как старый мелкий спрайт
     ghostSprite.scale.set(
-      tool === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : 1,
-      tool === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : 1
+      tool === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : tool === 'silo' ? SILO_VISUAL_SCALE : 1,
+      tool === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : tool === 'silo' ? SILO_VISUAL_SCALE : 1
     );
 
     const test: Entity = { id: 'ghost', kind: tool, pos: tile, dir: ghostDir, config: {} };
