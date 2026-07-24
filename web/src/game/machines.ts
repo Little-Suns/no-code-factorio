@@ -118,11 +118,13 @@ function updateMachines(entities: Record<string, Entity>, layer: Container): voi
         const initialFrames = Array.isArray(idleTextureOrFrames) ? idleTextureOrFrames : [idleTextureOrFrames];
         const animated = new AnimatedSprite(initialFrames);
         animated.animationSpeed = 0.1; // замедляем анимацию
+        animated.loop = false; // один проход, не зацикливаем — иначе "переигрывает" пока working держится
         animated.gotoAndStop(0); // стоим на idle-кадре, пока status !== 'working'
         sprite = animated;
       } else if (Array.isArray(idleTextureOrFrames)) {
         const animated = new AnimatedSprite(idleTextureOrFrames);
         animated.animationSpeed = 0.1;
+        animated.loop = false;
         animated.play();
         sprite = animated;
       } else {
