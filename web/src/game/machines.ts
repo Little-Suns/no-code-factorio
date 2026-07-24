@@ -20,6 +20,12 @@ const machineSprites = new Map<string, MachineSprite>();
 // читалось как "дотягивается до соседних тайлов"; вылезание за границы клетки
 // тут осознанно допустимо (в отличие от остальных станков).
 export const MANIPULATOR_VISUAL_SCALE = 1.4;
+// Ракета (silo): арт занимает не весь 3×3-кадр (прозрачные поля по краям) — растягиваем
+// спрайт, чтобы заполнил клетку. Масштаб вокруг центрального пивота → остаётся по центру.
+export const SILO_VISUAL_SCALE = 1.3;
+// Арт ракеты сидит низко в кадре (щель сверху, вылезает снизу) — поднимаем спрайт вверх
+// в мировых координатах (px), поэтому корректно при любом повороте станка.
+export const SILO_Y_OFFSET = 18;
 
 const STATUS_COLORS: Record<NodeStatus, number> = {
   idle: 0x5a5445,     // тускло-жёлтый (idle, дизайн-макет Factory.exe)
@@ -192,12 +198,15 @@ function updateMachines(entities: Record<string, Entity>, layer: Container): voi
     // (у assembler 3×3-арт садится по центру 2×2, лишний прозрачный бортик вылезает наружу).
     machineSprite.sprite.pivot.set(spriteSize.w * TILE * 0.5, spriteSize.h * TILE * 0.5);
     machineSprite.sprite.position.set(rotatedSize.w * TILE * 0.5, rotatedSize.h * TILE * 0.5);
+    if (entity.kind === 'silo') machineSprite.sprite.position.y -= SILO_Y_OFFSET;
     machineSprite.sprite.angle = entity.dir * 90;
     // manipulator: зеркалим по Y, пока развёрнут на "выкладку" (см. triggerManipulatorGrab/Release) —
     // поворот на 180° ставил руку "вверх ногами", зеркало держит её в исходной ориентации.
     if (entity.kind === 'manipulator') {
       const mirrored = machineSprite.manipulatorFlipped ? -1 : 1;
       machineSprite.sprite.scale.set(MANIPULATOR_VISUAL_SCALE, mirrored * MANIPULATOR_VISUAL_SCALE);
+    } else if (entity.kind === 'silo') {
+      machineSprite.sprite.scale.set(SILO_VISUAL_SCALE);
     }
   }
 }
