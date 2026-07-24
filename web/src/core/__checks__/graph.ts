@@ -46,11 +46,11 @@ console.log('Test 1: miner → 2 belts → manipulator → assembler');
     config: {},
   };
 
-  // assembler у входа манипулятора
+  // assembler у входа манипулятора (2×2: back-ряд y16 = (9,16),(10,16))
   const assembler: Entity = {
     id: 'asm1',
     kind: 'assembler',
-    pos: { x: 9, y: 14 },
+    pos: { x: 9, y: 15 },
     dir: 0,
     config: {},
   };
@@ -215,7 +215,7 @@ console.log('Test 4: lab rework port with feedback (through manipulator)');
   const assembler: Entity = {
     id: 'asm2',
     kind: 'assembler',
-    pos: { x: 20, y: 20 },
+    pos: { x: 20, y: 21 },
     dir: 0,
     config: {},
   };
@@ -346,11 +346,11 @@ console.log('Test 7: multiple ports from 2x2 miner — one via manipulator, one 
     config: {},
   };
 
-  // Assembler где-то выше — входит в inTiles с обеих колонок
+  // Assembler впритык над манипулятором (2×2: back-ряд y48 = (49,48),(50,48))
   const assembler: Entity = {
     id: 'asm4',
     kind: 'assembler',
-    pos: { x: 49, y: 46 },
+    pos: { x: 49, y: 47 },
     dir: 0,
     config: {},
   };
@@ -391,11 +391,11 @@ console.log('Test 8: two real stations directly adjacent without manipulator →
   };
 
   // assembler вплотную к FRONT furnace (furnace 2×2 у (60,60), FRONT — y=59;
-  // assembler 3×3 c BACK-рядом на y=59 → pos.y = 59 - (3-1) = 57)
+  // assembler 2×2 c BACK-рядом на y=59 → pos.y = 59 - (2-1) = 58)
   const assembler: Entity = {
     id: 'asm5',
     kind: 'assembler',
-    pos: { x: 59, y: 57 },
+    pos: { x: 59, y: 58 },
     dir: 0,
     config: {},
   };
@@ -429,11 +429,11 @@ console.log('Test 9: manipulator sandwiched between two stations (no belts)');
   };
 
   // assembler вплотную к FRONT манипулятора (манипулятор 1×1 у (70,69), FRONT y=68;
-  // assembler 3×3 c BACK-рядом на y=68 → pos.y = 68 - (3-1) = 66)
+  // assembler 2×2 c BACK-рядом на y=68 → pos.y = 68 - (2-1) = 67)
   const assembler: Entity = {
     id: 'asm6',
     kind: 'assembler',
-    pos: { x: 69, y: 66 },
+    pos: { x: 69, y: 67 },
     dir: 0,
     config: {},
   };
