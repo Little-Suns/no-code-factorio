@@ -1,0 +1,65 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'server/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+env:
+  DEPLOY_PATH_WEB: /var/www/adventure.littlesuns.ru/current
+  DEPLOY_PATH_SERVER: /opt/adventure/server
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+        working-directory: web
+
+      - name: Build frontend
+        # Пустой SERVER_URL → относительные /llm, /proxy, /events на том же домене (nginx проксирует на бэкенд)
+        run: VITE_SERVER_URL="" pnpm build
+        working-directory: web
+
+      - name: Setup SSH
+        run: |
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_deploy
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Sync frontend
+        run: |
+          rsync -az --delete -e "ssh -i ~/.ssh/id_deploy" \
+            web/dist/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ env.DEPLOY_PATH_WEB }}/
+
+      - name: Sync backend
+        run: |
+          rsync -az -e "ssh -i ~/.ssh/id_deploy" \
+            server/main.py server/requirements.txt \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ env.DEPLOY_PATH_SERVER }}/
+
+      - name: Install backend deps & restart service
+        run: |
+          ssh -i ~/.ssh/id_deploy ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
+            set -e
+            ${{ env.DEPLOY_PATH_SERVER }}/venv/bin/pip install --quiet -r ${{ env.DEPLOY_PATH_SERVER }}/requirements.txt
+            sudo -n systemctl restart adventure-backend
+          '
