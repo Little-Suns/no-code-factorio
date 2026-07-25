@@ -3,6 +3,7 @@
 
 import './grid';
 import './graph';
+import './manipulator-intake';
 import './rasterize';
 import './tpl';
 import './engine';
