@@ -1,45 +1,9 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useStore } from '../state/store';
-import type { MachineKind } from '../core/types';
+import { ALL_TOOLS, HOTKEYS, TOOL_DESCRIPTIONS, TOOL_ICONS, TOOL_NAMES } from './hotbarData';
 import './Hotbar.css';
 
-// Аккумулятор (E1) вне графа лент, но всё равно ставится мышью как обычный станок.
-const ALL_TOOLS: MachineKind[] = [
-  'belt', 'miner', 'assembler', 'splitter', 'mixer', 'silo',
-  'furnace', 'chest', 'lab', 'accumulator', 'webhook', 'manipulator',
-];
-const HOTKEYS: Record<MachineKind, string> = {
-  belt: '1',
-  miner: '2',
-  assembler: '3',
-  splitter: '4',
-  mixer: '5',
-  silo: '6',
-  webhook: '7',
-  furnace: '8',
-  chest: '9',
-  lab: '0',
-  accumulator: 'e',
-  manipulator: 'i',
-};
-const KEY_TO_TOOL: Partial<Record<string, MachineKind>> = Object.fromEntries(
-  ALL_TOOLS.map((tool) => [HOTKEYS[tool], tool])
-);
-
-const TOOL_NAMES: Record<MachineKind, string> = {
-  belt: 'Belt',
-  miner: 'Miner',
-  assembler: 'Assembler',
-  splitter: 'Splitter',
-  mixer: 'Mixer',
-  silo: 'Silo',
-  furnace: 'Furnace',
-  chest: 'Chest',
-  lab: 'Lab',
-  accumulator: 'Accumulator',
-  webhook: 'Webhook',
-  manipulator: 'Manipulator',
-};
+const KEY_TO_TOOL = Object.fromEntries(ALL_TOOLS.map((tool) => [HOTKEYS[tool], tool]));
 
 export function Hotbar() {
   const selectedTool = useStore((state) => state.selectedTool);
@@ -71,10 +35,10 @@ export function Hotbar() {
           key={tool}
           className={`hotbar-slot ${selectedTool === tool ? 'active' : ''}`}
           onClick={() => setTool(tool)}
-          title={`${TOOL_NAMES[tool]} (${HOTKEYS[tool]})`}
+          title={`${TOOL_NAMES[tool]} (${HOTKEYS[tool]}) — ${TOOL_DESCRIPTIONS[tool]}`}
         >
           <div className="hotbar-icon" data-tool={tool}>
-            {tool.charAt(0).toUpperCase()}
+            {TOOL_ICONS[tool]}
           </div>
           <span className="hotbar-hotkey">{HOTKEYS[tool]}</span>
         </button>
