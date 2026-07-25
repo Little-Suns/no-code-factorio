@@ -114,7 +114,11 @@ export function Tutorial() {
           <>
             <h3 className="tutorial-title">Choose language · Выберите язык · 选择语言</h3>
             <p className="tutorial-desc">
-              Switchable anytime via the 🌐 button · Сменить можно в любой момент кнопкой 🌐 · 随时可通过 🌐 按钮切换
+              Switchable anytime via the 🌐 button
+              <br />
+              Сменить можно в любой момент кнопкой 🌐
+              <br />
+              随时可通过 🌐 按钮切换
             </p>
             <div className="tutorial-actions">
               <button className="tutorial-skip" onClick={skipTutorial}>{t('tutorial.skip')}</button>
