@@ -138,7 +138,9 @@ export class Engine {
    * механические станки — константа 10.
    */
   private getEnergyCost(node: Entity, packet: Packet): number {
-    const LLM_KINDS = new Set(['assembler', 'splitter', 'mixer', 'lab']);
+    // splitter здесь НЕ значится: его handler не зовёт ctx.llm (тупой размножитель),
+    // LLM-тариф переплачивал бы его в ~40 раз и ронял большие пакеты по capacity.
+    const LLM_KINDS = new Set(['assembler', 'mixer', 'lab']);
     if (!LLM_KINDS.has(node.kind)) return 10;
     const modules = (node.config['modules'] as unknown[]) || [];
     return (packet.sizeHint / 4 + 400) * (1 + modules.length * 0.5);
@@ -268,12 +270,13 @@ export class Engine {
       data = mode === 'webhook' ? webhookBody : miner.config['text'] || '';
     }
 
-    // Создаём базовый пакет
+    // Создаём базовый пакет. data ?? null: JSON.stringify(undefined) возвращает
+    // undefined (не строку) — .length кидал TypeError на webhook-шахте без payload.
     const packet: Packet = {
       id: `pkt-${crypto.randomUUID().slice(0, 8)}`,
       data,
       item: 'text',
-      sizeHint: JSON.stringify(data).length,
+      sizeHint: JSON.stringify(data ?? null).length,
       ttl: 64,
     };
 
@@ -283,10 +286,12 @@ export class Engine {
       at: miner.pos,
     });
 
-    // Для каждого исходящего edge: клонируем пакет и запускаем доставку
+    // Для каждого исходящего edge: клон со СВЕЖИМ id (как в callHandler) — общий id
+    // на два выхода заставлял GameTransport.move заменить спрайт первого клона,
+    // не резолвя его Promise: одна из веток тихо зависала навсегда.
     const outgoingEdges = this.edges.filter((e) => e.from === miner.id);
     for (const edge of outgoingEdges) {
-      const clonedPacket = { ...packet };
+      const clonedPacket: Packet = { ...packet, id: `pkt-${crypto.randomUUID().slice(0, 8)}` };
       const chain = this.deliverPacket(edge, clonedPacket);
       this.running.add(chain);
       chain.finally(() => this.running.delete(chain));
@@ -607,7 +612,8 @@ export class Engine {
         // Клон пакета со СВЕЖИМ id на каждый выходной edge — иначе несколько edge одной
         // branch (дублер: два выхода 'out') делили бы один id/спрайт, второй move стёр
         // бы первый. Для одиночного выхода (assembler и др.) поведение прежнее.
-        const sizeHint = JSON.stringify(result.out).length;
+        // out ?? null — та же защита от JSON.stringify(undefined), что и в spawnPacket
+        const sizeHint = JSON.stringify(result.out ?? null).length;
         for (const edge of outEdges) {
           const clone: Packet = {
             id: `pkt-${crypto.randomUUID().slice(0, 8)}`,

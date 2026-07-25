@@ -93,4 +93,24 @@ try {
 }
 assert(threwOnEmpty, 'serialize: пустой набор сущностей должен быть отклонён');
 
+// Фикс алиасинга config (код-ревью): хендлеры мутируют config на месте (webhookHandler
+// дописывает headers) — serialize/instantiate обязаны делать глубокую копию, иначе
+// мутация инстанса протекает в чертёж и все его будущие постановки.
+{
+  const src: Entity = {
+    id: 'w1', kind: 'webhook', pos: { x: 0, y: 0 }, dir: 0,
+    config: { headers: { a: '1' } },
+  };
+  const bpCfg = serializeBlueprint([src], 'cfg');
+  (bpCfg.entities[0].config['headers'] as Record<string, string>)['b'] = '2';
+  assert(!('b' in (src.config['headers'] as Record<string, string>)),
+    'serialize: config не должен алиаситься с исходной сущностью');
+
+  const inst = instantiateBlueprint(bpCfg, { x: 0, y: 0 });
+  (inst[0].config['headers'] as Record<string, string>)['c'] = '3';
+  assert(!('c' in (bpCfg.entities[0].config['headers'] as Record<string, string>)),
+    'instantiate: config не должен алиаситься с чертежом');
+  console.log('✓ config deep-copy (no aliasing) OK');
+}
+
 console.log('blueprint checks OK');
