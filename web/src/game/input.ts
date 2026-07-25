@@ -161,13 +161,17 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
       const [w, h] = SIZES[e.kind];
       const rw = e.dir % 2 === 1 ? h : w;
       const rh = e.dir % 2 === 1 ? w : h;
+      // Текстура lab авторена на 2×1, футпринт (SIZES) — 2×2 (см. updateGhost выше и
+      // machines.ts) — пивот по размеру текстуры, иначе арт сместился бы к верху клетки
+      // нерастянутым, как раньше при 2×1-футпринте.
+      const [sw, sh] = e.kind === 'lab' ? [2, 1] : [w, h];
       sprite.visible = true;
-      sprite.pivot.set((w * TILE) / 2, (h * TILE) / 2);
+      sprite.pivot.set((sw * TILE) / 2, (sh * TILE) / 2);
       sprite.position.set(e.pos.x * TILE + (rw * TILE) / 2, e.pos.y * TILE + (rh * TILE) / 2);
       sprite.angle = e.dir * 90;
       sprite.scale.set(
         e.kind === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : 1,
-        e.kind === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : 1
+        e.kind === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : e.kind === 'lab' ? LAB_VISUAL_SCALE_Y : 1
       );
       sprite.tint = ok ? TINT_OK : TINT_BAD;
     });

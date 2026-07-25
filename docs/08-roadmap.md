@@ -63,6 +63,7 @@
   - Hotbar.tsx: `MVP_TOOLS`(7) → `ALL_TOOLS`(10) + `KEY_TO_TOOL` по HOTKEYS вместо позиционной арифметики по индексу — иначе furnace/chest/lab были бы нерасставляемы в UI, несмотря на рабочий handler (клавиши 8/9/0 уже были заявлены в HOTKEYS, но не подключены).
   - `__checks__/nodes.ts`: +4 (furnace-transform, furnace-undefined-error, lab-pass, lab-rework), `testRegistry` теперь требует handler у всех kind кроме `accumulator`. `__checks__/engine.ts`: +1 (AC9, chest — 3 миксера → chest(batchSize=3) → silo, проверка ровно 2 промежуточных result + 1 финальный с массивом из 3).
   - `pnpm typecheck` ✓, `pnpm check` ✓ (9 AC engine + 12 AC nodes), `pnpm build` ✓. Ручного smoke-теста в браузере не делал (без Claude in Chrome в этой сессии) — стоит прогнать глазами перед демо.
+  - **Ревью-фикс (fix/lab-2x2-footprint):** `lab` был описан как 2×1, из-за чего при `dir=1/3` занимал 1×2 — «крив» при повороте вместо стабильного квадрата. Футпринт исправлен на 2×2 сразу в четырёх местах, где он дублировался (`core/grid.ts`, `core/nodes/index.ts`, `game/machines.ts`, `game/input.ts` — включая одиночный ghost и групповой ghost чертежа), плюс комментарий в `game/debugScene.ts` (мёртвый код, размеры там — текстурные, не футпринт). Арт (`lab_idle/work.png`) остался авторен на 2×1 — визуально растягивается по Y (`LAB_VISUAL_SCALE_Y=2`, искажение осознанно, см. комментарий в `machines.ts`). Новые проверки в `__checks__/grid.ts` (footprint/коллизия/порты на 2×2 для всех 4 dir).
 
 ## Трек C — сервер и UI (docs/07, 06)
 
