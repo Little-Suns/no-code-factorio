@@ -7,12 +7,14 @@ import { initMachines } from '../game/machines';
 import { initBelts } from '../game/belts';
 import { initPackets } from '../game/packets';
 import { initFX } from '../game/fx';
+import { initCamera } from '../game/camera';
 import { Hotbar } from './Hotbar';
 import { TopBar } from './TopBar';
 import { ConfigPanel } from './ConfigPanel';
 import { ResultPanel } from './ResultPanel';
 import { BlueprintPanel } from './BlueprintPanel';
 import { LogsPanel } from './LogsPanel';
+import { NodeSearch } from './NodeSearch';
 import { Tutorial } from './Tutorial';
 import './App.css';
 
@@ -31,6 +33,7 @@ export function App() {
       initBelts(layers);
       initPackets(app, layers);
       initFX(app, layers);
+      initCamera(viewport, layers);
 
       // Инициализировать ввод
       initInput(canvasRef.current!, viewport, layers);
@@ -72,6 +75,7 @@ export function App() {
         <ResultPanel />
         <BlueprintPanel />
         <LogsPanel />
+        <NodeSearch />
         <Hotbar />
         <Tutorial />
       </div>

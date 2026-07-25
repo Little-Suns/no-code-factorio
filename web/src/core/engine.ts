@@ -52,6 +52,18 @@ export class Engine {
   // затор. runtime.ts на document.visibilitychange зовёт setPaused(document.hidden) —
   // симметрично паузе рендерера, не даём миру расходиться, пока его никто не видит.
   private paused = false;
+  // Режим отладки (пошаговое выполнение, UI: кнопки Пауза/Шаг). Отдельный от `paused`
+  // флаг — иначе visibilitychange (`setPaused`) сбрасывал бы дебаг-паузу при сворачивании
+  // вкладки. Источники (интервал-шахты, вебхуки) проверяют оба флага перед автоспавном;
+  // ручной triggerMiner работает всегда, как и раньше — это единственный способ подать
+  // пакет вручную, пока идёт пошаговая отладка.
+  private debugMode = false;
+  // FIFO очередь «ворот»: каждый значимый пакет-эвент (spawn/consume) при debugMode
+  // ждёт здесь, пока не придёт step(). Кредиты — на случай, если step() нажали ДО того,
+  // как событие успело встать в очередь (порядок вызова относительно gate непредсказуем
+  // в конкурентном движке) — тогда следующее событие проходит немедленно.
+  private debugGateWaiters: Array<() => void> = [];
+  private debugStepCredits = 0;
 
   constructor(
     private entities: Record<string, Entity>,
@@ -69,7 +81,9 @@ export class Engine {
         if (intervalSec > 0) {
           // Без window.* — core обязан работать headless (tsx-проверки под node)
           const id = setInterval(() => {
-            if (!this.abortController.signal.aborted && !this.paused) {
+            // debugMode тоже держит автоспавн — иначе интервальная шахта завалила бы
+            // ворота отладки пакетами, пока пользователь разглядывает текущий шаг.
+            if (!this.abortController.signal.aborted && !this.paused && !this.debugMode) {
               this.triggerMiner(entity.id);
             }
           }, intervalSec * 1000);
@@ -85,7 +99,7 @@ export class Engine {
         // но копить пакеты, которые рендер не сможет разобрать (rAF стоит), — тот
         // же баг, что и с интервалом шахты. Пришедший во время паузы вебхук тихо
         // теряется (docs/04 не даёт гарантий доставки вебхуков — как и раньше при stop()).
-        if (!this.abortController.signal.aborted && !this.paused) {
+        if (!this.abortController.signal.aborted && !this.paused && !this.debugMode) {
           // Найдём шахту с этим ID и спавним пакет с телом
           const miner = this.entities[nodeId];
           if (miner && miner.kind === 'miner') {
@@ -120,6 +134,60 @@ export class Engine {
    */
   setPaused(paused: boolean): void {
     this.paused = paused;
+  }
+
+  /**
+   * Вкл/выкл режим отладки (docs/04). Включение НЕ трогает уже летящие/стоящие в очереди
+   * пакеты — они дойдут до следующих ворот (debugGate) и там встанут. Выключение —
+   * отпускает все текущие ожидания разом (ворота + накопленные кредиты), фабрика едет дальше
+   * без пошагового режима, как обычно.
+   */
+  setDebugMode(enabled: boolean): void {
+    this.debugMode = enabled;
+    if (!enabled) {
+      this.debugStepCredits = 0;
+      this.releaseAllDebugGates();
+    }
+  }
+
+  /**
+   * Один шаг отладки: пропускает РОВНО одно ожидающее событие (кнопка «Шаг» в UI).
+   * Если в этот момент никто не ждёт — кредит копится и «съедается» следующим событием,
+   * которое встанет на ворота (иначе быстрый повторный клик Step мог бы потеряться,
+   * если событие ещё не успело дойти до gate).
+   */
+  step(): void {
+    if (!this.debugMode) return;
+    const waiter = this.debugGateWaiters.shift();
+    if (waiter) {
+      waiter();
+    } else {
+      this.debugStepCredits++;
+    }
+  }
+
+  private releaseAllDebugGates(): void {
+    const waiters = this.debugGateWaiters;
+    this.debugGateWaiters = [];
+    for (const resolve of waiters) resolve();
+  }
+
+  /**
+   * Ворота отладки: вызывается в начале обработки каждого значимого пакет-события
+   * (spawn у шахты/выхода станка, consume при входе в станок/chest/mixer). Вне debugMode —
+   * резолвится сразу (одна лишняя микрозадача, не влияет на порядок/тайминги остального
+   * движка — все смежные операции и так асинхронные). В debugMode — ждёт step() или
+   * setDebugMode(false).
+   */
+  private async debugGate(): Promise<void> {
+    if (!this.debugMode || this.abortController.signal.aborted) return;
+    if (this.debugStepCredits > 0) {
+      this.debugStepCredits--;
+      return;
+    }
+    await new Promise<void>((resolve) => {
+      this.debugGateWaiters.push(resolve);
+    });
   }
 
   /**
@@ -194,6 +262,12 @@ export class Engine {
   stop(): void {
     this.abortController.abort();
 
+    // Отпускаем всё, что ждёт на воротах отладки — иначе висящие промисы (debugGate)
+    // никогда не зарезолвятся, и связанные async-цепочки останутся в this.running навсегда.
+    this.debugMode = false;
+    this.debugStepCredits = 0;
+    this.releaseAllDebugGates();
+
     // Очищаем интервалы
     for (const id of this.intervals) {
       clearInterval(id);
@@ -233,6 +307,11 @@ export class Engine {
    * и остаётся нереализованным (баг: url молча улетал как сырая строка).
    */
   private async spawnPacket(webhookBody: unknown, miner: Entity): Promise<void> {
+    // Ворота отладки — ДО вызова handler'а шахты (не только до эмита), чтобы шаг
+    // показывал весь вброс атомарно: paused-фабрика ничего не делает, пока не нажали Step,
+    // включая сетевые запросы mode='url'.
+    await this.debugGate();
+
     let data: unknown;
     const handler = this.deps.handlers?.['miner'];
 
@@ -283,10 +362,15 @@ export class Engine {
       at: miner.pos,
     });
 
-    // Для каждого исходящего edge: клонируем пакет и запускаем доставку
+    // Для каждого исходящего edge: клонируем пакет и запускаем доставку.
+    // СВЕЖИЙ id на каждый клон — иначе несколько edge от одной шахты (2×2 миner
+    // с обоими портами подключёнными, напр. оба ведут в один chest для батча)
+    // делили бы один id/спрайт: второй transport.move стирал бы tween первого
+    // (packets.ts: "Удалить старый спрайт если существует"), первый пакет никогда
+    // не резолвился бы и не доставлялся — chest получал бы только последний клон.
     const outgoingEdges = this.edges.filter((e) => e.from === miner.id);
     for (const edge of outgoingEdges) {
-      const clonedPacket = { ...packet };
+      const clonedPacket = { ...packet, id: `pkt-${crypto.randomUUID().slice(0, 8)}` };
       const chain = this.deliverPacket(edge, clonedPacket);
       this.running.add(chain);
       chain.finally(() => this.running.delete(chain));
@@ -341,11 +425,13 @@ export class Engine {
     const toNode = this.entities[edge.to!];
     if (!toNode) return;
 
-    // Смеситель и сундук — специальная обработка (буферизация)
+    // Смеситель и сундук — специальная обработка (буферизация). Не await'им —
+    // как и раньше, это fire-and-forget относительно вызывающей цепочки (deliverPacket);
+    // debugGate() внутри сам сериализует прогресс через ворота отладки при необходимости.
     if (toNode.kind === 'mixer') {
-      this.deliverToMixer(toNode, edge, packet);
+      void this.deliverToMixer(toNode, edge, packet);
     } else if (toNode.kind === 'chest') {
-      this.deliverToChest(toNode, packet);
+      void this.deliverToChest(toNode, packet);
     } else {
       // Остальные узлы — в очередь
       this.enqueuePacket(toNode, packet);
@@ -359,7 +445,10 @@ export class Engine {
    * Полный набор — пропускается через обычный enqueuePacket/handler станка,
    * data при этом уже массив накопленных payload'ов.
    */
-  private deliverToChest(chest: Entity, packet: Packet): void {
+  private async deliverToChest(chest: Entity, packet: Packet): Promise<void> {
+    // Ворота отладки — до буферизации/consume, тот же смысл, что и в processNode.
+    await this.debugGate();
+
     if (!this.buffers.has(chest.id)) {
       this.buffers.set(chest.id, new Map());
     }
@@ -376,18 +465,32 @@ export class Engine {
 
     const batchSize = Math.max(1, Number(chest.config['batchSize']) || 5);
 
+    // items здесь передаётся тем же массивом, что уже лежит в буфере, — инспектор
+    // (ConfigPanel) должен видеть ВСЁ накопленное, а не только последний пришедший
+    // пакет, иначе выглядит как «сундук хранит только последнее вхождение».
     if (items.length < batchSize) {
       this.emit({ t: 'node-io', nodeId: chest.id, lastIn: packet.data });
-      this.emit({ t: 'result', nodeId: chest.id, data: { buffered: items.length, batchSize } });
+      this.emit({
+        t: 'result',
+        nodeId: chest.id,
+        data: { buffered: items.length, batchSize, items: items.map((p) => p.data) },
+      });
       this.emit({ t: 'node-status', nodeId: chest.id, status: 'ok' });
       return;
     }
 
-    // Полная пачка собрана — сбрасываем буфер, дальше как обычный станок
+    // Полная пачка собрана — эмитим итоговое содержимое до сброса буфера, иначе
+    // инспектор не узнает, что уехало (см. комментарий выше про items).
+    const flushedItems = items.map((p) => p.data);
+    this.emit({
+      t: 'result',
+      nodeId: chest.id,
+      data: { buffered: batchSize, batchSize, items: flushedItems, flushed: true },
+    });
     chestBuffer.set('items', []);
     const mergedPacket: Packet = {
       id: `pkt-${crypto.randomUUID().slice(0, 8)}`,
-      data: items.map((p) => p.data),
+      data: flushedItems,
       item: 'batch',
       sizeHint: items.reduce((sum, p) => sum + p.sizeHint, 0),
       ttl: Math.min(...items.map((p) => p.ttl)) - 1,
@@ -399,7 +502,14 @@ export class Engine {
   /**
    * Доставка в смеситель: буферизация до получения от всех входов.
    */
-  private deliverToMixer(mixer: Entity, edge: Edge, packet: Packet): void {
+  private async deliverToMixer(mixer: Entity, edge: Edge, packet: Packet): Promise<void> {
+    // Ворота отладки — до буферизации, как и в deliverToChest/processNode. Гейтится КАЖДОЕ
+    // прибытие (не только момент, когда комплект собран), чтобы буферная логика ниже
+    // (push/isReady/shift) осталась полностью синхронной и атомарной относительно других
+    // конкурентных вызовов — без await посреди неё гонки за один и тот же mixerBuffers
+    // невозможны, ровно как до появления debugGate.
+    await this.debugGate();
+
     // Получаем буфер смесителя
     if (!this.buffers.has(mixer.id)) {
       this.buffers.set(mixer.id, new Map());
@@ -485,6 +595,10 @@ export class Engine {
    * Обработка пакета в узле: consume → handler → spawn output / done / error.
    */
   private async processNode(node: Entity, packet: Packet): Promise<void> {
+    // Ворота отладки — пакет визуально уже доехал до узла (transport.move отработал),
+    // но «не входит» в станок, пока не нажали Step.
+    await this.debugGate();
+
     // Эмитим consume
     this.emit({
       t: 'packet-consume',
@@ -609,6 +723,10 @@ export class Engine {
         // бы первый. Для одиночного выхода (assembler и др.) поведение прежнее.
         const sizeHint = JSON.stringify(result.out).length;
         for (const edge of outEdges) {
+          // Ворота отладки — на каждый исходящий клон отдельно (дублер с 2 выходами даёт
+          // 2 шага: видно, как копии разъезжаются одна за другой, а не разом).
+          await this.debugGate();
+
           const clone: Packet = {
             id: `pkt-${crypto.randomUUID().slice(0, 8)}`,
             data: result.out,

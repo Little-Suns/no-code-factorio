@@ -695,8 +695,10 @@ async function testWebhookMiner() {
 
 /**
  * AC9 (B5): сундук выпускает пачку ровно на batchSize.
- * Недобор — result-событие с прогрессом у chest, но без spawn/доставки в silo;
- * набралось batchSize — один result у silo с массивом всех накопленных payload'ов.
+ * Недобор — result-событие с прогрессом у chest (включая накопленные `items`,
+ * инспектор должен видеть их все, не только последний); набралось batchSize —
+ * ещё один result у chest (`flushed: true`, полный список) и один result у silo
+ * с массивом всех накопленных payload'ов.
  */
 async function testChestBatch() {
   const events: EngineEvent[] = [];
@@ -736,12 +738,24 @@ async function testChestBatch() {
   const chestResults = events.filter(
     (e): e is Extract<EngineEvent, { t: 'result' }> => e.t === 'result' && e.nodeId === 'chest1'
   );
-  if (chestResults.length !== 2) {
-    throw new Error(`AC9: ожидались 2 промежуточных result у chest (недобор), получено ${chestResults.length}`);
+  if (chestResults.length !== 3) {
+    throw new Error(`AC9: ожидались 2 промежуточных result + 1 flush у chest, получено ${chestResults.length}`);
   }
   const buffered = chestResults.map((e) => (e.data as { buffered: number }).buffered);
-  if (buffered[0] !== 1 || buffered[1] !== 2) {
+  if (buffered[0] !== 1 || buffered[1] !== 2 || buffered[2] !== 3) {
     throw new Error(`AC9: неверный прогресс буфера: ${buffered.join(',')}`);
+  }
+  // Инспектор должен видеть ВСЕ накопленные items на каждом шаге, а не только последний
+  const itemsProgression = chestResults.map((e) => (e.data as { items: unknown[] }).items);
+  if (itemsProgression[0].length !== 1 || itemsProgression[1].length !== 2 || itemsProgression[2].length !== 3) {
+    throw new Error(`AC9: неверная длина items по шагам: ${itemsProgression.map((i) => i.length).join(',')}`);
+  }
+  const lastFlush = chestResults[2].data as { flushed?: boolean; items: unknown[] };
+  if (lastFlush.flushed !== true) {
+    throw new Error('AC9: последний result у chest должен быть помечен flushed: true');
+  }
+  if (JSON.stringify([...lastFlush.items].sort()) !== JSON.stringify(['item-0', 'item-1', 'item-2'])) {
+    throw new Error(`AC9: неверное содержимое финального items: ${JSON.stringify(lastFlush.items)}`);
   }
 
   const siloResults = events.filter(
@@ -1195,6 +1209,87 @@ async function testDuplicatorTwoCopies() {
 }
 
 /**
+ * AC17: режим отладки (setDebugMode/step) — пакет проходит РОВНО по одному gate за step(),
+ * дальше ничего не движется, пока не нажали Step; setDebugMode(false) снимает режим.
+ * Пайплайн miner→assembler→silo даёт ровно 4 ворот: spawn у шахты, consume у assembler,
+ * spawn assembler→silo, consume у silo (после которого сразу идёт result, без своих ворот).
+ */
+async function testDebugStepMode() {
+  const events: EngineEvent[] = [];
+
+  const entities: Record<string, Entity> = {
+    miner1: { id: 'miner1', kind: 'miner', pos: { x: 0, y: 0 }, dir: 0, config: { mode: 'text', text: 'x' } },
+    assembler1: { id: 'assembler1', kind: 'assembler', pos: { x: 5, y: 0 }, dir: 0, config: {} },
+    silo1: { id: 'silo1', kind: 'silo', pos: { x: 10, y: 0 }, dir: 0, config: {} },
+  };
+  const edges: Edge[] = [
+    { id: 'e1:out:0', from: 'miner1', branch: 'out', to: 'assembler1', path: [{ x: 1, y: 0 }, { x: 4, y: 0 }] },
+    { id: 'e2:out:0', from: 'assembler1', branch: 'out', to: 'silo1', path: [{ x: 6, y: 0 }, { x: 9, y: 0 }] },
+  ];
+  const handlers: Record<string, (ctx: NodeCtx) => Promise<HandlerResult>> = {
+    assembler: async () => ({ out: 'processed' }),
+    silo: async () => ({ done: true }),
+  };
+
+  const engine = new Engine(entities, edges, fakeTransport, (e) => events.push(e), {
+    handlers: handlers as any,
+  });
+
+  engine.start();
+  engine.setDebugMode(true);
+  engine.triggerMiner('miner1');
+
+  await new Promise((r) => setTimeout(r, 40));
+  if (events.length > 0) {
+    throw new Error(`AC17: в debug-режиме ничего не должно случиться до первого step(), получено ${events.length} событий`);
+  }
+
+  engine.step(); // ворота A: spawn у шахты
+  await new Promise((r) => setTimeout(r, 30));
+  let spawns = events.filter((e) => e.t === 'packet-spawn').length;
+  if (spawns !== 1) throw new Error(`AC17: после 1-го step ожидался 1 packet-spawn, получено ${spawns}`);
+  if (events.some((e) => e.t === 'packet-consume')) {
+    throw new Error('AC17: consume не должен случиться раньше своего step()');
+  }
+
+  engine.step(); // ворота B: consume у assembler
+  await new Promise((r) => setTimeout(r, 30));
+  const consumesAtAssembler = events.filter(
+    (e) => e.t === 'packet-consume' && e.nodeId === 'assembler1'
+  ).length;
+  if (consumesAtAssembler !== 1) {
+    throw new Error(`AC17: после 2-го step ожидался consume у assembler1, получено ${consumesAtAssembler}`);
+  }
+  if (events.some((e) => e.t === 'result')) {
+    throw new Error('AC17: result не должен появиться раньше 4-го step()');
+  }
+
+  engine.step(); // ворота C: spawn assembler → silo
+  await new Promise((r) => setTimeout(r, 30));
+  spawns = events.filter((e) => e.t === 'packet-spawn').length;
+  if (spawns !== 2) throw new Error(`AC17: после 3-го step ожидались 2 packet-spawn, получено ${spawns}`);
+
+  engine.step(); // ворота D: consume у silo → сразу done/result
+  await new Promise((r) => setTimeout(r, 30));
+  const siloResults = events.filter((e) => e.t === 'result' && e.nodeId === 'silo1');
+  if (siloResults.length !== 1) {
+    throw new Error(`AC17: после 4-го step ожидался result у silo1, получено ${siloResults.length}`);
+  }
+
+  // setDebugMode(false) снимает режим — дальнейшие вбросы идут без ворот, как обычно
+  engine.setDebugMode(false);
+  events.length = 0;
+  engine.triggerMiner('miner1');
+  await new Promise((r) => setTimeout(r, 60));
+  if (!events.some((e) => e.t === 'result' && e.nodeId === 'silo1')) {
+    throw new Error('AC17: после setDebugMode(false) пайплайн должен снова доезжать до result без step()');
+  }
+
+  engine.stop();
+  console.log('✓ AC17: debug pause/step OK');
+}
+
+/**
  * Запуск всех проверок
  */
 (async () => {
@@ -1215,8 +1310,9 @@ async function testDuplicatorTwoCopies() {
     await testPauseStopsNewSpawns();
     await testBeltLoop();
     await testDuplicatorTwoCopies();
+    await testDebugStepMode();
 
-    console.log('\n✅ engine checks OK — все 16 AC пройдены');
+    console.log('\n✅ engine checks OK — все 17 AC пройдены');
   } catch (e) {
     console.error('\n❌ engine checks FAILED:', e);
     throw e;

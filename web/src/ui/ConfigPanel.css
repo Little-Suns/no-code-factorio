@@ -333,3 +333,25 @@
 .io-collapsible[open] summary {
   background: var(--panel-bg-2);
 }
+
+.chest-buffer-empty {
+  padding: 9px;
+  background: var(--panel-bg);
+  border: 2px solid var(--panel-border);
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.chest-buffer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.chest-buffer-item {
+  border: 2px solid var(--panel-border);
+  background: var(--panel-bg-2);
+  padding: 4px 6px;
+}
