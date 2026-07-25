@@ -205,6 +205,39 @@ async function testD2() {
   );
 }
 
+// Test E: манипулятор, чей FRONT смотрит в пустоту (развёрнут не в ту сторону/ничего не
+// подключено на выходе) => buildGraph не создаёт ни одного edge от него (path.length===0
+// && to===null, как в Test B2). Регрессия на баг "манипулятор замораживается": без явного
+// packet-spawn при 0 исходящих edge triggerManipulatorRelease (runtime.ts, висит на
+// packet-spawn) никогда не вызывался, и манипулятор визуально навсегда застревал в позе
+// "держит предмет". Движок обязан эмитить packet-spawn + packet-drop('dead-end'), как при
+// настоящем тупике ленты, а не молча терять пакет.
+async function testE() {
+  const miner: Entity = { id: 'miner_e', kind: 'miner', pos: { x: 40, y: 5 }, dir: 0, config: { mode: 'text', text: 'x' } };
+  const belt: Entity = { id: 'belt_e', kind: 'belt', pos: { x: 40, y: 4 }, dir: 0, config: {} };
+  // manip_e забирает с belt_e (BACK), но FRONT (dir=0, вверх) смотрит в пустой тайл — ничего не подключено.
+  const manip: Entity = { id: 'manip_e', kind: 'manipulator', pos: { x: 40, y: 3 }, dir: 0, config: {} };
+
+  const entities = { miner_e: miner, belt_e: belt, manip_e: manip };
+  const edges = buildGraph(entities);
+
+  const manipEdges = edges.filter((e) => e.from === 'manip_e');
+  assert(manipEdges.length === 0, `manip_e facing empty space must yield 0 edges, got ${manipEdges.length}`);
+
+  const events: EngineEvent[] = [];
+  const engine = new Engine(entities, edges, fakeTransport, (e) => events.push(e), { handlers: collectHandlers() });
+  engine.start();
+  engine.triggerMiner('miner_e');
+  // miner MIN_WORK_MS (~2.7с) + manipulator GRAB_MS (~0.35с) — тот же запас, что у testA2/testD2.
+  await new Promise((r) => setTimeout(r, 3200));
+  engine.stop();
+
+  const manipSpawns = events.filter((e) => e.t === 'packet-spawn' && e.at.x === manip.pos.x && e.at.y === manip.pos.y);
+  assert(manipSpawns.length === 1, `Expected manip_e to still emit packet-spawn (releases its grab pose) even with 0 outgoing edges, got ${manipSpawns.length}`);
+  const deadEndDrops = events.filter((e) => e.t === 'packet-drop' && e.reason === 'dead-end');
+  assert(deadEndDrops.length === 1, `Expected the packet with nowhere to go to be dropped as dead-end, got ${deadEndDrops.length}`);
+}
+
 (async () => {
   try {
     await testA2();
@@ -213,6 +246,8 @@ async function testD2() {
     console.log('✓ Test C OK (engine level, via manipulator => result delivered)');
     await testD2();
     console.log('✓ Test D2 OK (engine level, manipulator only at load end => no result)');
+    await testE();
+    console.log('✓ Test E OK (manipulator with 0 outgoing edges still releases, does not freeze)');
     console.log('manipulator-invariant checks OK');
   } catch (e) {
     console.error('\n❌ manipulator-invariant checks FAILED:', e);

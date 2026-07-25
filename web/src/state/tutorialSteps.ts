@@ -19,8 +19,6 @@ export interface TutorialStep {
 export const TUTORIAL_STEPS: TutorialStep[] = [
   { target: null, titleKey: '', descKey: '', lang: true },
   { target: null, titleKey: 'tutorial.step.welcome.title', descKey: 'tutorial.step.welcome.desc' },
-  { target: null, titleKey: 'tutorial.step.metaphor.title', descKey: 'tutorial.step.metaphor.desc' },
-  { target: null, titleKey: 'tutorial.step.terms.title', descKey: 'tutorial.step.terms.desc' },
   { target: 'hotbar', titleKey: 'tutorial.step.hotbar.title', descKey: 'tutorial.step.hotbar.desc' },
   { target: null, titleKey: 'tutorial.step.place.title', descKey: 'tutorial.step.place.desc', practice: 'place' },
   {

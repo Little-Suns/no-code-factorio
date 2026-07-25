@@ -27,6 +27,15 @@ export const SILO_VISUAL_SCALE = 1.3;
 // в мировых координатах (px), поэтому корректно при любом повороте станка.
 export const SILO_Y_OFFSET = 18;
 
+// Арт станков (кроме belt, у которого свой процедурный рендер в belts.ts) нарисован
+// с "нейтральной" позой не так, как принято для dir=0 (docs/01, CLAUDE.md) — без
+// офсета dir=0 визуально читался как "развёрнуто вправо". Сдвигаем угол на +90°,
+// чтобы dir=0 показывал станок прямо. Только для рендера (angle), не для
+// футпринта/occupancy — те считаются от entity.dir напрямую и с этим смещением не связаны.
+export function machineSpriteAngle(dir: Dir): number {
+  return (((dir + 1) % 4) * 90);
+}
+
 const STATUS_COLORS: Record<NodeStatus, number> = {
   idle: 0x5a5445,     // тускло-жёлтый (idle, дизайн-макет Factory.exe)
   working: 0xf0a030,  // акцентный оранжевый (working)
@@ -225,7 +234,7 @@ function updateMachines(entities: Record<string, Entity>, layer: Container): voi
     machineSprite.sprite.pivot.set(spriteSize.w * TILE * 0.5, spriteSize.h * TILE * 0.5);
     machineSprite.sprite.position.set(rotatedSize.w * TILE * 0.5, rotatedSize.h * TILE * 0.5);
     if (entity.kind === 'silo') machineSprite.sprite.position.y -= SILO_Y_OFFSET;
-    machineSprite.sprite.angle = entity.dir * 90;
+    machineSprite.sprite.angle = machineSpriteAngle(entity.dir);
     // manipulator: зеркалим по Y, пока развёрнут на "выкладку" (см. triggerManipulatorGrab/Release) —
     // поворот на 180° ставил руку "вверх ногами", зеркало держит её в исходной ориентации.
     if (entity.kind === 'manipulator') {
@@ -282,6 +291,11 @@ function updateMachineStatus(
       const workTextures = getTexture(entity.kind, 'work');
       if (Array.isArray(workTextures) && machineSprite.sprite instanceof AnimatedSprite) {
         machineSprite.sprite.textures = workTextures;
+        // loop=true: реальный handler (LLM-вызов и т.п.) часто длится дольше одного
+        // прохода анимации — без луп сборка "застревала" на последнем work-кадре до
+        // самого завершения (выглядело как замороженный станок). lastStatus-гварда
+        // выше не даёт .play() перезапускаться повторно, пока working не сменился.
+        machineSprite.sprite.loop = true;
         machineSprite.sprite.play();
       }
     } else {

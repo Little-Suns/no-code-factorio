@@ -744,6 +744,25 @@ export class Engine {
           chain.finally(() => this.running.delete(chain));
         }
 
+        // Нет исходящих edge вовсе (частая причина: манипулятор/станок развёрнут не в ту
+        // сторону — buildGraph не создал Edge, docs/03/CLAUDE.md). Без явного packet-spawn
+        // манипулятор никогда не получает "выкладку" (triggerManipulatorRelease в runtime.ts
+        // висит на событии packet-spawn) и визуально навсегда застревает в позе "держит
+        // предмет" — тот же результат для игрока, что и настоящий тупик ленты, поэтому эмитим
+        // тот же packet-spawn + packet-drop('dead-end'), что и при реальном dead-end ниже по цепи.
+        if (outEdges.length === 0) {
+          await this.debugGate();
+          const clone: Packet = {
+            id: `pkt-${crypto.randomUUID().slice(0, 8)}`,
+            data: result.out,
+            item: outItem,
+            sizeHint,
+            ttl: packet.ttl - 1,
+          };
+          this.emit({ t: 'packet-spawn', packet: clone, at: node.pos });
+          this.emit({ t: 'packet-drop', packetId: clone.id, reason: 'dead-end' });
+        }
+
         this.emit({
           t: 'node-status',
           nodeId: node.id,

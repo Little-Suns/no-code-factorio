@@ -2,7 +2,7 @@ import { Sprite, Point, Graphics } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { TILE } from './app';
 import { getTexture } from './assets';
-import { MANIPULATOR_VISUAL_SCALE, SILO_VISUAL_SCALE, SILO_Y_OFFSET, LAB_VISUAL_SCALE_Y, SPLITTER_VISUAL_SCALE, ASSEMBLER_VISUAL_SCALE } from './machines';
+import { MANIPULATOR_VISUAL_SCALE, SILO_VISUAL_SCALE, SILO_Y_OFFSET, LAB_VISUAL_SCALE_Y, SPLITTER_VISUAL_SCALE, ASSEMBLER_VISUAL_SCALE, machineSpriteAngle } from './machines';
 import { useStore } from '../state/store';
 import { tutorialBlocksInput } from '../state/tutorialSteps';
 import { t } from '../i18n/dictionaries';
@@ -182,7 +182,8 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
       sprite.visible = true;
       sprite.pivot.set((sw * TILE) / 2, (sh * TILE) / 2);
       sprite.position.set(e.pos.x * TILE + (rw * TILE) / 2, e.pos.y * TILE + (rh * TILE) / 2);
-      sprite.angle = e.dir * 90;
+      // belt рендерится отдельно процедурно (belts.ts) — офсет только для реального арта станков.
+      sprite.angle = e.kind === 'belt' ? e.dir * 90 : machineSpriteAngle(e.dir);
       sprite.scale.set(
         e.kind === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : e.kind === 'splitter' ? SPLITTER_VISUAL_SCALE : e.kind === 'assembler' ? ASSEMBLER_VISUAL_SCALE : 1,
         e.kind === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : e.kind === 'splitter' ? SPLITTER_VISUAL_SCALE : e.kind === 'assembler' ? ASSEMBLER_VISUAL_SCALE : e.kind === 'lab' ? LAB_VISUAL_SCALE_Y : 1
@@ -299,7 +300,7 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
     ghostSprite.pivot.set((sw * TILE) / 2, (sh * TILE) / 2);
     ghostSprite.position.set(tile.x * TILE + (rw * TILE) / 2, tile.y * TILE + (rh * TILE) / 2);
     if (tool === 'silo') ghostSprite.position.y -= SILO_Y_OFFSET;
-    ghostSprite.angle = ghostDir * 90;
+    ghostSprite.angle = machineSpriteAngle(ghostDir);
     // manipulator: тот же увеличенный масштаб + дефолтное зеркало, что и у реально
     // поставленного станка (machines.ts) — иначе ghost выглядит как старый мелкий спрайт.
     // lab: та же вертикальная растяжка арта, что и у реально поставленного станка.
