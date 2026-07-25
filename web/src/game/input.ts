@@ -37,6 +37,12 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
   let leftDownPx: { x: number; y: number } | null = null; // для отличия клика от драга рамки (px, не тайлы)
   let rightDown: { x: number; y: number } | null = null;
 
+  // Баг 16: перетаскивание существующего станка/ленты нажатием+движением ЛКМ.
+  // moveGrabOffset — смещение точки захвата от pos станка, чтобы при драге станок
+  // не «прыгал» так, чтобы pos совпал с курсором, а сохранял исходную точку хвата.
+  let movingEntityId: string | null = null;
+  let moveGrabOffset: Vec = { x: 0, y: 0 };
+
   // E4: выделение рамкой — просто зажим+растягивание ЛКМ без инструмента/чертежа на кисти
   let selectionBox: Graphics | null = null;
   let entityHighlight: Graphics | null = null;
@@ -311,6 +317,17 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
   canvas.addEventListener('pointermove', (e: PointerEvent) => {
     lastMouse = { x: e.clientX, y: e.clientY };
     const store = useStore.getState();
+    // Перетаскивание станка — двигаем сразу в сторе (как rotate: canPlace не пускает
+    // в занятую клетку, поэтому лишней проверки/ghost не нужно, драг просто «упирается»).
+    if (movingEntityId) {
+      const raw = toTile(e.clientX, e.clientY);
+      const target = { x: raw.x - moveGrabOffset.x, y: raw.y - moveGrabOffset.y };
+      const entity = store.entities[movingEntityId];
+      if (entity && (entity.pos.x !== target.x || entity.pos.y !== target.y)) {
+        store.move(movingEntityId, target);
+      }
+      return;
+    }
     // Рамка выделения — просто зажатая ЛКМ без инструмента/чертежа на кисти, без отдельного режима
     if (dragStart && !store.selectedTool && !store.stampBlueprintId) {
       const dragEnd = toTile(e.clientX, e.clientY);
@@ -327,7 +344,19 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
       leftDownPx = { x: e.clientX, y: e.clientY };
       const store = useStore.getState();
       // Новый драг рамкой — сбросить подсветку прошлого выделения, если она ещё висела
-      if (!store.selectedTool && !store.stampBlueprintId) clearEntityHighlight();
+      if (!store.selectedTool && !store.stampBlueprintId) {
+        clearEntityHighlight();
+        // Клик по существующему станку без инструмента на кисти — начало драга
+        // перемещения (баг 16), а не рамки выделения. Пока работает — не тащим.
+        if (!store.running) {
+          const hitId = findEntityAtTile(dragStart);
+          if (hitId) {
+            const entity = store.entities[hitId];
+            movingEntityId = hitId;
+            moveGrabOffset = { x: dragStart.x - entity.pos.x, y: dragStart.y - entity.pos.y };
+          }
+        }
+      }
     } else if (e.button === 2) {
       rightDown = { x: e.clientX, y: e.clientY };
     }
@@ -338,6 +367,18 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
 
     if (e.button === 0 && dragStart) {
       const dragEnd = toTile(e.clientX, e.clientY);
+
+      if (movingEntityId) {
+        // Клик без движения тоже проходит через сюда (target = pos) — то же
+        // поведение «клик выделяет станок», что было раньше без драга.
+        store.select(movingEntityId);
+        movingEntityId = null;
+        moveGrabOffset = { x: 0, y: 0 };
+        dragStart = null;
+        leftDownPx = null;
+        updateGhost();
+        return;
+      }
 
       if (!store.selectedTool && !store.stampBlueprintId) {
         // Отличаем клик от драга рамки по пиксельному смещению (как ПКМ снос/пан ниже) —
@@ -426,6 +467,8 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
       store.setPendingSelection(null);
       dragStart = null;
       leftDownPx = null;
+      movingEntityId = null;
+      moveGrabOffset = { x: 0, y: 0 };
       clearSelectionBox();
       clearEntityHighlight();
       updateGhost();
