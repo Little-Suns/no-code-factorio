@@ -144,12 +144,72 @@ async function testC() {
   );
 }
 
+// Test D: манипулятор ТОЛЬКО на стороне загрузки (miner -> manipulator -> belt -> belt
+// -> silo) — «липкий» fromManipulator не должен авторизовать весь последующий
+// ленточный пробег до silo. Манипулятор мостит РОВНО одну границу (сам сдвиг с его
+// FRONT-тайла на следующий), а не открывает разгрузку в конце произвольно длинной
+// ленты. Регрессия на баг из docs/03: без фикса fromManipulator остаётся true через
+// весь while-цикл trace() и молча разрешает non-manipulator getTile в конце.
+console.log('Test D: miner -> manipulator -> belt -> belt -> silo (manipulator only at load end) => dead-end, no result');
+{
+  const miner: Entity = { id: 'miner_d', kind: 'miner', pos: { x: 0, y: 5 }, dir: 0, config: {} };
+  const manip: Entity = { id: 'manip_d', kind: 'manipulator', pos: { x: 0, y: 4 }, dir: 0, config: {} };
+  const belt1: Entity = { id: 'belt_d1', kind: 'belt', pos: { x: 0, y: 3 }, dir: 0, config: {} };
+  const belt2: Entity = { id: 'belt_d2', kind: 'belt', pos: { x: 0, y: 2 }, dir: 0, config: {} };
+  // silo 3x3 at (-1,-1): back row y=1 -> (-1,1),(0,1),(1,1); belt_d2 at (0,2) steps to (0,1).
+  const silo: Entity = { id: 'silo_d', kind: 'silo', pos: { x: -1, y: -1 }, dir: 0, config: {} };
+
+  const entities = { miner_d: miner, manip_d: manip, belt_d1: belt1, belt_d2: belt2, silo_d: silo };
+  const edges = buildGraph(entities);
+
+  // miner -> manipulator (0 лент, target=manipulator) — легитимно, это не проверяем строго.
+  // Ключевая проверка: manipulator -> ... -> silo ЧЕРЕЗ 2 ленты не должно стать рабочим edge.
+  const manipEdges = edges.filter((e) => e.from === 'manip_d');
+  assert(manipEdges.length === 1, `Expected 1 edge from manip_d, got ${manipEdges.length}`);
+  assert(
+    manipEdges[0].to === null,
+    `Manipulator feeding a belt run must NOT authorize the far end touching silo (unload boundary still needs its own manipulator), got to=${manipEdges[0].to}`
+  );
+  assert(
+    edges.every((e) => e.to !== 'silo_d'),
+    'No edge may point at silo_d — the belt run past the manipulator has no manipulator at the unload boundary'
+  );
+}
+console.log('✓ Test D OK (graph level)');
+
+async function testD2() {
+  const miner: Entity = { id: 'miner_d2', kind: 'miner', pos: { x: 10, y: 5 }, dir: 0, config: { mode: 'text', text: 'leak' } };
+  const manip: Entity = { id: 'manip_d2', kind: 'manipulator', pos: { x: 10, y: 4 }, dir: 0, config: {} };
+  const belt1: Entity = { id: 'belt_d2_1', kind: 'belt', pos: { x: 10, y: 3 }, dir: 0, config: {} };
+  const belt2: Entity = { id: 'belt_d2_2', kind: 'belt', pos: { x: 10, y: 2 }, dir: 0, config: {} };
+  const silo: Entity = { id: 'silo_d2', kind: 'silo', pos: { x: 9, y: -1 }, dir: 0, config: {} };
+
+  const entities = { miner_d2: miner, manip_d2: manip, belt_d2_1: belt1, belt_d2_2: belt2, silo_d2: silo };
+  const edges = buildGraph(entities);
+
+  const events: EngineEvent[] = [];
+  const engine = new Engine(entities, edges, fakeTransport, (e) => events.push(e), { handlers: collectHandlers() });
+  engine.start();
+  engine.triggerMiner('miner_d2');
+  // На случай если бы это (ошибочно) заработало — silo держит working ~2.7с; ждём с запасом.
+  await new Promise((r) => setTimeout(r, 3200));
+  engine.stop();
+
+  const resultEvents = events.filter((e) => e.t === 'result');
+  assert(
+    resultEvents.length === 0,
+    `Manipulator-at-load-end-only must NOT deliver to silo without a manipulator at the unload boundary, got ${resultEvents.length} 'result' events`
+  );
+}
+
 (async () => {
   try {
     await testA2();
     console.log('✓ Test A2 OK (engine level, no manipulator => no result)');
     await testC();
     console.log('✓ Test C OK (engine level, via manipulator => result delivered)');
+    await testD2();
+    console.log('✓ Test D2 OK (engine level, manipulator only at load end => no result)');
     console.log('manipulator-invariant checks OK');
   } catch (e) {
     console.error('\n❌ manipulator-invariant checks FAILED:', e);
