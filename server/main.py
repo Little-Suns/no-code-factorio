@@ -149,10 +149,16 @@ async def llm_endpoint(request: Request):
                 return err(502, f"LLM error: {error_detail}")
 
             data = response.json()
-            text = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            content = data.get("choices", [{}])[0].get("message", {}).get("content")
+            # content: null (отказ/фильтр/tool-call) или пустой — это ошибка провайдера,
+            # а не валидный текст: мок-режим всегда отдаёт непустую строку, реальный
+            # режим обязан вести себя так же (фронт не должен их различать).
+            if not isinstance(content, str) or not content.strip():
+                log("llm←ERR", node=node_id, model=model, error="empty content", body=data)
+                return err(502, "LLM error: empty model response")
 
-            log("llm←out", node=node_id, model=model, text=text)
-            return {"text": text}
+            log("llm←out", node=node_id, model=model, text=content)
+            return {"text": content}
 
     except HTTPException:
         raise
@@ -193,14 +199,19 @@ async def proxy_endpoint(request: Request):
     # url может содержать секрет (напр. bot-token telegram в пути) — усекается _short'ом.
     log("proxy→in", method=method, url=url, body=req_body)
 
+    # Фронт присылает body уже сериализованной строкой (webhook.ts рендерит шаблон) —
+    # json= сериализовал бы её ВТОРОЙ раз, и на провод уходила JSON-строка вместо объекта
+    # (Discord/Telegram отвечали 400). Строку шлём как есть, dict/list — как json.
+    body_kwargs = {"content": req_body} if isinstance(req_body, str) else {"json": req_body}
+
     try:
         async with httpx.AsyncClient(timeout=20) as client:
             if method == "GET":
                 response = await client.get(url, headers=headers)
             elif method == "POST":
-                response = await client.post(url, headers=headers, json=req_body)
+                response = await client.post(url, headers=headers, **body_kwargs)
             elif method == "PUT":
-                response = await client.put(url, headers=headers, json=req_body)
+                response = await client.put(url, headers=headers, **body_kwargs)
             elif method == "DELETE":
                 response = await client.delete(url, headers=headers)
             else:

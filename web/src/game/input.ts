@@ -2,7 +2,7 @@ import { Sprite, Point, Graphics } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { TILE } from './app';
 import { getTexture } from './assets';
-import { MANIPULATOR_VISUAL_SCALE, SILO_VISUAL_SCALE, SILO_Y_OFFSET, LAB_VISUAL_SCALE_Y, SPLITTER_VISUAL_SCALE } from './machines';
+import { MANIPULATOR_VISUAL_SCALE, SILO_VISUAL_SCALE, SILO_Y_OFFSET, LAB_VISUAL_SCALE_Y, SPLITTER_VISUAL_SCALE, ASSEMBLER_VISUAL_SCALE } from './machines';
 import { useStore } from '../state/store';
 import { t } from '../i18n/dictionaries';
 import { footprintTiles, canPlace } from '../core/grid';
@@ -36,6 +36,17 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
   let dragStart: Vec | null = null;
   let leftDownPx: { x: number; y: number } | null = null; // для отличия клика от драга рамки (px, не тайлы)
   let rightDown: { x: number; y: number } | null = null;
+
+  // Баг 16: перетаскивание существующего станка/ленты нажатием+движением ЛКМ.
+  // moveGrabOffset — смещение точки захвата от pos станка, чтобы при драге станок
+  // не «прыгал» так, чтобы pos совпал с курсором, а сохранял исходную точку хвата.
+  let movingEntityId: string | null = null;
+  let moveGrabOffset: Vec = { x: 0, y: 0 };
+  // Групповой драг: если клик пришёлся на станок из уже выделенной рамкой группы
+  // (store.pendingSelection) — тащим всю группу, сохраняя относительное расположение.
+  let movingGroupIds: string[] = [];
+  let groupMoveAnchor: Vec = { x: 0, y: 0 };
+  let groupMoveStartPositions: Record<string, Vec> = {};
 
   // E4: выделение рамкой — просто зажим+растягивание ЛКМ без инструмента/чертежа на кисти
   let selectionBox: Graphics | null = null;
@@ -166,14 +177,14 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
       // Текстура lab авторена на 2×1, футпринт (SIZES) — 2×2 (см. updateGhost выше и
       // machines.ts) — пивот по размеру текстуры, иначе арт сместился бы к верху клетки
       // нерастянутым, как раньше при 2×1-футпринте.
-      const [sw, sh] = e.kind === 'lab' || e.kind === 'splitter' ? [2, 1] : [w, h];
+      const [sw, sh] = e.kind === 'assembler' ? [3, 3] : e.kind === 'lab' || e.kind === 'splitter' ? [2, 1] : [w, h];
       sprite.visible = true;
       sprite.pivot.set((sw * TILE) / 2, (sh * TILE) / 2);
       sprite.position.set(e.pos.x * TILE + (rw * TILE) / 2, e.pos.y * TILE + (rh * TILE) / 2);
       sprite.angle = e.dir * 90;
       sprite.scale.set(
-        e.kind === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : e.kind === 'splitter' ? SPLITTER_VISUAL_SCALE : 1,
-        e.kind === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : e.kind === 'splitter' ? SPLITTER_VISUAL_SCALE : e.kind === 'lab' ? LAB_VISUAL_SCALE_Y : 1
+        e.kind === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : e.kind === 'splitter' ? SPLITTER_VISUAL_SCALE : e.kind === 'assembler' ? ASSEMBLER_VISUAL_SCALE : 1,
+        e.kind === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : e.kind === 'splitter' ? SPLITTER_VISUAL_SCALE : e.kind === 'assembler' ? ASSEMBLER_VISUAL_SCALE : e.kind === 'lab' ? LAB_VISUAL_SCALE_Y : 1
       );
       sprite.tint = ok ? TINT_OK : TINT_BAD;
     });
@@ -292,8 +303,8 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
     // поставленного станка (machines.ts) — иначе ghost выглядит как старый мелкий спрайт.
     // lab: та же вертикальная растяжка арта, что и у реально поставленного станка.
     ghostSprite.scale.set(
-      tool === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : tool === 'silo' ? SILO_VISUAL_SCALE : tool === 'splitter' ? SPLITTER_VISUAL_SCALE : 1,
-      tool === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : tool === 'silo' ? SILO_VISUAL_SCALE : tool === 'splitter' ? SPLITTER_VISUAL_SCALE : tool === 'lab' ? LAB_VISUAL_SCALE_Y : 1
+      tool === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : tool === 'silo' ? SILO_VISUAL_SCALE : tool === 'splitter' ? SPLITTER_VISUAL_SCALE : tool === 'assembler' ? ASSEMBLER_VISUAL_SCALE : 1,
+      tool === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : tool === 'silo' ? SILO_VISUAL_SCALE : tool === 'splitter' ? SPLITTER_VISUAL_SCALE : tool === 'assembler' ? ASSEMBLER_VISUAL_SCALE : tool === 'lab' ? LAB_VISUAL_SCALE_Y : 1
     );
 
     const test: Entity = { id: 'ghost', kind: tool, pos: tile, dir: ghostDir, config: {} };
@@ -311,6 +322,38 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
   canvas.addEventListener('pointermove', (e: PointerEvent) => {
     lastMouse = { x: e.clientX, y: e.clientY };
     const store = useStore.getState();
+    // Групповое перетаскивание — то же «упирается в занятое», но атомарно для всей
+    // группы (moveMany/canPlaceBlueprint), абсолютная цель всегда от исходных позиций
+    // (не накопление за кадр), чтобы не было дрейфа при отклонённых кадрах.
+    if (movingGroupIds.length > 0) {
+      const raw = toTile(e.clientX, e.clientY);
+      const delta = { x: raw.x - groupMoveAnchor.x, y: raw.y - groupMoveAnchor.y };
+      if (delta.x !== 0 || delta.y !== 0) {
+        const positions = movingGroupIds
+          .filter((id) => groupMoveStartPositions[id])
+          .map((id) => ({
+            id,
+            pos: { x: groupMoveStartPositions[id].x + delta.x, y: groupMoveStartPositions[id].y + delta.y },
+          }));
+        store.moveMany(positions);
+      }
+      // Рамка подсветки должна ехать вместе с группой — пересчитываем по свежим
+      // позициям из стора (moveMany мог отклонить кадр — тогда останется на месте).
+      const fresh = useStore.getState();
+      updateEntityHighlight(movingGroupIds.map((id) => fresh.entities[id]).filter((e): e is Entity => !!e));
+      return;
+    }
+    // Перетаскивание станка — двигаем сразу в сторе (как rotate: canPlace не пускает
+    // в занятую клетку, поэтому лишней проверки/ghost не нужно, драг просто «упирается»).
+    if (movingEntityId) {
+      const raw = toTile(e.clientX, e.clientY);
+      const target = { x: raw.x - moveGrabOffset.x, y: raw.y - moveGrabOffset.y };
+      const entity = store.entities[movingEntityId];
+      if (entity && (entity.pos.x !== target.x || entity.pos.y !== target.y)) {
+        store.move(movingEntityId, target);
+      }
+      return;
+    }
     // Рамка выделения — просто зажатая ЛКМ без инструмента/чертежа на кисти, без отдельного режима
     if (dragStart && !store.selectedTool && !store.stampBlueprintId) {
       const dragEnd = toTile(e.clientX, e.clientY);
@@ -327,7 +370,30 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
       leftDownPx = { x: e.clientX, y: e.clientY };
       const store = useStore.getState();
       // Новый драг рамкой — сбросить подсветку прошлого выделения, если она ещё висела
-      if (!store.selectedTool && !store.stampBlueprintId) clearEntityHighlight();
+      if (!store.selectedTool && !store.stampBlueprintId) {
+        const hitId = !store.running ? findEntityAtTile(dragStart) : null;
+        const group = store.pendingSelection;
+        if (hitId && group && group.some((ent) => ent.id === hitId)) {
+          // Клик по станку из уже выделенной рамкой группы — тащим всю группу целиком,
+          // подсветку не гасим (иначе непонятно, что именно двигается).
+          movingGroupIds = group.map((ent) => ent.id);
+          groupMoveAnchor = dragStart;
+          groupMoveStartPositions = {};
+          for (const id of movingGroupIds) {
+            const entity = store.entities[id];
+            if (entity) groupMoveStartPositions[id] = entity.pos;
+          }
+        } else {
+          clearEntityHighlight();
+          // Клик по существующему станку без инструмента на кисти — начало драга
+          // перемещения (баг 16), а не рамки выделения. Пока работает — не тащим.
+          if (hitId) {
+            const entity = store.entities[hitId];
+            movingEntityId = hitId;
+            moveGrabOffset = { x: dragStart.x - entity.pos.x, y: dragStart.y - entity.pos.y };
+          }
+        }
+      }
     } else if (e.button === 2) {
       rightDown = { x: e.clientX, y: e.clientY };
     }
@@ -338,6 +404,29 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
 
     if (e.button === 0 && dragStart) {
       const dragEnd = toTile(e.clientX, e.clientY);
+
+      if (movingGroupIds.length > 0) {
+        // Подсветку/pendingSelection не трогаем — группа остаётся выделенной для
+        // повторного перетаскивания или сохранения в чертёж.
+        movingGroupIds = [];
+        groupMoveStartPositions = {};
+        dragStart = null;
+        leftDownPx = null;
+        updateGhost();
+        return;
+      }
+
+      if (movingEntityId) {
+        // Клик без движения тоже проходит через сюда (target = pos) — то же
+        // поведение «клик выделяет станок», что было раньше без драга.
+        store.select(movingEntityId);
+        movingEntityId = null;
+        moveGrabOffset = { x: 0, y: 0 };
+        dragStart = null;
+        leftDownPx = null;
+        updateGhost();
+        return;
+      }
 
       if (!store.selectedTool && !store.stampBlueprintId) {
         // Отличаем клик от драга рамки по пиксельному смещению (как ПКМ снос/пан ниже) —
@@ -426,6 +515,10 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
       store.setPendingSelection(null);
       dragStart = null;
       leftDownPx = null;
+      movingEntityId = null;
+      moveGrabOffset = { x: 0, y: 0 };
+      movingGroupIds = [];
+      groupMoveStartPositions = {};
       clearSelectionBox();
       clearEntityHighlight();
       updateGhost();

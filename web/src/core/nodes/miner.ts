@@ -7,6 +7,13 @@
 import { Handler, NodeCtx } from '../engine';
 import { Field } from './index';
 
+// Тот же принцип, что у silo (см. silo.ts LAUNCH_MS): work-анимация (miner_work.png,
+// 16 кадров × animationSpeed 0.1 ≈ 2.7с) должна успеть отыграть. mode='text' резолвится
+// синхронно (мгновенно) — working сменялся бы на ok быстрее одного кадра, и «дрель»
+// визуально не анимировалась вообще. Доливаем остаток до минимума (не плоскую паузу —
+// mode='url' может и так быть медленнее сети).
+const MIN_WORK_MS = 2700;
+
 export const minerSchema: Field[] = [
   {
     key: 'mode',
@@ -48,6 +55,7 @@ export const minerSchema: Field[] = [
  * (Реальное срабатывание триггера (кнопка, интервал, вебхук) управляется Engine.triggerMiner и webhooks.)
  */
 export const minerHandler: Handler = async (ctx: NodeCtx) => {
+  const started = Date.now();
   const mode = (ctx.config['mode'] as string) || 'text';
 
   let payload: unknown;
@@ -74,6 +82,11 @@ export const minerHandler: Handler = async (ctx: NodeCtx) => {
     payload = ctx.data;
   } else {
     payload = '';
+  }
+
+  const elapsed = Date.now() - started;
+  if (elapsed < MIN_WORK_MS) {
+    await new Promise((resolve) => setTimeout(resolve, MIN_WORK_MS - elapsed));
   }
 
   return { out: payload };

@@ -127,6 +127,12 @@ export const LAB_VISUAL_SCALE_Y = 2;
 // вместо этого центрируем нативный кадр (getSpriteSize=2×1, пивот по нему) и увеличиваем
 // РАВНОМЕРНО, чтобы девайс дорос до клетки 2×2 без искажения (по образцу assembler/silo).
 export const SPLITTER_VISUAL_SCALE = 2;
+// assembler: спрайт авторен на 3×3, футпринт ужат до 2×2 (3624a4c), но масштаб под это
+// сжатие никогда не добавили — текстура рисовалась в НАТИВНЫЕ 192×192 и вылезала за
+// пределы своей клетки на ~32px на сторону (позиция по футпринту, пивот по текстуре
+// без scale). Даунскейл 2/3, чтобы 3×3-арт вписался в 2×2-клетку — тот же принцип,
+// что и у silo (там наоборот апскейл под прозрачные поля), просто в другую сторону.
+export const ASSEMBLER_VISUAL_SCALE = 2 / 3;
 
 function updateMachines(entities: Record<string, Entity>, layer: Container): void {
   const existingIds = new Set(machineSprites.keys());
@@ -137,7 +143,9 @@ function updateMachines(entities: Record<string, Entity>, layer: Container): voi
     if (!currentIds.has(id)) {
       const machineSprite = machineSprites.get(id);
       if (machineSprite) {
-        layer.removeChild(machineSprite.container);
+        // destroy, не removeChild — иначе Container+Sprite+Graphics утекают навсегда
+        // (та же конвенция, что у belts.ts)
+        machineSprite.container.destroy({ children: true });
         machineSprites.delete(id);
       }
     }
@@ -231,6 +239,9 @@ function updateMachines(entities: Record<string, Entity>, layer: Container): voi
     } else if (entity.kind === 'splitter') {
       // квадратный девайс по центру кадра — равномерный зум, без искажения
       machineSprite.sprite.scale.set(SPLITTER_VISUAL_SCALE);
+    } else if (entity.kind === 'assembler') {
+      // 3×3-арт в 2×2-клетке — равномерный даунскейл, иначе вылезает на соседние тайлы
+      machineSprite.sprite.scale.set(ASSEMBLER_VISUAL_SCALE);
     }
   }
 }

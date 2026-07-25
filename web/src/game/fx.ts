@@ -56,7 +56,8 @@ export function smoke(worldX: number, worldY: number): void {
       elapsed += t.deltaMS;
       if (elapsed >= duration) {
         Ticker.shared.remove(tick);
-        layers?.fx.removeChild(particle);
+        // destroy(), не removeChild — у Graphics есть GPU-геометрия, иначе утекает
+        particle.destroy();
         return;
       }
       const progress = elapsed / duration;

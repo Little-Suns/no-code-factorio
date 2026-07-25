@@ -64,7 +64,8 @@ export class GameTransport implements Transport {
     if (packetSprites.has(packetId)) {
       const old = packetSprites.get(packetId);
       if (old?.sprite) {
-        layers.items.removeChild(old.sprite);
+        // destroy() сам снимает с родителя; голый removeChild копил бы спрайты в куче
+        old.sprite.destroy();
       }
       if (old?.tick) {
         removeTween(old.tick);
@@ -148,7 +149,7 @@ export class GameTransport implements Transport {
     // Удалить все спрайты (на случай, если чей-то tick не попал в реестр)
     for (const { sprite, tick } of packetSprites.values()) {
       if (tick) Ticker.shared.remove(tick);
-      layers.items.removeChild(sprite);
+      sprite.destroy();
     }
     packetSprites.clear();
   }
@@ -176,7 +177,7 @@ export function consumePacket(packetId: string, nodePos?: Vec): void {
     elapsed += ticker.deltaMS;
     if (elapsed >= duration) {
       removeTween(tick);
-      layers?.items.removeChild(sprite);
+      sprite.destroy();
       packetSprites.delete(packetId);
       return;
     }
@@ -212,7 +213,7 @@ export function dropPacket(packetId: string, reason: 'error' | 'dead-end' | 'ttl
     // Удалить через 2с
     setTimeout(() => {
       if (packetSprites.has(packetId)) {
-        layers?.items.removeChild(sprite);
+        sprite.destroy();
         packetSprites.delete(packetId);
       }
     }, 2000);
@@ -227,7 +228,7 @@ export function dropPacket(packetId: string, reason: 'error' | 'dead-end' | 'ttl
       elapsed += ticker.deltaMS;
       if (elapsed >= duration) {
         removeTween(tick);
-        layers?.items.removeChild(sprite);
+        sprite.destroy();
         packetSprites.delete(packetId);
         return;
       }

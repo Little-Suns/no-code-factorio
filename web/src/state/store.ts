@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Entity, NodeStatus, MachineKind } from '../core/types';
+import type { Entity, NodeStatus, MachineKind, Vec } from '../core/types';
 import { canPlace } from '../core/grid';
 import { NODE_DEFS } from '../core/nodes';
 import type { Blueprint } from '../core/blueprint';
@@ -40,6 +40,8 @@ export interface Store {
   remove: (entityId: string) => void;
   removeMany: (entityIds: string[]) => void;
   rotate: (entityId: string) => void;
+  move: (entityId: string, pos: Vec) => boolean;
+  moveMany: (positions: { id: string; pos: Vec }[]) => boolean;
   setConfig: (entityId: string, config: Record<string, unknown>) => void;
   select: (entityId: string | null) => void;
   setTool: (tool: MachineKind | null) => void;
@@ -170,6 +172,60 @@ export const useStore = create<Store>((set, get) => ({
     set((s) => ({
       entities: { ...s.entities, [entityId]: newEntity },
     }));
+  },
+
+  // Перетаскивание станка/ленты мышкой (баг 16): та же схема проверки, что и rotate —
+  // сам станок исключаем из занятости, иначе целевая клетка всегда «занята» им же.
+  move: (entityId: string, pos: Vec) => {
+    const state = get();
+    if (state.running) {
+      get().toast(t('toast.stopFactory', state.locale));
+      return false;
+    }
+    const entity = state.entities[entityId];
+    if (!entity) return false;
+    const newEntity = { ...entity, pos };
+    const others = { ...state.entities };
+    delete others[entityId];
+    if (!canPlace(others, newEntity)) {
+      return false;
+    }
+    set((s) => ({
+      entities: { ...s.entities, [entityId]: newEntity },
+    }));
+    return true;
+  },
+
+  // Групповое перетаскивание рамкой выделения (pendingSelection) — атомарно, как
+  // placeMany: либо вся группа сдвигается, либо ничего (canPlaceBlueprint уже
+  // проверяет и коллизии с миром, и между собой — но между собой чистая трансляция
+  // их и так не меняет, реальная проверка тут только против остального мира).
+  moveMany: (positions: { id: string; pos: Vec }[]) => {
+    const state = get();
+    if (state.running) {
+      get().toast(t('toast.stopFactory', state.locale));
+      return false;
+    }
+    const idSet = new Set(positions.map((p) => p.id));
+    const newEntities: Entity[] = [];
+    for (const p of positions) {
+      const entity = state.entities[p.id];
+      if (!entity) return false;
+      newEntities.push({ ...entity, pos: p.pos });
+    }
+    const others: Record<string, Entity> = {};
+    for (const [id, entity] of Object.entries(state.entities)) {
+      if (!idSet.has(id)) others[id] = entity;
+    }
+    if (!canPlaceBlueprint(others, newEntities)) {
+      return false;
+    }
+    set((s) => {
+      const entities = { ...s.entities };
+      for (const entity of newEntities) entities[entity.id] = entity;
+      return { entities };
+    });
+    return true;
   },
 
   setConfig: (entityId: string, config: Record<string, unknown>) => {

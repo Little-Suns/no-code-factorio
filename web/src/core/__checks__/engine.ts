@@ -1022,7 +1022,9 @@ async function testMinerUrlThroughSpawnPacket() {
   engine.start();
   engine.triggerMiner('miner1');
 
-  await new Promise((r) => setTimeout(r, 50));
+  // miner держит минимум working ~2.7с (core/nodes/miner.ts MIN_WORK_MS, тот же
+  // принцип, что у silo LAUNCH_MS) — ждём с запасом.
+  await new Promise((r) => setTimeout(r, 3200));
   engine.stop();
 
   if (receivedByAssembler !== 'Content from URL') {
@@ -1209,7 +1211,56 @@ async function testDuplicatorTwoCopies() {
 }
 
 /**
- * AC17: режим отладки (setDebugMode/step) — пакет проходит РОВНО по одному gate за step(),
+ * AC17 (фиксы код-ревью): webhook-шахта без payload (ручной триггер) — data=undefined
+ * не роняет spawnPacket (JSON.stringify(undefined) возвращал undefined, .length кидал
+ * TypeError вне try/catch), а клоны на два выхода шахты получают РАЗНЫЕ id
+ * (общий id вешал одну из веток в GameTransport.move — замена спрайта без resolve).
+ */
+async function testMinerUndefinedDataFreshIds() {
+  const events: EngineEvent[] = [];
+
+  const entities: Record<string, Entity> = {
+    miner1: { id: 'miner1', kind: 'miner', pos: { x: 0, y: 0 }, dir: 0, config: { mode: 'webhook' } },
+    siloA: { id: 'siloA', kind: 'silo', pos: { x: 5, y: 0 }, dir: 0, config: {} },
+    siloB: { id: 'siloB', kind: 'silo', pos: { x: 5, y: 5 }, dir: 0, config: {} },
+  };
+  const edges: Edge[] = [
+    { id: 'eA:out:0', from: 'miner1', branch: 'out', to: 'siloA', path: [{ x: 1, y: 0 }] },
+    { id: 'eB:out:1', from: 'miner1', branch: 'out', to: 'siloB', path: [{ x: 1, y: 1 }] },
+  ];
+  // Стаб вместо реального minerHandler: тот держит MIN_WORK_MS≈2.7с визуальной паузы,
+  // а суть та же — mode='webhook' без payload возвращает { out: ctx.data } = undefined.
+  const handlers: Record<string, (ctx: any) => Promise<HandlerResult>> = {
+    miner: async (ctx) => ({ out: ctx.data }),
+    silo: async () => ({ done: true }),
+  };
+
+  const engine = new Engine(entities, edges, fakeTransport, (e) => events.push(e), {
+    handlers: handlers as any,
+  });
+
+  engine.start();
+  engine.triggerMiner('miner1'); // ручной триггер → webhookBody === undefined
+
+  await new Promise((r) => setTimeout(r, 100));
+  engine.stop();
+
+  const spawns = events.filter((e) => e.t === 'packet-spawn');
+  if (spawns.length === 0) {
+    throw new Error('AC17: spawn с data=undefined должен пройти без TypeError');
+  }
+  const consumes = events.filter((e): e is Extract<EngineEvent, { t: 'packet-consume' }> =>
+    e.t === 'packet-consume');
+  const ids = new Set(consumes.map((e) => e.packetId));
+  if (ids.size < 2) {
+    throw new Error(`AC17: клоны на два выхода шахты должны иметь разные id, получено ${ids.size}`);
+  }
+
+  console.log('✓ AC17: miner undefined-data spawn + свежие id клонов на каждый выход');
+}
+
+/**
+ * AC18: режим отладки (setDebugMode/step) — пакет проходит РОВНО по одному gate за step(),
  * дальше ничего не движется, пока не нажали Step; setDebugMode(false) снимает режим.
  * Пайплайн miner→assembler→silo даёт ровно 4 ворот: spawn у шахты, consume у assembler,
  * spawn assembler→silo, consume у silo (после которого сразу идёт result, без своих ворот).
@@ -1241,15 +1292,15 @@ async function testDebugStepMode() {
 
   await new Promise((r) => setTimeout(r, 40));
   if (events.length > 0) {
-    throw new Error(`AC17: в debug-режиме ничего не должно случиться до первого step(), получено ${events.length} событий`);
+    throw new Error(`AC18: в debug-режиме ничего не должно случиться до первого step(), получено ${events.length} событий`);
   }
 
   engine.step(); // ворота A: spawn у шахты
   await new Promise((r) => setTimeout(r, 30));
   let spawns = events.filter((e) => e.t === 'packet-spawn').length;
-  if (spawns !== 1) throw new Error(`AC17: после 1-го step ожидался 1 packet-spawn, получено ${spawns}`);
+  if (spawns !== 1) throw new Error(`AC18: после 1-го step ожидался 1 packet-spawn, получено ${spawns}`);
   if (events.some((e) => e.t === 'packet-consume')) {
-    throw new Error('AC17: consume не должен случиться раньше своего step()');
+    throw new Error('AC18: consume не должен случиться раньше своего step()');
   }
 
   engine.step(); // ворота B: consume у assembler
@@ -1258,22 +1309,22 @@ async function testDebugStepMode() {
     (e) => e.t === 'packet-consume' && e.nodeId === 'assembler1'
   ).length;
   if (consumesAtAssembler !== 1) {
-    throw new Error(`AC17: после 2-го step ожидался consume у assembler1, получено ${consumesAtAssembler}`);
+    throw new Error(`AC18: после 2-го step ожидался consume у assembler1, получено ${consumesAtAssembler}`);
   }
   if (events.some((e) => e.t === 'result')) {
-    throw new Error('AC17: result не должен появиться раньше 4-го step()');
+    throw new Error('AC18: result не должен появиться раньше 4-го step()');
   }
 
   engine.step(); // ворота C: spawn assembler → silo
   await new Promise((r) => setTimeout(r, 30));
   spawns = events.filter((e) => e.t === 'packet-spawn').length;
-  if (spawns !== 2) throw new Error(`AC17: после 3-го step ожидались 2 packet-spawn, получено ${spawns}`);
+  if (spawns !== 2) throw new Error(`AC18: после 3-го step ожидались 2 packet-spawn, получено ${spawns}`);
 
   engine.step(); // ворота D: consume у silo → сразу done/result
   await new Promise((r) => setTimeout(r, 30));
   const siloResults = events.filter((e) => e.t === 'result' && e.nodeId === 'silo1');
   if (siloResults.length !== 1) {
-    throw new Error(`AC17: после 4-го step ожидался result у silo1, получено ${siloResults.length}`);
+    throw new Error(`AC18: после 4-го step ожидался result у silo1, получено ${siloResults.length}`);
   }
 
   // setDebugMode(false) снимает режим — дальнейшие вбросы идут без ворот, как обычно
@@ -1282,11 +1333,11 @@ async function testDebugStepMode() {
   engine.triggerMiner('miner1');
   await new Promise((r) => setTimeout(r, 60));
   if (!events.some((e) => e.t === 'result' && e.nodeId === 'silo1')) {
-    throw new Error('AC17: после setDebugMode(false) пайплайн должен снова доезжать до result без step()');
+    throw new Error('AC18: после setDebugMode(false) пайплайн должен снова доезжать до result без step()');
   }
 
   engine.stop();
-  console.log('✓ AC17: debug pause/step OK');
+  console.log('✓ AC18: debug pause/step OK');
 }
 
 /**
@@ -1310,9 +1361,10 @@ async function testDebugStepMode() {
     await testPauseStopsNewSpawns();
     await testBeltLoop();
     await testDuplicatorTwoCopies();
+    await testMinerUndefinedDataFreshIds();
     await testDebugStepMode();
 
-    console.log('\n✅ engine checks OK — все 17 AC пройдены');
+    console.log('\n✅ engine checks OK — все 18 AC пройдены');
   } catch (e) {
     console.error('\n❌ engine checks FAILED:', e);
     throw e;

@@ -66,7 +66,9 @@ async function testA2() {
   const engine = new Engine(entities, edges, fakeTransport, (e) => events.push(e), { handlers: collectHandlers() });
   engine.start();
   engine.triggerMiner('miner_a2');
-  await new Promise((r) => setTimeout(r, 200));
+  // miner теперь тоже держит минимум working ~2.7с (core/nodes/miner.ts MIN_WORK_MS,
+  // тот же принцип, что у silo LAUNCH_MS) — ждём с запасом, как testC/testD2 ниже.
+  await new Promise((r) => setTimeout(r, 3200));
   engine.stop();
 
   const resultEvents = events.filter((e) => e.t === 'result');
@@ -132,8 +134,9 @@ async function testC() {
   const engine = new Engine(entities, edges, fakeTransport, (e) => events.push(e), { handlers: collectHandlers() });
   engine.start();
   engine.triggerMiner('miner_c');
-  // siloHandler держит working ~2.7с (LAUNCH_MS) перед 'result' — ждём с запасом.
-  await new Promise((r) => setTimeout(r, 3200));
+  // Полная цепочка теперь копит паузы: miner MIN_WORK_MS (~2.7с) + manipulator GRAB_MS
+  // (~0.35с) + siloHandler LAUNCH_MS (~2.7с) перед 'result' — ждём с запасом.
+  await new Promise((r) => setTimeout(r, 6500));
   engine.stop();
 
   const resultEvents = events.filter((e) => e.t === 'result');
