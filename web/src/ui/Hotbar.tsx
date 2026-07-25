@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useStore } from '../state/store';
 import type { MachineKind } from '../core/types';
-import { ALL_TOOLS, HOTKEYS, TOOL_DESCRIPTIONS, TOOL_ICONS } from './hotbarData';
+import { ALL_TOOLS, HOTKEYS, TOOL_ICONS } from './hotbarData';
 import { useT } from '../i18n';
 import './Hotbar.css';
 
@@ -13,10 +13,9 @@ const KEY_TO_TOOL: Partial<Record<string, MachineKind>> = Object.fromEntries(
   ALL_TOOLS.map((tool) => [HOTKEYS[tool], tool])
 );
 
-// Заголовки станков берём из общего i18n-словаря (ключ node.<kind>.title) — тот же
-// текст, что и в заголовке ConfigPanel, чтобы не дублировать перевод в двух местах.
-// TOOL_DESCRIPTIONS (hotbarData.tsx) пока не переведены — короткое описание роли
-// станка остаётся на русском во всех локалях, это отдельная задача на будущее.
+// Заголовки и описания станков берём из общего i18n-словаря (ключи node.<kind>.title /
+// node.<kind>.desc) — тот же title, что и в заголовке ConfigPanel, чтобы не дублировать
+// перевод в двух местах.
 const TOOL_NAME_KEYS: Record<MachineKind, string> = {
   belt: 'node.belt.title',
   miner: 'node.miner.title',
@@ -30,6 +29,21 @@ const TOOL_NAME_KEYS: Record<MachineKind, string> = {
   accumulator: 'node.accumulator.title',
   webhook: 'node.webhook.title',
   manipulator: 'node.manipulator.title',
+};
+
+const TOOL_DESC_KEYS: Record<MachineKind, string> = {
+  belt: 'node.belt.desc',
+  miner: 'node.miner.desc',
+  assembler: 'node.assembler.desc',
+  splitter: 'node.splitter.desc',
+  mixer: 'node.mixer.desc',
+  silo: 'node.silo.desc',
+  furnace: 'node.furnace.desc',
+  chest: 'node.chest.desc',
+  lab: 'node.lab.desc',
+  accumulator: 'node.accumulator.desc',
+  webhook: 'node.webhook.desc',
+  manipulator: 'node.manipulator.desc',
 };
 
 export function Hotbar() {
@@ -63,13 +77,18 @@ export function Hotbar() {
           key={tool}
           className={`hotbar-slot ${selectedTool === tool ? 'active' : ''}`}
           onClick={() => setTool(tool)}
-          title={`${t(TOOL_NAME_KEYS[tool])} (${HOTKEYS[tool]}) — ${TOOL_DESCRIPTIONS[tool]}`}
           aria-label={`${t(TOOL_NAME_KEYS[tool])} (${HOTKEYS[tool]})`}
         >
           <div className="hotbar-icon" data-tool={tool}>
             {TOOL_ICONS[tool]}
           </div>
           <span className="hotbar-hotkey">{HOTKEYS[tool]}</span>
+          <div className="hotbar-tooltip" role="tooltip">
+            <span className="hotbar-tooltip-title">
+              {t(TOOL_NAME_KEYS[tool])} <span className="hotbar-tooltip-key">{HOTKEYS[tool]}</span>
+            </span>
+            <span className="hotbar-tooltip-desc">{t(TOOL_DESC_KEYS[tool])}</span>
+          </div>
         </button>
       ))}
     </div>
