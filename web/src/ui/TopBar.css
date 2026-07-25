@@ -23,6 +23,14 @@
   gap: 12px;
 }
 
+/* Обёртка Pause+Step для подсветки-спота обучалки (data-tutorial="debug-controls") —
+   flex, чтобы сохранить межкнопочный gap как у остальных .top-bar-left детей. */
+.debug-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .top-bar-center {
   flex: 1;
   text-align: center;

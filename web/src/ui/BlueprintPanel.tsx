@@ -40,7 +40,10 @@ export function BlueprintPanel() {
   }
 
   const handleClose = () => {
+    // Видимость — OR(blueprintPanelOpen, pendingSelection): при незакрытой форме
+    // сохранения одного лишь сброса flag'а недостаточно, панель не спрячется.
     setBlueprintPanelOpen(false);
+    setPendingSelection(null);
   };
 
   const handleSave = () => {

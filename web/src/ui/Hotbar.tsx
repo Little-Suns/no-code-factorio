@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useStore } from '../state/store';
 import type { MachineKind } from '../core/types';
 import { ALL_TOOLS, HOTKEYS, TOOL_ICONS } from './hotbarData';
+import { tutorialBlocksInput } from '../state/tutorialSteps';
 import { useT } from '../i18n';
 import './Hotbar.css';
 
@@ -58,8 +59,9 @@ export function Hotbar() {
       // ConfigPanel/BlueprintPanel переключал бы инструмент постановки на карте.
       const target = e.target as HTMLElement;
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return;
-      // Обучалка открыта (ui/Tutorial.tsx) — блокирует хоткеи наравне с кликами по канвасу.
-      if (useStore.getState().tutorialActive) return;
+      // Обучалка открыта (ui/Tutorial.tsx) — блокирует хоткеи наравне с кликами по канвасу,
+      // кроме практик-шагов (там нужно реально выбрать инструмент).
+      if (tutorialBlocksInput(useStore.getState())) return;
 
       const tool = KEY_TO_TOOL[e.key];
       if (tool) {

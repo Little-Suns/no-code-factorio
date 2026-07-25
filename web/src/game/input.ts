@@ -4,6 +4,7 @@ import { TILE } from './app';
 import { getTexture } from './assets';
 import { MANIPULATOR_VISUAL_SCALE, SILO_VISUAL_SCALE, SILO_Y_OFFSET, LAB_VISUAL_SCALE_Y, SPLITTER_VISUAL_SCALE, ASSEMBLER_VISUAL_SCALE } from './machines';
 import { useStore } from '../state/store';
+import { tutorialBlocksInput } from '../state/tutorialSteps';
 import { t } from '../i18n/dictionaries';
 import { footprintTiles, canPlace } from '../core/grid';
 import { instantiateBlueprint, canPlaceBlueprint } from '../core/blueprint';
@@ -508,7 +509,9 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
   window.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
     const store = useStore.getState();
-    if (store.tutorialActive) return; // обучалка открыта (ui/Tutorial.tsx) — блокирует хоткеи
+    // Обучалка открыта (ui/Tutorial.tsx) — блокирует хоткеи, КРОМЕ практик-шагов
+    // (там нужно реально нажать R и т.п., иначе шаг не завершить).
+    if (tutorialBlocksInput(store)) return;
 
     if (e.key === 'Escape') {
       store.setTool(null); // сбрасывает selectedTool + stampBlueprintId + selectedEntityId

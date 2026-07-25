@@ -5,6 +5,12 @@
   pointer-events: auto;
 }
 
+/* Практик-шаг: пропускаем клики/хоткеи к канвасу и хотбару насквозь — сама карточка
+   (.tutorial-card) держит свой pointer-events: auto и остаётся кликабельной. */
+.tutorial-overlay.practice {
+  pointer-events: none;
+}
+
 .tutorial-spotlight {
   position: fixed;
   border-radius: 6px;
@@ -55,6 +61,21 @@
   font-size: 12px;
   line-height: 1.5;
   margin: 0 0 16px;
+}
+
+.tutorial-practice-status {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  margin: -8px 0 16px;
+}
+
+.tutorial-practice-status.pending {
+  color: var(--text-dim);
+}
+
+.tutorial-practice-status.done {
+  color: var(--accent);
 }
 
 .tutorial-actions {

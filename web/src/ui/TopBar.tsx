@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { useStore } from '../state/store';
 import { startRun, stopRun, setDebugMode, stepDebug } from '../state/runtime';
 import type { Entity } from '../core/types';
+import { tutorialBlocksInput } from '../state/tutorialSteps';
 import { useT, LOCALES, LOCALE_NAMES } from '../i18n';
 import './TopBar.css';
 
@@ -44,7 +45,7 @@ export function TopBar() {
       if (e.code === 'Space' && !isInput) {
         e.preventDefault();
         if (e.repeat) return; // автоповтор ОС при удержании — иначе спам startRun()/stopRun()
-        if (useStore.getState().tutorialActive) return; // обучалка открыта — блокирует хоткеи
+        if (tutorialBlocksInput(useStore.getState())) return; // обучалка открыта — блокирует хоткеи (кроме практик-шагов)
         if (running) {
           stopRun();
         } else {
@@ -145,22 +146,24 @@ export function TopBar() {
           {running ? t('top.stop') : t('top.run')}
         </button>
 
-        <button
-          className={`icon-button ${debugMode ? 'active' : ''}`}
-          onClick={handleTogglePause}
-          disabled={!running}
-          title={debugMode ? t('top.debugResumeTitle') : t('top.debugPauseTitle')}
-        >
-          {debugMode ? `▶ ${t('top.debugResume')}` : `⏸ ${t('top.debugPause')}`}
-        </button>
-        <button
-          className="icon-button"
-          onClick={handleStep}
-          disabled={!running || !debugMode}
-          title={t('top.debugStepTitle')}
-        >
-          ⏭ {t('top.debugStep')}
-        </button>
+        <span className="debug-controls" data-tutorial="debug-controls">
+          <button
+            className={`icon-button ${debugMode ? 'active' : ''}`}
+            onClick={handleTogglePause}
+            disabled={!running}
+            title={debugMode ? t('top.debugResumeTitle') : t('top.debugPauseTitle')}
+          >
+            {debugMode ? `▶ ${t('top.debugResume')}` : `⏸ ${t('top.debugPause')}`}
+          </button>
+          <button
+            className="icon-button"
+            onClick={handleStep}
+            disabled={!running || !debugMode}
+            title={t('top.debugStepTitle')}
+          >
+            ⏭ {t('top.debugStep')}
+          </button>
+        </span>
 
         <span className="entity-counter" title={`${t('top.entities')}: ${entityCount}`}>
           <span>{t('top.entities')}</span>

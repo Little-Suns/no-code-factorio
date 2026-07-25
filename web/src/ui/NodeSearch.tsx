@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../state/store';
 import { NODE_DEFS } from '../core/nodes';
 import { focusEntity } from '../game/camera';
+import { tutorialBlocksInput } from '../state/tutorialSteps';
 import { useT } from '../i18n';
 import './NodeSearch.css';
 
@@ -18,6 +19,7 @@ export function NodeSearch() {
   const entities = useStore((state) => state.entities);
   const select = useStore((state) => state.select);
   const tutorialActive = useStore((state) => state.tutorialActive);
+  const tutorialStep = useStore((state) => state.tutorialStep);
 
   const [query, setQuery] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
@@ -26,7 +28,7 @@ export function NodeSearch() {
   // Ctrl/Cmd+F открывает поиск (перехватывает браузерный Find-in-page); Esc закрывает
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (tutorialActive) return;
+      if (tutorialBlocksInput(useStore.getState())) return;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
         e.preventDefault();
         setQuery('');
@@ -38,7 +40,7 @@ export function NodeSearch() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [searchOpen, tutorialActive, setSearchOpen]);
+  }, [searchOpen, tutorialActive, tutorialStep, setSearchOpen]);
 
   useEffect(() => {
     if (searchOpen) inputRef.current?.focus();

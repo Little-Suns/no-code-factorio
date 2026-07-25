@@ -1,6 +1,8 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useStore } from '../state/store';
 import { useT, LOCALES, LOCALE_NAMES } from '../i18n';
+import { TUTORIAL_STEPS as STEPS } from '../state/tutorialSteps';
+import { buildGraph } from '../core/graph';
 import './Tutorial.css';
 
 /**
@@ -10,27 +12,11 @@ import './Tutorial.css';
  * экрана, без подсветки (вступление, общие советы). Первый шаг — выбор языка
  * (не через t(), т.к. до выбора язык может быть неподходящим): дальше весь тур
  * идёт уже на выбранном.
+ *
+ * Практик-шаги (`step.practice`, см. state/tutorialSteps.ts) требуют реального
+ * действия на канвасе — сравниваем снимок мира на входе на шаг с текущим (см.
+ * snapshotRef ниже) и держим Next выключенным, пока действие не выполнено.
  */
-interface Step {
-  target: string | null;
-  titleKey: string;
-  descKey: string;
-  lang?: boolean;
-}
-
-const STEPS: Step[] = [
-  { target: null, titleKey: '', descKey: '', lang: true },
-  { target: null, titleKey: 'tutorial.step.welcome.title', descKey: 'tutorial.step.welcome.desc' },
-  { target: 'hotbar', titleKey: 'tutorial.step.hotbar.title', descKey: 'tutorial.step.hotbar.desc' },
-  { target: null, titleKey: 'tutorial.step.place.title', descKey: 'tutorial.step.place.desc' },
-  { target: 'hotbar-manipulator', titleKey: 'tutorial.step.manipulator.title', descKey: 'tutorial.step.manipulator.desc' },
-  { target: null, titleKey: 'tutorial.step.config.title', descKey: 'tutorial.step.config.desc' },
-  { target: 'run', titleKey: 'tutorial.step.run.title', descKey: 'tutorial.step.run.desc' },
-  { target: 'results', titleKey: 'tutorial.step.results.title', descKey: 'tutorial.step.results.desc' },
-  { target: 'blueprints', titleKey: 'tutorial.step.blueprints.title', descKey: 'tutorial.step.blueprints.desc' },
-  { target: 'logs', titleKey: 'tutorial.step.logs.title', descKey: 'tutorial.step.logs.desc' },
-  { target: null, titleKey: 'tutorial.step.done.title', descKey: 'tutorial.step.done.desc' },
-];
 
 const SPOT_PAD = 8;
 const CARD_WIDTH = 320;
@@ -63,6 +49,9 @@ export function Tutorial() {
   const skipTutorial = useStore((s) => s.skipTutorial);
   const locale = useStore((s) => s.locale);
   const setLocale = useStore((s) => s.setLocale);
+  const entities = useStore((s) => s.entities);
+  const blueprints = useStore((s) => s.blueprints);
+  const stampBlueprintId = useStore((s) => s.stampBlueprintId);
   const [rect, setRect] = useState<Rect | null>(null);
 
   const current = STEPS[step];
@@ -75,6 +64,57 @@ export function Tutorial() {
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
   }, [active, target]);
+
+  // Снимок мира на входе на шаг — практика считается выполненной, если что-то
+  // изменилось относительно него (см. practiceDone). Снимаем заново на каждый
+  // step, поэтому повторный заход на шаг снова требует свежего действия — ок,
+  // это осознанное упрощение (см. промпт задачи), не баг.
+  const snapshotRef = useRef<{
+    dir: Record<string, number>;
+    pos: Record<string, { x: number; y: number }>;
+    bpCount: number;
+    entityCount: number;
+  } | null>(null);
+  const [stampSeen, setStampSeen] = useState(false);
+
+  useEffect(() => {
+    snapshotRef.current = {
+      dir: Object.fromEntries(Object.entries(entities).map(([id, e]) => [id, e.dir])),
+      pos: Object.fromEntries(Object.entries(entities).map(([id, e]) => [id, e.pos])),
+      bpCount: blueprints.length,
+      entityCount: Object.keys(entities).length,
+    };
+    setStampSeen(false);
+    // eslint: намеренно только `step` — снимок берём исключительно при входе на шаг
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  useEffect(() => {
+    if (current?.practice === 'blueprintStamp' && stampBlueprintId) setStampSeen(true);
+  }, [current?.practice, stampBlueprintId]);
+
+  const practiceDone = useMemo(() => {
+    const practice = current?.practice;
+    const snap = snapshotRef.current;
+    if (!practice || !snap) return true;
+    switch (practice) {
+      case 'rotate':
+        return Object.entries(entities).some(([id, e]) => snap.dir[id] !== undefined && snap.dir[id] !== e.dir);
+      case 'move':
+        return Object.entries(entities).some(
+          ([id, e]) => snap.pos[id] && (snap.pos[id].x !== e.pos.x || snap.pos[id].y !== e.pos.y)
+        );
+      case 'connect':
+        return buildGraph(entities).some((edge) => edge.to !== null);
+      case 'blueprintSave':
+        return blueprints.length > snap.bpCount;
+      case 'blueprintStamp':
+        return stampSeen && Object.keys(entities).length > snap.entityCount;
+      default:
+        return true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current?.practice, entities, blueprints, stampSeen]);
 
   if (!active || !current) return null;
 
@@ -103,7 +143,7 @@ export function Tutorial() {
     : { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
 
   return (
-    <div className="tutorial-overlay">
+    <div className={`tutorial-overlay ${current.practice ? 'practice' : ''}`}>
       <div
         className={`tutorial-spotlight ${rect ? '' : 'no-target'}`}
         style={{ top: spot.top, left: spot.left, width: spot.width, height: spot.height }}
@@ -139,13 +179,18 @@ export function Tutorial() {
           <>
             <h3 className="tutorial-title">{t(current.titleKey)}</h3>
             <p className="tutorial-desc">{t(current.descKey)}</p>
+            {current.practice && (
+              <p className={`tutorial-practice-status ${practiceDone ? 'done' : 'pending'}`}>
+                {practiceDone ? t('tutorial.practice.done') : t('tutorial.practice.pending')}
+              </p>
+            )}
             <div className="tutorial-actions">
               <button className="tutorial-skip" onClick={skipTutorial}>{t('tutorial.skip')}</button>
               <div className="tutorial-nav">
                 {step > 0 && (
                   <button className="tutorial-prev" onClick={handlePrev}>{t('tutorial.prev')}</button>
                 )}
-                <button className="tutorial-next" onClick={handleNext}>
+                <button className="tutorial-next" onClick={handleNext} disabled={!!current.practice && !practiceDone}>
                   {isLast ? t('tutorial.finish') : t('tutorial.next')}
                 </button>
               </div>
