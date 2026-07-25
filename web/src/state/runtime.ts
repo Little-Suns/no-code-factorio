@@ -20,6 +20,19 @@ let starting = false;
 // закончится, вместо того чтобы молча проигнорировать клик Stop.
 let stopRequestedDuringStart = false;
 
+// Баг «переключились со вкладки и вернулись — предметы копятся, не обрабатываются»:
+// wall-clock setInterval шахты (core/engine.ts) не останавливается браузером на скрытой
+// вкладке, а анимация пакетов в game/packets.ts держится на Ticker.shared (requestAnimationFrame),
+// который на скрытой вкладке просто не вызывается. В итоге шахта продолжает спавнить пакеты,
+// а рендер не может их разобрать — растущий backlog. Держим Engine и рендерер синхронно
+// на паузе, пока вкладка не видна; уже летящие/стоящие в очереди пакеты не трогаем —
+// они доедут как обычно, когда Ticker снова пойдёт (docs/02, docs/04).
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    engine?.setPaused(document.hidden);
+  });
+}
+
 /**
  * Таймаут на fetch к нашему серверу — если он зависнет (не апстрим-LLM, а именно наш /llm
  * или /proxy), await в handler'е ноды никогда не резолвится, и per-node очередь в
@@ -252,6 +265,11 @@ export async function startRun(): Promise<void> {
 
     // Запускаем
     engine.start();
+    // Вкладка уже могла быть скрыта до нажатия Run (напр. запуск из другой вкладки) —
+    // синхронизируем паузу сразу, не дожидаясь следующего visibilitychange.
+    if (typeof document !== 'undefined') {
+      engine.setPaused(document.hidden);
+    }
     store.setRunning(true);
   } finally {
     starting = false;
