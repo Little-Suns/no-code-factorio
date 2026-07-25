@@ -6,7 +6,7 @@
 
 // Практика: шаг требует реального действия пользователя на канвасе/UI, а не просто
 // чтения текста — во время такого шага оверлей отпускает клики/хоткеи (см. tutorialBlocksInput).
-export type TutorialPractice = 'connect' | 'rotate' | 'move' | 'blueprintSave' | 'blueprintStamp';
+export type TutorialPractice = 'place' | 'connect' | 'rotate' | 'move' | 'blueprintSave' | 'blueprintStamp';
 
 export interface TutorialStep {
   target: string | null;
@@ -19,8 +19,10 @@ export interface TutorialStep {
 export const TUTORIAL_STEPS: TutorialStep[] = [
   { target: null, titleKey: '', descKey: '', lang: true },
   { target: null, titleKey: 'tutorial.step.welcome.title', descKey: 'tutorial.step.welcome.desc' },
+  { target: null, titleKey: 'tutorial.step.metaphor.title', descKey: 'tutorial.step.metaphor.desc' },
+  { target: null, titleKey: 'tutorial.step.terms.title', descKey: 'tutorial.step.terms.desc' },
   { target: 'hotbar', titleKey: 'tutorial.step.hotbar.title', descKey: 'tutorial.step.hotbar.desc' },
-  { target: null, titleKey: 'tutorial.step.place.title', descKey: 'tutorial.step.place.desc' },
+  { target: null, titleKey: 'tutorial.step.place.title', descKey: 'tutorial.step.place.desc', practice: 'place' },
   {
     target: 'hotbar-manipulator',
     titleKey: 'tutorial.step.manipulator.title',

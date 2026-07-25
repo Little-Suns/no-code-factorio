@@ -65,6 +65,59 @@
   margin: 0 0 16px;
 }
 
+/* Схема "станок → лента → манипулятор → станок" (только шаг manipulator/connect).
+   10 ячеек в DOM-порядке: первые 5 — ряд иконок, вторые 5 — подписи под ними;
+   grid без явных row/column специально — auto-flow сам заполняет ряд 1, потом ряд 2
+   в том же порядке колонок, раз колонок ровно 5 и элементов кратно 5. */
+.tutorial-diagram {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 3px 4px;
+  margin: 0 0 14px;
+}
+
+.td-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--panel-border);
+  border-radius: 4px;
+  font-family: var(--f-mono);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.td-machine {
+  background: var(--panel-bg);
+  color: var(--accent);
+}
+
+.td-belt {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--text-dim);
+  color: var(--text-dim);
+}
+
+.td-manip {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+
+.td-caption {
+  font-family: var(--f-mono);
+  font-size: 8px;
+  line-height: 1.3;
+  text-align: center;
+  color: var(--text-dim);
+}
+
+.td-caption-accent {
+  color: var(--accent);
+}
+
 .tutorial-practice-status {
   font-family: var(--f-mono);
   font-size: 10px;

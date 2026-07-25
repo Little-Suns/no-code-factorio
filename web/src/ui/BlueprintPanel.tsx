@@ -10,6 +10,28 @@ import { LIBRARY_BLUEPRINTS } from '../core/blueprintLibrary';
 import { useT } from '../i18n';
 import './BlueprintPanel.css';
 
+// Инлайн-глиф чертежа (без иконочных библиотек — правило CLAUDE.md), в стиле
+// геометрических иконок Hotbar (hotbarData.tsx): viewBox 24x24, stroke=currentColor.
+function BlueprintGlyph({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="3.5" y="3.5" width="17" height="17" rx="1" />
+      <path d="M3.5 9.5 L20.5 9.5 M9.5 20.5 L9.5 9.5" />
+    </svg>
+  );
+}
+
 export function BlueprintPanel() {
   const t = useT();
   const blueprints = useStore((state) => state.blueprints);
@@ -80,7 +102,10 @@ export function BlueprintPanel() {
   return (
     <div className={`blueprint-panel ${configOpen ? 'config-open' : ''}`}>
       <div className="blueprint-header">
-        <h3 className="blueprint-title">{t('bp.title')}</h3>
+        <div className="blueprint-header-left">
+          <BlueprintGlyph className="blueprint-header-glyph" />
+          <h3 className="blueprint-title">{t('bp.title')}</h3>
+        </div>
         <button className="blueprint-icon-btn" onClick={handleClose} title={t('bp.collapseTitle')}>
           &#9662;
         </button>
@@ -107,15 +132,22 @@ export function BlueprintPanel() {
         </div>
       )}
 
-      <div className="blueprint-section-title">{t('bp.myBlueprints')}</div>
+      <div className="blueprint-section-title">
+        <span className="blueprint-section-dot mine" />
+        {t('bp.myBlueprints')}
+      </div>
       <div className="blueprint-list">
         {blueprints.length === 0 ? (
           <div className="blueprint-empty">{t('bp.empty')}</div>
         ) : (
           blueprints.map((bp, i) => (
             <div key={bp.id} className={`blueprint-item ${stampBlueprintId === bp.id ? 'active' : ''}`}>
+              <BlueprintGlyph className="blueprint-item-icon" />
               <span className="blueprint-name" title={t('bp.entitiesCountTitle', { n: bp.entities.length })}>
                 {bp.name}
+              </span>
+              <span className="blueprint-count-badge" title={t('bp.entitiesCountTitle', { n: bp.entities.length })}>
+                {bp.entities.length}
               </span>
               <div className="blueprint-item-actions">
                 <button
@@ -140,12 +172,19 @@ export function BlueprintPanel() {
 
       {/* Библиотека — статичные пресеты из коробки (blueprintLibrary.ts), read-only:
           без экспорта/удаления, только «поставить», как обычный инструмент. */}
-      <div className="blueprint-section-title">{t('bp.library')}</div>
+      <div className="blueprint-section-title">
+        <span className="blueprint-section-dot library" />
+        {t('bp.library')}
+      </div>
       <div className="blueprint-list blueprint-list-library">
         {LIBRARY_BLUEPRINTS.map((bp) => (
           <div key={bp.id} className={`blueprint-item library ${stampBlueprintId === bp.id ? 'active' : ''}`}>
+            <BlueprintGlyph className="blueprint-item-icon library" />
             <span className="blueprint-name" title={t('bp.entitiesCountTitle', { n: bp.entities.length })}>
               {bp.name}
+            </span>
+            <span className="blueprint-count-badge library" title={t('bp.entitiesCountTitle', { n: bp.entities.length })}>
+              {bp.entities.length}
             </span>
             <div className="blueprint-item-actions">
               <button

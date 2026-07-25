@@ -9,8 +9,8 @@ import './Tutorial.css';
  * Обучалка первого запуска: пошаговый тур с подсветкой реальных элементов UI
  * (по атрибуту `data-tutorial="<id>"`, расставлен в Hotbar.tsx/TopBar.tsx).
  * Автостарт/флаг «видел» — state/tutorialPersist.ts. Шаги без `target` — без
- * подсветки и без затемнения фона (вступление, общие советы, а также rotate/move —
- * у них цель это произвольный станок на канвасе, а не фиксированный DOM-узел), карточка
+ * подсветки и без затемнения фона (вступление, общие советы, а также place/rotate/move —
+ * у них цель это произвольная точка/станок на канвасе, а не фиксированный DOM-узел), карточка
  * в левом верхнем углу под TopBar, не по центру — иначе перекрывала бы канвас, где как раз
  * нужно что-то сделать. Первый шаг — выбор языка
  * (не через t(), т.к. до выбора язык может быть неподходящим): дальше весь тур
@@ -124,6 +124,8 @@ export function Tutorial() {
       case 'rotate':
       case 'move':
         return changedSeen;
+      case 'place':
+        return Object.keys(entities).length > snap.entityCount;
       case 'connect':
         return buildGraph(entities).some((edge) => edge.to !== null);
       case 'blueprintSave':
@@ -213,6 +215,24 @@ export function Tutorial() {
           <>
             <h3 className="tutorial-title">{t(current.titleKey)}</h3>
             <p className="tutorial-desc">{t(current.descKey)}</p>
+            {current.practice === 'connect' && (
+              // Схема "станок → лента → манипулятор(стрелка внутрь) → станок" — единственный
+              // шаг, где абстрактной подсветки DOM-кнопки недостаточно: тут нужно один раз
+              // явно показать геометрию (куда именно ставить манипулятор и куда должна
+              // смотреть его стрелка), а не только текстом.
+              <div className="tutorial-diagram" aria-hidden="true">
+                <div className="td-cell td-machine">A</div>
+                <div className="td-cell td-belt">▸</div>
+                <div className="td-cell td-belt">▸</div>
+                <div className="td-cell td-manip">▸</div>
+                <div className="td-cell td-machine">B</div>
+                <div className="td-caption">{t('tutorial.diagram.machine')}</div>
+                <div className="td-caption" />
+                <div className="td-caption">{t('tutorial.diagram.belt')}</div>
+                <div className="td-caption td-caption-accent">{t('tutorial.diagram.manipulator')}</div>
+                <div className="td-caption">{t('tutorial.diagram.machine')}</div>
+              </div>
+            )}
             {current.practice && (
               <p className={`tutorial-practice-status ${practiceDone ? 'done' : 'pending'}`}>
                 {practiceDone ? t('tutorial.practice.done') : t('tutorial.practice.pending')}

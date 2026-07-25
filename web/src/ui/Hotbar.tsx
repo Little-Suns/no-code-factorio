@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useStore } from '../state/store';
 import type { MachineKind } from '../core/types';
-import { ALL_TOOLS, HOTKEYS, TOOL_ICONS } from './hotbarData';
+import { ALL_TOOLS, LOGISTICS_TOOLS, MACHINE_TOOLS, HOTKEYS, TOOL_ICONS } from './hotbarData';
 import { tutorialBlocksInput } from '../state/tutorialSteps';
 import { useT } from '../i18n';
 import './Hotbar.css';
@@ -74,28 +74,38 @@ export function Hotbar() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setTool]);
 
+  const renderSlot = (tool: MachineKind) => (
+    <button
+      key={tool}
+      className={`hotbar-slot ${selectedTool === tool ? 'active' : ''}`}
+      onClick={() => setTool(tool)}
+      aria-label={`${t(TOOL_NAME_KEYS[tool])} (${HOTKEYS[tool]})`}
+      data-tutorial={tool === 'manipulator' ? 'hotbar-manipulator' : undefined}
+    >
+      <div className="hotbar-icon" data-tool={tool}>
+        {TOOL_ICONS[tool]}
+      </div>
+      <span className="hotbar-hotkey">{HOTKEYS[tool]}</span>
+      <div className="hotbar-tooltip" role="tooltip">
+        <span className="hotbar-tooltip-title">
+          {t(TOOL_NAME_KEYS[tool])} <span className="hotbar-tooltip-key">{HOTKEYS[tool]}</span>
+        </span>
+        <span className="hotbar-tooltip-desc">{t(TOOL_DESC_KEYS[tool])}</span>
+      </div>
+    </button>
+  );
+
   return (
     <div className="hotbar" data-tutorial="hotbar">
-      {ALL_TOOLS.map((tool) => (
-        <button
-          key={tool}
-          className={`hotbar-slot ${selectedTool === tool ? 'active' : ''}`}
-          onClick={() => setTool(tool)}
-          aria-label={`${t(TOOL_NAME_KEYS[tool])} (${HOTKEYS[tool]})`}
-          data-tutorial={tool === 'manipulator' ? 'hotbar-manipulator' : undefined}
-        >
-          <div className="hotbar-icon" data-tool={tool}>
-            {TOOL_ICONS[tool]}
-          </div>
-          <span className="hotbar-hotkey">{HOTKEYS[tool]}</span>
-          <div className="hotbar-tooltip" role="tooltip">
-            <span className="hotbar-tooltip-title">
-              {t(TOOL_NAME_KEYS[tool])} <span className="hotbar-tooltip-key">{HOTKEYS[tool]}</span>
-            </span>
-            <span className="hotbar-tooltip-desc">{t(TOOL_DESC_KEYS[tool])}</span>
-          </div>
-        </button>
-      ))}
+      <div className="hotbar-group">
+        <div className="hotbar-group-label">{t('hotbar.group.logistics')}</div>
+        <div className="hotbar-group-slots">{LOGISTICS_TOOLS.map(renderSlot)}</div>
+      </div>
+      <div className="hotbar-divider" />
+      <div className="hotbar-group">
+        <div className="hotbar-group-label">{t('hotbar.group.machines')}</div>
+        <div className="hotbar-group-slots">{MACHINE_TOOLS.map(renderSlot)}</div>
+      </div>
     </div>
   );
 }

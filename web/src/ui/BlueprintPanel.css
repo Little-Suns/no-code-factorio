@@ -2,7 +2,7 @@
   position: fixed;
   bottom: 96px;
   right: 14px;
-  width: 300px;
+  width: 312px;
   max-height: 40vh;
   background: var(--panel-bg);
   border: 2px solid var(--panel-border);
@@ -10,7 +10,12 @@
   flex-direction: column;
   pointer-events: auto;
   z-index: 200;
-  box-shadow: -4px 4px 0 rgba(0, 0, 0, 0.4);
+  /* Тот же чанки-бевел, что у Hotbar/TopBar — без него панель выглядела плоско
+     на фоне остального интерфейса. */
+  box-shadow:
+    -4px 4px 0 rgba(0, 0, 0, 0.4),
+    inset 2px 2px 0 #454b53,
+    inset -2px -2px 0 var(--panel-border);
   overflow: hidden;
   transition: right 0.2s ease; /* синхронно со слайдом ConfigPanel (0.2s) */
 }
@@ -22,12 +27,23 @@
 }
 
 .blueprint-header {
-  padding: 9px 11px;
+  padding: 10px 12px;
   border-bottom: 2px solid var(--panel-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
+}
+
+.blueprint-header-left {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.blueprint-header-glyph {
+  color: var(--accent);
   flex-shrink: 0;
 }
 
@@ -41,7 +57,7 @@
 }
 
 .blueprint-hint {
-  padding: 9px 11px;
+  padding: 10px 12px;
   border-bottom: 2px solid var(--panel-border);
   color: var(--text-dim);
   font-size: 9px;
@@ -50,11 +66,11 @@
 }
 
 .blueprint-save-form {
-  padding: 10px 11px;
+  padding: 12px;
   border-bottom: 2px solid var(--panel-border);
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
   flex-shrink: 0;
   background: var(--panel-bg-2);
 }
@@ -113,20 +129,40 @@
 }
 
 .blueprint-section-title {
-  padding: 7px 11px 0;
+  padding: 10px 12px 5px;
   color: var(--text-dim);
   font-size: 9px;
   font-family: var(--f-mono);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Маркер раздела: заливка — мои чертежи (редактируемые), контур — пресеты
+   библиотеки (read-only) — та же пара состояний, что даёт пунктирная левая
+   рамка у .blueprint-item.library, продублировано в заголовке для контраста
+   на первый взгляд, без чтения текста. */
+.blueprint-section-dot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--accent);
+  background: var(--accent);
+}
+
+.blueprint-section-dot.library {
+  background: transparent;
+  border-color: var(--text-dim);
 }
 
 .blueprint-list {
-  padding: 7px 11px 10px;
+  padding: 6px 12px 12px;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
   overflow-y: auto;
 }
 
@@ -154,19 +190,38 @@
 
 .blueprint-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: 8px;
-  padding: 7px 9px;
+  padding: 8px 10px;
   background: var(--dirt-dark);
   border-left: 3px solid transparent;
+  transition: background 0.2s ease, border-left-color 0.2s ease;
+}
+
+.blueprint-item-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.blueprint-item-icon.library {
+  color: var(--text-dim);
 }
 
 .blueprint-item.active {
   border-left-color: var(--accent);
+  /* Armed для штамповки — не только тонкая полоска слева: пульс делает состояние
+     заметным даже боковым зрением, без него легко забыть, что чертёж всё ещё
+     «заряжен» и следующий клик по карте его проштампует. */
+  animation: blueprintArmedPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes blueprintArmedPulse {
+  0%, 100% { border-left-color: var(--accent); background: var(--dirt-dark); }
+  50% { border-left-color: var(--accent-bright); background: var(--panel-bg-2); }
 }
 
 .blueprint-name {
+  flex: 1;
   color: var(--text);
   font-size: 11px;
   overflow: hidden;
@@ -174,15 +229,31 @@
   white-space: nowrap;
 }
 
+.blueprint-count-badge {
+  flex-shrink: 0;
+  min-width: 16px;
+  padding: 1px 5px;
+  background: var(--panel-bg);
+  border: 1.5px solid var(--panel-border);
+  color: var(--text-muted);
+  font-family: var(--f-mono);
+  font-size: 9px;
+  text-align: center;
+}
+
+.blueprint-count-badge.library {
+  color: var(--text-dim);
+}
+
 .blueprint-item-actions {
   display: flex;
-  gap: 4px;
+  gap: 5px;
   flex-shrink: 0;
 }
 
 .blueprint-icon-btn {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   background: var(--dirt);
   border: 2px solid var(--panel-border);
@@ -202,7 +273,7 @@
 }
 
 .blueprint-import {
-  padding: 10px 11px;
+  padding: 12px;
   border-top: 2px solid var(--panel-border);
   display: flex;
   gap: 6px;
