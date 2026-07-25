@@ -13,9 +13,8 @@ function getSize(kind: MachineKind): { w: number; h: number } {
     case 'webhook':
     case 'assembler':
     case 'lab':
-      return { w: 2, h: 2 };
     case 'splitter':
-      return { w: 2, h: 1 };
+      return { w: 2, h: 2 };
     case 'mixer':
     case 'silo':
       return { w: 3, h: 3 };
@@ -112,19 +111,21 @@ export function outPorts(entity: Entity): { tile: Vec; branch: Branch }[] {
       }
       break;
 
-    case 'splitter':
-      // FRONT левого (dx=0) = true, FRONT правого (dx=1) = false
+    case 'splitter': {
+      // Дублер: оба FRONT-тайла — выходы branch 'out'. Движок спавнит клон пакета
+      // на каждый 'out'-edge → одна копия на каждый выход.
       const leftOffset = rotOffset(0, -1, baseSize.w, baseSize.h, entity.dir);
       ports.push({
         tile: { x: entity.pos.x + leftOffset.x, y: entity.pos.y + leftOffset.y },
-        branch: 'true',
+        branch: 'out',
       });
       const rightOffset = rotOffset(1, -1, baseSize.w, baseSize.h, entity.dir);
       ports.push({
         tile: { x: entity.pos.x + rightOffset.x, y: entity.pos.y + rightOffset.y },
-        branch: 'false',
+        branch: 'out',
       });
       break;
+    }
 
     case 'mixer':
       // FRONT центральный тайл (out)

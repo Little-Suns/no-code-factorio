@@ -23,7 +23,7 @@ const ENTITY_HL_COLOR = 0x5ad1ff;
 // Размеры при dir=0 — для пивота ghost (дублирует core/grid, там getSize приватный)
 const SIZES: Record<MachineKind, [number, number]> = {
   belt: [1, 1], miner: [2, 2], furnace: [2, 2], assembler: [2, 2],
-  splitter: [2, 1], mixer: [3, 3], chest: [1, 1], lab: [2, 2],
+  splitter: [2, 2], mixer: [3, 3], chest: [1, 1], lab: [2, 2],
   silo: [3, 3], accumulator: [2, 2], webhook: [2, 2],
   manipulator: [1, 1],
 };
@@ -166,14 +166,14 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
       // Текстура lab авторена на 2×1, футпринт (SIZES) — 2×2 (см. updateGhost выше и
       // machines.ts) — пивот по размеру текстуры, иначе арт сместился бы к верху клетки
       // нерастянутым, как раньше при 2×1-футпринте.
-      const [sw, sh] = e.kind === 'lab' ? [2, 1] : [w, h];
+      const [sw, sh] = e.kind === 'lab' || e.kind === 'splitter' ? [2, 1] : [w, h];
       sprite.visible = true;
       sprite.pivot.set((sw * TILE) / 2, (sh * TILE) / 2);
       sprite.position.set(e.pos.x * TILE + (rw * TILE) / 2, e.pos.y * TILE + (rh * TILE) / 2);
       sprite.angle = e.dir * 90;
       sprite.scale.set(
         e.kind === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : 1,
-        e.kind === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : e.kind === 'lab' ? LAB_VISUAL_SCALE_Y : 1
+        e.kind === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : e.kind === 'lab' || e.kind === 'splitter' ? LAB_VISUAL_SCALE_Y : 1
       );
       sprite.tint = ok ? TINT_OK : TINT_BAD;
     });
@@ -281,7 +281,7 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
     // assembler: спрайт 3×3, футпринт 2×2 (арт с прозрачным бортиком, центрируется).
     // lab: спрайт (арт) 2×1, футпринт теперь 2×2 (докс/03, инвариант к повороту) —
     // тянем по высоте (LAB_VISUAL_SCALE_Y), см. machines.ts.
-    const [sw, sh] = tool === 'assembler' ? [3, 3] : tool === 'lab' ? [2, 1] : [w, h];
+    const [sw, sh] = tool === 'assembler' ? [3, 3] : tool === 'lab' || tool === 'splitter' ? [2, 1] : [w, h];
 
     ghostSprite.visible = true;
     ghostSprite.pivot.set((sw * TILE) / 2, (sh * TILE) / 2);
@@ -293,7 +293,7 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
     // lab: та же вертикальная растяжка арта, что и у реально поставленного станка.
     ghostSprite.scale.set(
       tool === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : tool === 'silo' ? SILO_VISUAL_SCALE : 1,
-      tool === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : tool === 'silo' ? SILO_VISUAL_SCALE : tool === 'lab' ? LAB_VISUAL_SCALE_Y : 1
+      tool === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : tool === 'silo' ? SILO_VISUAL_SCALE : tool === 'lab' || tool === 'splitter' ? LAB_VISUAL_SCALE_Y : 1
     );
 
     const test: Entity = { id: 'ghost', kind: tool, pos: tile, dir: ghostDir, config: {} };

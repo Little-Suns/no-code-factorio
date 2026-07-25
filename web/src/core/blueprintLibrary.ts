@@ -41,18 +41,20 @@ const processingCell: Blueprint = {
   ],
 };
 
-// 2. Разветвитель на 2 выхода: сплиттер → (true/false) → манипулятор → сундук на каждой ветке.
+// 2. Дублер на 2 выхода: дублер (2×2) → манипулятор → сундук на каждой ветке.
+// Оба выхода — одна и та же копия входа (движок клонирует пакет на каждый выход).
+// Порты 2×2-дублера dir=1: (2,0) и (2,1) → ленты веток начинаются там.
 const splitterBranch: Blueprint = {
   id: 'lib-splitter-branch',
-  name: 'Разветвитель на 2 выхода',
+  name: 'Дублер на 2 выхода',
   entities: [
-    e('sb-splitter', 'splitter', 0, 0, { mode: 'expr', expr: 'true', question: 'Is this positive?' }),
-    e('sb-belt-true', 'belt', 1, 0),
-    e('sb-manip-true', 'manipulator', 2, 0),
-    e('sb-chest-true', 'chest', 3, 0, { batchSize: 1 }),
-    e('sb-belt-false', 'belt', 1, 1),
-    e('sb-manip-false', 'manipulator', 2, 1),
-    e('sb-chest-false', 'chest', 3, 1, { batchSize: 1 }),
+    e('sb-splitter', 'splitter', 0, 0),
+    e('sb-belt-a', 'belt', 2, 0),
+    e('sb-manip-a', 'manipulator', 3, 0),
+    e('sb-chest-a', 'chest', 4, 0, { batchSize: 1 }),
+    e('sb-belt-b', 'belt', 2, 1),
+    e('sb-manip-b', 'manipulator', 3, 1),
+    e('sb-chest-b', 'chest', 4, 1, { batchSize: 1 }),
   ],
 };
 

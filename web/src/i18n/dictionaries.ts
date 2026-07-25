@@ -126,7 +126,7 @@ const ru: Dict = {
 
   'node.miner.title': 'Шахта / Input',
   'node.assembler.title': 'Сборочный станок / Агент',
-  'node.splitter.title': 'Разветвитель',
+  'node.splitter.title': 'Дублер',
   'node.mixer.title': 'Смеситель / Химзавод',
   'node.silo.title': 'Ракета / Output',
   'node.belt.title': 'Конвейер',
@@ -289,7 +289,7 @@ const en: Dict = {
 
   'node.miner.title': 'Miner / Input',
   'node.assembler.title': 'Assembler / Agent',
-  'node.splitter.title': 'Splitter',
+  'node.splitter.title': 'Duplicator',
   'node.mixer.title': 'Mixer / Chemical Plant',
   'node.silo.title': 'Rocket / Output',
   'node.belt.title': 'Belt',
@@ -452,7 +452,7 @@ const zh: Dict = {
 
   'node.miner.title': '采矿机 / 输入',
   'node.assembler.title': '装配机 / 代理',
-  'node.splitter.title': '分流器',
+  'node.splitter.title': '复制器',
   'node.mixer.title': '混合机 / 化工厂',
   'node.silo.title': '火箭 / 输出',
   'node.belt.title': '传送带',

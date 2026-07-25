@@ -89,9 +89,8 @@ function getSize(kind: MachineKind): { w: number; h: number } {
     case 'webhook':
     case 'assembler':
     case 'lab':
-      return { w: 2, h: 2 };
     case 'splitter':
-      return { w: 2, h: 1 };
+      return { w: 2, h: 2 };
     case 'mixer':
     case 'silo':
       return { w: 3, h: 3 };
@@ -110,7 +109,8 @@ function getSize(kind: MachineKind): { w: number; h: number } {
 // с футпринтом.
 function getSpriteSize(kind: MachineKind): { w: number; h: number } {
   if (kind === 'assembler') return { w: 3, h: 3 };
-  if (kind === 'lab') return { w: 2, h: 1 };
+  // lab и splitter: арт авторен 2×1 (128×64), футпринт теперь 2×2 — растягиваем по Y (ниже)
+  if (kind === 'lab' || kind === 'splitter') return { w: 2, h: 1 };
   return getSize(kind);
 }
 
@@ -220,7 +220,8 @@ function updateMachines(entities: Record<string, Entity>, layer: Container): voi
       machineSprite.sprite.scale.set(MANIPULATOR_VISUAL_SCALE, mirrored * MANIPULATOR_VISUAL_SCALE);
     } else if (entity.kind === 'silo') {
       machineSprite.sprite.scale.set(SILO_VISUAL_SCALE);
-    } else if (entity.kind === 'lab') {
+    } else if (entity.kind === 'lab' || entity.kind === 'splitter') {
+      // арт 2×1 в футпринте 2×2 — тянем по Y вдвое, чтобы заполнить клетку (см. lab)
       machineSprite.sprite.scale.set(1, LAB_VISUAL_SCALE_Y);
     }
   }
