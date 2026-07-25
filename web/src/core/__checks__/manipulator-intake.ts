@@ -171,15 +171,21 @@ console.log('Test 3: terminal manipulator wins over a side-tapping neighbour, or
 
     // M1 — терминальный манипулятор, ровно на пути ленты: (500, 496)
     const m1: Entity = { id: 'manip_t3_1', kind: 'manipulator', pos: { x: 500, y: 496 }, dir: 0, config: {} };
-    // M2 — тапает ТОТ ЖЕ тайл (500, 497) сбоку, с востока: pos=(501,497), dir=1 (E)
-    // intake = (501,497) - DELTA[1] = (500, 497) — совпадает с BACK-тайлом M1
-    const m2: Entity = { id: 'manip_t3_2', kind: 'manipulator', pos: { x: 501, y: 497 }, dir: 1, config: {} };
+    // Тапающий манипулятор — тапает ТОТ ЖЕ тайл (500, 497) сбоку, с востока:
+    // pos=(501,497), dir=1 (E); intake = (501,497) - DELTA[1] = (500, 497) —
+    // совпадает с BACK-тайлом M1. Id ("aaa_tap_t3") НАРОЧНО выбран лексикографически
+    // МЕНЬШЕ id терминального манипулятора ("manip_t3_1") — иначе тай-брейк по
+    // наименьшему id в manipulatorIntake сам по себе выбирал бы терминал, и тест
+    // проходил бы даже без реальной проверки forwardIsManipulatorTerminal (это и был
+    // ревью-баг: с исходными id "manip_t3_1" < "manip_t3_2" тест был mutation-escape —
+    // проходил, даже если приоритет терминала из trace() вырезать целиком).
+    const tapper: Entity = { id: 'aaa_tap_t3', kind: 'manipulator', pos: { x: 501, y: 497 }, dir: 1, config: {} };
 
     const belts = { bt3_1: belt1, bt3_2: belt2, bt3_3: belt3 };
     if (order === 'm1-first') {
-      return { miner_t3: miner, manip_t3_1: m1, manip_t3_2: m2, ...belts };
+      return { miner_t3: miner, manip_t3_1: m1, aaa_tap_t3: tapper, ...belts };
     }
-    return { miner_t3: miner, manip_t3_2: m2, manip_t3_1: m1, ...belts };
+    return { miner_t3: miner, aaa_tap_t3: tapper, manip_t3_1: m1, ...belts };
   };
 
   for (const order of ['m1-first', 'm2-first'] as const) {
@@ -188,7 +194,8 @@ console.log('Test 3: terminal manipulator wins over a side-tapping neighbour, or
     assert(minerEdges.length === 1, `[${order}] Expected 1 edge from miner_t3, got ${minerEdges.length}`);
     assert(
       minerEdges[0].to === 'manip_t3_1',
-      `[${order}] Terminal manipulator (manip_t3_1) should win over the side-tapping neighbour, got ${minerEdges[0].to}`
+      `[${order}] Terminal manipulator (manip_t3_1) should win over the side-tapping neighbour ` +
+        `(aaa_tap_t3, whose id sorts LOWER — so a plain id tie-break would wrongly pick it), got ${minerEdges[0].to}`
     );
     assert(
       minerEdges[0].path.length === 3,
