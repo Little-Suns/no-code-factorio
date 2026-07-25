@@ -85,6 +85,7 @@ const strokeProps = {
   strokeWidth: 1.8,
   strokeLinecap: 'round' as const,
   strokeLinejoin: 'round' as const,
+  'aria-hidden': 'true' as const,
 };
 
 export const TOOL_ICONS: Record<MachineKind, JSX.Element> = {

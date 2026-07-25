@@ -43,6 +43,7 @@ export function Hotbar() {
           className={`hotbar-slot ${selectedTool === tool ? 'active' : ''}`}
           onClick={() => setTool(tool)}
           title={`${TOOL_NAMES[tool]} (${HOTKEYS[tool]}) — ${TOOL_DESCRIPTIONS[tool]}`}
+          aria-label={`${TOOL_NAMES[tool]} (${HOTKEYS[tool]})`}
         >
           <div className="hotbar-icon" data-tool={tool}>
             {TOOL_ICONS[tool]}

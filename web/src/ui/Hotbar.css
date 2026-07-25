@@ -45,9 +45,6 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  font-family: var(--f-disp);
-  font-size: 14px;
-  line-height: 1;
 }
 
 .hotbar-icon[data-tool='belt'] { color: var(--node-icon); }
