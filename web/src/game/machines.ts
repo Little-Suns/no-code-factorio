@@ -143,7 +143,9 @@ function updateMachines(entities: Record<string, Entity>, layer: Container): voi
     if (!currentIds.has(id)) {
       const machineSprite = machineSprites.get(id);
       if (machineSprite) {
-        layer.removeChild(machineSprite.container);
+        // destroy, не removeChild — иначе Container+Sprite+Graphics утекают навсегда
+        // (та же конвенция, что у belts.ts)
+        machineSprite.container.destroy({ children: true });
         machineSprites.delete(id);
       }
     }

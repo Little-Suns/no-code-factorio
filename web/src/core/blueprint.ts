@@ -32,9 +32,13 @@ export function serializeBlueprint(entities: Entity[], name: string): Blueprint 
   return {
     id: crypto.randomUUID().slice(0, 8),
     name,
+    // structuredClone(config): спред копирует config по ссылке, а хендлеры мутируют
+    // его на месте (webhookHandler дописывает headers) — без глубокой копии запуск
+    // станка правил бы конфиг и в чертеже, и во всех его будущих постановках.
     entities: entities.map((e) => ({
       ...e,
       pos: { x: e.pos.x - minX, y: e.pos.y - minY },
+      config: structuredClone(e.config),
     })),
   };
 }
@@ -45,10 +49,13 @@ export function serializeBlueprint(entities: Entity[], name: string): Blueprint 
  * повторная постановка того же чертежа схлопнула бы id-коллизией.
  */
 export function instantiateBlueprint(blueprint: Blueprint, origin: Vec): Entity[] {
+  // structuredClone(config) — иначе все постановки чертежа (и LIBRARY_BLUEPRINTS-пресеты)
+  // делили бы один объект config, см. комментарий в serializeBlueprint.
   return blueprint.entities.map((e) => ({
     ...e,
     id: crypto.randomUUID().slice(0, 8),
     pos: { x: origin.x + e.pos.x, y: origin.y + e.pos.y },
+    config: structuredClone(e.config),
   }));
 }
 

@@ -1197,6 +1197,55 @@ async function testDuplicatorTwoCopies() {
 }
 
 /**
+ * AC17 (фиксы код-ревью): webhook-шахта без payload (ручной триггер) — data=undefined
+ * не роняет spawnPacket (JSON.stringify(undefined) возвращал undefined, .length кидал
+ * TypeError вне try/catch), а клоны на два выхода шахты получают РАЗНЫЕ id
+ * (общий id вешал одну из веток в GameTransport.move — замена спрайта без resolve).
+ */
+async function testMinerUndefinedDataFreshIds() {
+  const events: EngineEvent[] = [];
+
+  const entities: Record<string, Entity> = {
+    miner1: { id: 'miner1', kind: 'miner', pos: { x: 0, y: 0 }, dir: 0, config: { mode: 'webhook' } },
+    siloA: { id: 'siloA', kind: 'silo', pos: { x: 5, y: 0 }, dir: 0, config: {} },
+    siloB: { id: 'siloB', kind: 'silo', pos: { x: 5, y: 5 }, dir: 0, config: {} },
+  };
+  const edges: Edge[] = [
+    { id: 'eA:out:0', from: 'miner1', branch: 'out', to: 'siloA', path: [{ x: 1, y: 0 }] },
+    { id: 'eB:out:1', from: 'miner1', branch: 'out', to: 'siloB', path: [{ x: 1, y: 1 }] },
+  ];
+  // Стаб вместо реального minerHandler: тот держит MIN_WORK_MS≈2.7с визуальной паузы,
+  // а суть та же — mode='webhook' без payload возвращает { out: ctx.data } = undefined.
+  const handlers: Record<string, (ctx: any) => Promise<HandlerResult>> = {
+    miner: async (ctx) => ({ out: ctx.data }),
+    silo: async () => ({ done: true }),
+  };
+
+  const engine = new Engine(entities, edges, fakeTransport, (e) => events.push(e), {
+    handlers: handlers as any,
+  });
+
+  engine.start();
+  engine.triggerMiner('miner1'); // ручной триггер → webhookBody === undefined
+
+  await new Promise((r) => setTimeout(r, 100));
+  engine.stop();
+
+  const spawns = events.filter((e) => e.t === 'packet-spawn');
+  if (spawns.length === 0) {
+    throw new Error('AC17: spawn с data=undefined должен пройти без TypeError');
+  }
+  const consumes = events.filter((e): e is Extract<EngineEvent, { t: 'packet-consume' }> =>
+    e.t === 'packet-consume');
+  const ids = new Set(consumes.map((e) => e.packetId));
+  if (ids.size < 2) {
+    throw new Error(`AC17: клоны на два выхода шахты должны иметь разные id, получено ${ids.size}`);
+  }
+
+  console.log('✓ AC17: miner undefined-data spawn + свежие id клонов на каждый выход');
+}
+
+/**
  * Запуск всех проверок
  */
 (async () => {
@@ -1217,8 +1266,9 @@ async function testDuplicatorTwoCopies() {
     await testPauseStopsNewSpawns();
     await testBeltLoop();
     await testDuplicatorTwoCopies();
+    await testMinerUndefinedDataFreshIds();
 
-    console.log('\n✅ engine checks OK — все 16 AC пройдены');
+    console.log('\n✅ engine checks OK — все 17 AC пройдены');
   } catch (e) {
     console.error('\n❌ engine checks FAILED:', e);
     throw e;
