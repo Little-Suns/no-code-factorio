@@ -36,6 +36,9 @@ React поверх canvas. Оверлеи — absolute-элементы с `poin
 ### Toasts.tsx (правый верхний угол)
 `store.toasts`, автоудаление 4 с. Источники: ошибки станков («Агент: HTTP 500»), «Останови фабрику», итог Import.
 
+### Tutorial.tsx (обучалка первого запуска)
+Пошаговый тур (10 шагов, i18n) с подсветкой реальных элементов UI: полупрозрачный full-screen оверлей + «дырка» на цели через `box-shadow: 0 0 0 9999px` (без SVG-масок), карточка с заголовком/описанием рядом с целью (клампится в вьюпорт, приоритет — под целью, иначе над). Цель ищется по `document.querySelector('[data-tutorial="<id>"]')` — атрибут расставлен точечно в `Hotbar.tsx` (сам хотбар + отдельно слот `manipulator` под шаг-предупреждение про обязательность манипулятора) и `TopBar.tsx` (Run/Blueprints/Results/Logs); шаги без цели (вступление, «кликни по карте», «настрой станок», финал) — карточка по центру экрана. Стор: `tutorialActive`/`tutorialStep` + `startTutorial`/`setTutorialStep`/`skipTutorial` (`state/store.ts`). Пока активна — блокирует клики по канвасу (оверлей `pointer-events: auto` поверх, `z-index: 500`) и все хоткеи (guard `if (store.tutorialActive) return` в `game/input.ts`, `Hotbar.tsx`, `TopBar.tsx`; `App.tsx` не гасит выделение по Esc). Автостарт при первом визите + флаг «видел» — `state/tutorialPersist.ts` (localStorage `ncf.tutorial.seen.v1`, зеркало `localePersist.ts`). Повторный запуск — кнопка «? TUTORIAL» в TopBar.
+
 ## Связка с движком — `web/src/state/runtime.ts` (не React)
 
 Единственный владелец Engine: `startRun()` / `stopRun()` / `triggerMiner(id)`; создаёт Engine с Transport из `game/packets.ts` и deps (`llm`, `proxyFetch` — обёртки над fetch к серверу; `webhooks` — обёртка над `EventSource('/events')`), события маппит в store-actions. React про Engine не знает.

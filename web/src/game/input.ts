@@ -419,6 +419,7 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
   window.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
     const store = useStore.getState();
+    if (store.tutorialActive) return; // обучалка открыта (ui/Tutorial.tsx) — блокирует хоткеи
 
     if (e.key === 'Escape') {
       store.setTool(null); // сбрасывает selectedTool + stampBlueprintId + selectedEntityId

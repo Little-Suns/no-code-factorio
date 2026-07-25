@@ -55,6 +55,8 @@ const ru: Dict = {
   'top.demo': 'Демо',
   'top.demoTitle': 'Загрузить демо',
   'top.langTitle': 'Сменить язык интерфейса',
+  'top.tutorial': 'Обучение',
+  'top.tutorialTitle': 'Показать обучалку заново',
 
   'toast.stopFactory': 'Останови фабрику',
   'toast.placeMiner': 'Поставь шахту',
@@ -209,6 +211,31 @@ const ru: Dict = {
 
   'module.web-search.label': 'Веб-поиск',
   'module.memory.label': 'Память (склад)',
+
+  'tutorial.skip': 'Пропустить',
+  'tutorial.prev': '← Назад',
+  'tutorial.next': 'Далее →',
+  'tutorial.finish': 'Готово',
+  'tutorial.step.welcome.title': 'Добро пожаловать на фабрику',
+  'tutorial.step.welcome.desc': 'Здесь ты строишь конвейер из AI-станков: шахта добывает данные, станки обрабатывают их через LLM, лента везёт результат к ракете. Короткий тур из 10 шагов — можно пропустить в любой момент.',
+  'tutorial.step.hotbar.title': 'Панель станков',
+  'tutorial.step.hotbar.desc': 'Внизу — станки для постройки. Клик или клавиша (1–9, 0, e, i) выбирает станок для установки. Повторный клик или Esc снимает выбор.',
+  'tutorial.step.place.title': 'Постановка на карту',
+  'tutorial.step.place.desc': 'С выбранным станком кликни по карте, чтобы поставить его. Лента ставится протяжкой мышью. R — повернуть, Delete — снести выбранный станок.',
+  'tutorial.step.manipulator.title': 'Манипулятор — не забывай!',
+  'tutorial.step.manipulator.desc': 'Между двумя станками (или там, где лента упирается в станок не впритык) обязательно нужен манипулятор — без него связь просто не построится, и пакеты никуда не поедут.',
+  'tutorial.step.config.title': 'Настройка станка',
+  'tutorial.step.config.desc': 'Клик по уже поставленному станку открывает панель настроек справа: рецепт для сборщика, промпт для критика и так далее.',
+  'tutorial.step.run.title': 'Запуск фабрики',
+  'tutorial.step.run.desc': 'Кнопка Run (или Space) строит граф связей и запускает фабрику. Stop — останавливает. Без хотя бы одной шахты запуск не получится.',
+  'tutorial.step.results.title': 'Результаты',
+  'tutorial.step.results.desc': 'Здесь появляется финальный текст, когда ракета (силос) успешно стартует.',
+  'tutorial.step.blueprints.title': 'Чертежи',
+  'tutorial.step.blueprints.desc': 'Сохраняй группы станков как чертежи и переиспользуй их, либо возьми готовый пресет из библиотеки.',
+  'tutorial.step.logs.title': 'Логи',
+  'tutorial.step.logs.desc': 'Ошибки станков и системные события собираются здесь.',
+  'tutorial.step.done.title': 'Всё готово!',
+  'tutorial.step.done.desc': 'Теперь ты знаешь основы. Начинай строить — обучалку всегда можно открыть заново кнопкой «?» сверху.',
 };
 
 const en: Dict = {
@@ -231,6 +258,8 @@ const en: Dict = {
   'top.demo': 'Demo',
   'top.demoTitle': 'Load demo',
   'top.langTitle': 'Switch interface language',
+  'top.tutorial': 'Tutorial',
+  'top.tutorialTitle': 'Show the tutorial again',
 
   'toast.stopFactory': 'Stop the factory first',
   'toast.placeMiner': 'Place a miner',
@@ -385,6 +414,31 @@ const en: Dict = {
 
   'module.web-search.label': 'Web search',
   'module.memory.label': 'Memory (storage)',
+
+  'tutorial.skip': 'Skip',
+  'tutorial.prev': '← Back',
+  'tutorial.next': 'Next →',
+  'tutorial.finish': 'Done',
+  'tutorial.step.welcome.title': 'Welcome to the factory',
+  'tutorial.step.welcome.desc': 'You build a pipeline of AI machines: a miner produces data, machines process it through an LLM, belts carry the result to a rocket. A quick 10-step tour — skip anytime.',
+  'tutorial.step.hotbar.title': 'Machine bar',
+  'tutorial.step.hotbar.desc': 'Buildable machines live down here. Click or press a key (1-9, 0, e, i) to pick one for placement. Click again or Esc to deselect.',
+  'tutorial.step.place.title': 'Placing on the map',
+  'tutorial.step.place.desc': 'With a machine selected, click the map to place it. Drag to lay a belt. R rotates, Delete removes the selected machine.',
+  'tutorial.step.manipulator.title': "Manipulator — don't forget it!",
+  'tutorial.step.manipulator.desc': "A manipulator is required between two machines (or wherever a belt meets a machine not head-on) — without it the connection simply won't be built and packets won't move.",
+  'tutorial.step.config.title': 'Configuring a machine',
+  'tutorial.step.config.desc': 'Clicking a placed machine opens its settings panel on the right: recipe for an assembler, prompt for a critic, and so on.',
+  'tutorial.step.run.title': 'Running the factory',
+  'tutorial.step.run.desc': 'The Run button (or Space) builds the graph and starts the factory. Stop halts it. You need at least one miner to run.',
+  'tutorial.step.results.title': 'Results',
+  'tutorial.step.results.desc': 'The final text appears here once a rocket (silo) successfully launches.',
+  'tutorial.step.blueprints.title': 'Blueprints',
+  'tutorial.step.blueprints.desc': 'Save groups of machines as blueprints and reuse them, or grab a ready-made preset from the library.',
+  'tutorial.step.logs.title': 'Logs',
+  'tutorial.step.logs.desc': 'Machine errors and system events are collected here.',
+  'tutorial.step.done.title': "You're all set!",
+  'tutorial.step.done.desc': 'That covers the basics. Start building — reopen this tutorial anytime with the "?" button up top.',
 };
 
 const zh: Dict = {
@@ -407,6 +461,8 @@ const zh: Dict = {
   'top.demo': '演示',
   'top.demoTitle': '加载演示',
   'top.langTitle': '切换界面语言',
+  'top.tutorial': '教程',
+  'top.tutorialTitle': '重新显示教程',
 
   'toast.stopFactory': '请先停止工厂',
   'toast.placeMiner': '请放置一个采矿机',
@@ -561,6 +617,31 @@ const zh: Dict = {
 
   'module.web-search.label': '网络搜索',
   'module.memory.label': '记忆（仓库）',
+
+  'tutorial.skip': '跳过',
+  'tutorial.prev': '← 上一步',
+  'tutorial.next': '下一步 →',
+  'tutorial.finish': '完成',
+  'tutorial.step.welcome.title': '欢迎来到工厂',
+  'tutorial.step.welcome.desc': '在这里搭建 AI 机器流水线：矿机产出数据，机器通过 LLM 处理数据，传送带把结果送到火箭。快速十步导览，随时可以跳过。',
+  'tutorial.step.hotbar.title': '机器栏',
+  'tutorial.step.hotbar.desc': '下方是可建造的机器。点击或按键（1-9、0、e、i）选择要放置的机器，再次点击或按 Esc 取消选择。',
+  'tutorial.step.place.title': '放置到地图上',
+  'tutorial.step.place.desc': '选中机器后点击地图即可放置；拖拽鼠标铺设传送带。R 旋转，Delete 拆除选中的机器。',
+  'tutorial.step.manipulator.title': '机械臂 — 别忘了！',
+  'tutorial.step.manipulator.desc': '两台机器之间（或传送带没有正对机器入口时）必须放置机械臂，否则连接根本建立不起来，物品也无法传递。',
+  'tutorial.step.config.title': '配置机器',
+  'tutorial.step.config.desc': '点击已放置的机器会在右侧打开配置面板：组装台的配方、评审员的提示词等等。',
+  'tutorial.step.run.title': '启动工厂',
+  'tutorial.step.run.desc': 'Run 按钮（或空格键）会构建连接图并启动工厂，Stop 停止。地图上至少要有一台矿机才能启动。',
+  'tutorial.step.results.title': '结果',
+  'tutorial.step.results.desc': '火箭（发射井）成功发射后，最终文本会显示在这里。',
+  'tutorial.step.blueprints.title': '蓝图',
+  'tutorial.step.blueprints.desc': '把一组机器保存为蓝图并重复使用，也可以直接使用蓝图库里的现成预设。',
+  'tutorial.step.logs.title': '日志',
+  'tutorial.step.logs.desc': '机器错误和系统事件会汇总在这里。',
+  'tutorial.step.done.title': '准备就绪！',
+  'tutorial.step.done.desc': '基础知识就是这些，开始搭建吧 — 随时可以点击顶部的「?」按钮重新打开本教程。',
 };
 
 export const DICTIONARIES: Record<Locale, Dict> = { ru, en, zh };
