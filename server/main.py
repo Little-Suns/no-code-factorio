@@ -1,11 +1,8 @@
 import asyncio
-import ipaddress
 import json
 import os
 import random
-import socket
 from typing import Optional
-from urllib.parse import urlparse
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
@@ -49,35 +46,13 @@ def log(tag: str, **fields) -> None:
 # FastAPI app
 app = FastAPI()
 
-# CORS middleware for local development — только локальный Vite-фронт, не любой сайт:
-# с allow_origins=["*"] любая открытая в браузере страница могла читать ответы сервера.
+# CORS middleware for local development
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-def _proxy_target_denied(url: str) -> Optional[str]:
-    """Анти-SSRF для /proxy: только http(s) и только публичные адреса.
-    Возвращает текст ошибки или None, если url проксировать можно."""
-    parsed = urlparse(url)
-    if parsed.scheme not in ("http", "https"):
-        return "only http(s) URLs are allowed"
-    host = parsed.hostname
-    if not host:
-        return "invalid url"
-    try:
-        infos = socket.getaddrinfo(host, None)
-    except OSError:
-        return f"cannot resolve host: {host}"
-    for _family, _type, _proto, _canon, sockaddr in infos:
-        ip = ipaddress.ip_address(sockaddr[0])
-        # is_global отсекает loopback/private/link-local/reserved разом
-        if not ip.is_global:
-            return "private/loopback targets are not allowed"
-    return None
 
 
 @app.post("/llm")
@@ -224,10 +199,6 @@ async def proxy_endpoint(request: Request):
     # url может содержать секрет (напр. bot-token telegram в пути) — усекается _short'ом.
     log("proxy→in", method=method, url=url, body=req_body)
 
-    denied = _proxy_target_denied(url)
-    if denied:
-        raise HTTPException(status_code=400, detail=denied)
-
     # Фронт присылает body уже сериализованной строкой (webhook.ts рендерит шаблон) —
     # json= сериализовал бы её ВТОРОЙ раз, и на провод уходила JSON-строка вместо объекта
     # (Discord/Telegram отвечали 400). Строку шлём как есть, dict/list — как json.
@@ -318,6 +289,4 @@ async def events_stream():
 
 if __name__ == "__main__":
     import uvicorn
-    # 127.0.0.1, не 0.0.0.0: /proxy и /llm не должны быть доступны из LAN;
-    # внешние вебхуки на демо — через туннель (он и так коннектится к localhost).
-    uvicorn.run(app, host="127.0.0.1", port=8787)
+    uvicorn.run(app, host="0.0.0.0", port=8787)
