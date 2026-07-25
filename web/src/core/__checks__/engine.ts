@@ -1028,7 +1028,83 @@ async function testMinerUrlThroughSpawnPacket() {
 }
 
 /**
- * AC14: кольцо лент (edge.to=null + loopFrom) — предмет гоняется по петле, НЕ дропается.
+ * AC14 (фикс бага «фоновая вкладка»): setPaused(true) должен останавливать
+ * и interval-шахту, и вебхук-шахту — новые пакеты не спавнятся, пока пауза
+ * активна (backlog не растёт, пока рендер, привязанный к rAF, тоже стоит).
+ * setPaused(false) — обычный поток продолжается, ничего не потеряно навсегда
+ * (кроме события вебхука, пришедшего строго во время паузы — это ожидаемо,
+ * docs/04 не даёт гарантий доставки вебхуков).
+ */
+async function testPauseStopsNewSpawns() {
+  const events: EngineEvent[] = [];
+  let webhookCallback: ((nodeId: string, body: unknown) => void) | null = null;
+
+  const entities: Record<string, Entity> = {
+    // intervalSec настолько мал, что за тест таймер тикнет несколько раз —
+    // если пауза не держит, увидим лишние packet-spawn от миner1.
+    miner1: {
+      id: 'miner1',
+      kind: 'miner',
+      pos: { x: 0, y: 0 },
+      dir: 0,
+      config: { mode: 'text', text: 'x', intervalSec: 0.03 },
+    },
+    webhook_miner: {
+      id: 'webhook_miner',
+      kind: 'miner',
+      pos: { x: 0, y: 3 },
+      dir: 0,
+      config: { mode: 'webhook' },
+    },
+  };
+
+  const edges: Edge[] = [];
+
+  const mockWebhooks = (cb: (nodeId: string, body: unknown) => void) => {
+    webhookCallback = cb;
+    return () => {};
+  };
+
+  const engine = new Engine(entities, edges, fakeTransport, (e) => events.push(e), {
+    webhooks: mockWebhooks,
+  });
+
+  engine.start();
+
+  // Пауза сразу — имитируем скрытую вкладку с самого начала прогона.
+  engine.setPaused(true);
+
+  await new Promise((r) => setTimeout(r, 150)); // интервал успел бы тикнуть ~5 раз
+
+  const cb = webhookCallback as ((nodeId: string, body: unknown) => void) | null;
+  cb?.('webhook_miner', { message: 'while paused' });
+  await new Promise((r) => setTimeout(r, 20));
+
+  const spawnsWhilePaused = events.filter((e) => e.t === 'packet-spawn').length;
+  if (spawnsWhilePaused > 0) {
+    throw new Error(
+      `AC14: пока paused=true, новых пакетов быть не должно, получено ${spawnsWhilePaused}`
+    );
+  }
+
+  // Снимаем паузу — интервал и вебхук снова должны спавнить.
+  engine.setPaused(false);
+  await new Promise((r) => setTimeout(r, 150));
+  cb?.('webhook_miner', { message: 'after resume' });
+  await new Promise((r) => setTimeout(r, 20));
+
+  engine.stop();
+
+  const spawnsAfterResume = events.filter((e) => e.t === 'packet-spawn').length;
+  if (spawnsAfterResume === 0) {
+    throw new Error('AC14: после setPaused(false) шахты должны снова спавнить пакеты');
+  }
+
+  console.log('✓ AC14: setPaused(true) держит спавн шахт (interval + webhook), false — резюмирует');
+}
+
+/**
+ * AC15: кольцо лент (edge.to=null + loopFrom) — предмет гоняется по петле, НЕ дропается.
  */
 async function testBeltLoop() {
   const events: EngineEvent[] = [];
@@ -1063,12 +1139,12 @@ async function testBeltLoop() {
 
   const drops = events.filter((e) => e.t === 'packet-drop' && e.reason === 'dead-end');
   if (drops.length > 0) {
-    throw new Error('AC14: зацикленный предмет НЕ должен дропаться как dead-end');
+    throw new Error('AC15: зацикленный предмет НЕ должен дропаться как dead-end');
   }
   if (moveCount < 2) {
-    throw new Error(`AC14: предмет должен гоняться по петле (несколько move), было ${moveCount}`);
+    throw new Error(`AC15: предмет должен гоняться по петле (несколько move), было ${moveCount}`);
   }
-  console.log(`✓ AC14: belt loop — предмет циркулирует, не дропается (${moveCount} кругов)`);
+  console.log(`✓ AC15: belt loop — предмет циркулирует, не дропается (${moveCount} кругов)`);
 }
 
 /**
@@ -1089,9 +1165,10 @@ async function testBeltLoop() {
     await testAssemblerMemorySnapshot();
     await testEnergyCapacityInsufficient();
     await testMinerUrlThroughSpawnPacket();
+    await testPauseStopsNewSpawns();
     await testBeltLoop();
 
-    console.log('\n✅ engine checks OK — все 14 AC пройдены');
+    console.log('\n✅ engine checks OK — все 15 AC пройдены');
   } catch (e) {
     console.error('\n❌ engine checks FAILED:', e);
     throw e;

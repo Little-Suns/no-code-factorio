@@ -1,5 +1,5 @@
-import { rotOffset, footprintTiles, outPorts, inTiles } from '../grid';
-import { Entity } from '../types';
+import { rotOffset, footprintTiles, outPorts, inTiles, canPlace } from '../grid';
+import { Entity, Vec } from '../types';
 
 // Простая функция assert
 function assert(cond: boolean, msg: string): void {
@@ -168,5 +168,68 @@ assert(
 );
 
 console.log('✓ manipulator ports OK');
+
+// lab: футпринт 2×2 (докс/03 — раньше был 2×1 и на dir=1/3 занимал 1×2, что визуально
+// выглядело как "растянутая крив" лаборатория; должен быть квадрат, инвариантный к dir).
+console.log('Testing lab footprint is 2×2 and invariant under rotation...');
+for (const dir of [0, 1, 2, 3] as const) {
+  const lab: Entity = { id: `lab-dir${dir}`, kind: 'lab', pos: { x: 0, y: 0 }, dir, config: {} };
+  const tiles = footprintTiles(lab);
+  assert(tiles.length === 4, `lab dir=${dir} footprint should have 4 tiles, got ${tiles.length}`);
+  const minX = Math.min(...tiles.map((t) => t.x));
+  const maxX = Math.max(...tiles.map((t) => t.x));
+  const minY = Math.min(...tiles.map((t) => t.y));
+  const maxY = Math.max(...tiles.map((t) => t.y));
+  const width = maxX - minX + 1;
+  const height = maxY - minY + 1;
+  assert(width === 2, `lab dir=${dir} width should be 2, got ${width}`);
+  assert(height === 2, `lab dir=${dir} height should be 2, got ${height}`);
+}
+console.log('✓ lab footprint 2×2 OK');
+
+// lab: занимает все 4 тайла (коллизия) — соседний станок не может встать поверх ни одного из них.
+console.log('Testing lab occupies all 4 tiles (collision)...');
+{
+  const lab: Entity = { id: 'lab-collision', kind: 'lab', pos: { x: 5, y: 5 }, dir: 0, config: {} };
+  const world: Record<string, Entity> = { 'lab-collision': lab };
+  const overlaps: Vec[] = [
+    { x: 5, y: 5 }, { x: 6, y: 5 }, { x: 5, y: 6 }, { x: 6, y: 6 },
+  ];
+  for (const pos of overlaps) {
+    const other: Entity = { id: 'other', kind: 'belt', pos, dir: 0, config: {} };
+    assert(!canPlace(world, other), `belt at (${pos.x},${pos.y}) should collide with lab 2×2`);
+  }
+  const free: Entity = { id: 'other-free', kind: 'belt', pos: { x: 7, y: 5 }, dir: 0, config: {} };
+  assert(canPlace(world, free), 'belt at (7,5) должен быть свободен рядом с lab 2×2');
+}
+console.log('✓ lab collision OK');
+
+// lab: порты pass/rework на FRONT остаются на прежних местах (левый/правый верхний тайл
+// над футпринтом) — расширение вниз (BACK) не должно сдвигать выходы.
+console.log('Testing lab pass/rework ports on 2×2 footprint...');
+{
+  const lab: Entity = { id: 'lab-ports', kind: 'lab', pos: { x: 0, y: 0 }, dir: 0, config: {} };
+  const ports = outPorts(lab);
+  assert(ports.length === 2, `lab should have 2 output ports, got ${ports.length}`);
+  const passPort = ports.find((p) => p.branch === 'pass');
+  const reworkPort = ports.find((p) => p.branch === 'rework');
+  assert(passPort !== undefined, 'lab should have pass port');
+  assert(reworkPort !== undefined, 'lab should have rework port');
+  assert(
+    passPort!.tile.x === 0 && passPort!.tile.y === -1,
+    `pass port should be at (0,-1), got (${passPort!.tile.x},${passPort!.tile.y})`
+  );
+  assert(
+    reworkPort!.tile.x === 1 && reworkPort!.tile.y === -1,
+    `rework port should be at (1,-1), got (${reworkPort!.tile.x},${reworkPort!.tile.y})`
+  );
+
+  // BACK принимает вход на обоих нижних тайлах футпринта (y=1, а не y=0 как было при h=1)
+  const labInTiles = inTiles(lab);
+  assert(labInTiles.has('0,1'), 'lab BACK input should include (0,1)');
+  assert(labInTiles.has('1,1'), 'lab BACK input should include (1,1)');
+  assert(!labInTiles.has('0,0'), 'lab top row (0,0) is not a BACK input tile');
+}
+console.log('✓ lab pass/rework ports OK');
 
 console.log('grid checks OK');

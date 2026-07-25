@@ -5,11 +5,13 @@ import { triggerMiner, rechargeAccumulator } from '../state/runtime';
 import { MODULE_DEFS } from '../core/nodes/modules';
 import { RECIPES } from '../core/nodes/recipes';
 import { JsonView } from './JsonView';
+import { useT, translateEngineError } from '../i18n';
 import './ConfigPanel.css';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? 'http://localhost:8787';
 
 export function ConfigPanel() {
+  const t = useT();
   const selectedEntityId = useStore((state) => state.selectedEntityId);
   const entities = useStore((state) => state.entities);
   const running = useStore((state) => state.running);
@@ -17,6 +19,7 @@ export function ConfigPanel() {
   const energy = useStore((state) => state.energy);
   const setConfig = useStore((state) => state.setConfig);
   const select = useStore((state) => state.select);
+  const locale = useStore((state) => state.locale);
 
   const entity = selectedEntityId ? entities[selectedEntityId] : null;
   const def = entity ? NODE_DEFS[entity.kind] : null;
@@ -34,6 +37,21 @@ export function ConfigPanel() {
   if (!entity || !def) {
     return <div className="config-panel" />;
   }
+
+  // Данные схемы (NODE_DEFS/RECIPES/MODULE_DEFS) живут в core/ и не знают про локаль —
+  // текст оттуда используем только как фоллбэк, если для конкретного ключа перевода нет
+  // (t() возвращает сам ключ, если не нашёл строку ни в текущей локали, ни в ru).
+  const tOr = (key: string, fallback: string) => {
+    const translated = t(key);
+    return translated === key ? fallback : translated;
+  };
+  const nodeTitle = tOr(`node.${entity.kind}.title`, def.title);
+  const fieldLabel = (fieldKey: string, fallback: string) =>
+    tOr(`field.${entity.kind}.${fieldKey}.label`, fallback);
+  const fieldPlaceholder = (fieldKey: string, fallback?: string) =>
+    fallback === undefined ? undefined : tOr(`field.${entity.kind}.${fieldKey}.placeholder`, fallback);
+  const optionLabel = (fieldKey: string, value: string, fallback: string) =>
+    tOr(`option.${entity.kind}.${fieldKey}.${value}`, fallback);
 
   const handleConfigChange = (key: string, value: unknown) => {
     const newConfig = { ...entity.config, [key]: value };
@@ -65,7 +83,7 @@ export function ConfigPanel() {
   const handleCopyWebhook = () => {
     if (webhookUrl) {
       navigator.clipboard.writeText(webhookUrl);
-      useStore.getState().toast('Webhook URL скопирован');
+      useStore.getState().toast(t('toast.webhookCopied'));
     }
   };
 
@@ -73,10 +91,10 @@ export function ConfigPanel() {
     <div className="config-panel open">
       <div className="config-header">
         <div className="config-title">
-          <span className="config-kind" data-kind={entity.kind}>{def.title}</span>
+          <span className="config-kind" data-kind={entity.kind}>{nodeTitle}</span>
           <span className="config-type">{entity.kind}</span>
         </div>
-        <button className="config-close" onClick={() => select(null)} title="Close (Esc)">
+        <button className="config-close" onClick={() => select(null)} title={t('config.closeTitle')}>
           ✕
         </button>
       </div>
@@ -89,7 +107,7 @@ export function ConfigPanel() {
             if (entity.kind === 'assembler' && field.key === 'modules') return null;
             return (
             <div key={field.key} className="config-field">
-              <label className="config-label">{field.label}</label>
+              <label className="config-label">{fieldLabel(field.key, field.label)}</label>
 
               {field.type === 'text' && (
                 <input
@@ -97,7 +115,7 @@ export function ConfigPanel() {
                   className="config-input"
                   value={(entity.config[field.key] as string) || ''}
                   onChange={(e) => handleConfigChange(field.key, e.target.value)}
-                  placeholder={field.placeholder}
+                  placeholder={fieldPlaceholder(field.key, field.placeholder)}
                   disabled={running}
                 />
               )}
@@ -118,7 +136,7 @@ export function ConfigPanel() {
                   rows={6}
                   value={(entity.config[field.key] as string) || ''}
                   onChange={(e) => handleConfigChange(field.key, e.target.value)}
-                  placeholder={field.placeholder}
+                  placeholder={fieldPlaceholder(field.key, field.placeholder)}
                   disabled={running}
                 />
               )}
@@ -141,7 +159,7 @@ export function ConfigPanel() {
                       handleConfigChange(field.key, e.target.value);
                     }
                   }}
-                  placeholder={field.placeholder}
+                  placeholder={fieldPlaceholder(field.key, field.placeholder)}
                   disabled={running}
                 />
               )}
@@ -170,10 +188,15 @@ export function ConfigPanel() {
                   }}
                   disabled={running}
                 >
-                  <option value="">-- Select --</option>
+                  <option value="">{t('config.selectPlaceholder')}</option>
                   {field.options.map((opt) => (
                     <option key={opt.value} value={opt.value}>
-                      {opt.label}
+                      {/* Рецепты assembler переводятся отдельным неймспейсом recipe.<value>.label
+                          (RECIPES живут в core/nodes/recipes.ts вместе с system-промптом,
+                          который НЕ переводим — это бизнес-данные, а не UI-текст) */}
+                      {field.key === 'recipe' && entity.kind === 'assembler'
+                        ? tOr(`recipe.${opt.value}.label`, opt.label)
+                        : optionLabel(field.key, opt.value, opt.label)}
                     </option>
                   ))}
                 </select>
@@ -186,10 +209,11 @@ export function ConfigPanel() {
         {/* Спец-блок для assembler (E2): модули как переключатели, не сырой JSON */}
         {entity.kind === 'assembler' && (
           <div className="config-special">
-            <label className="config-label">Модули (до 3)</label>
+            <label className="config-label">{t('config.modulesLabel')}</label>
             <div className="module-toggles">
               {MODULE_DEFS.map((mod) => {
                 const active = ((entity.config['modules'] as string[]) || []).includes(mod.id);
+                const modLabel = tOr(`module.${mod.id}.label`, mod.label);
                 return (
                   <button
                     key={mod.id}
@@ -197,9 +221,9 @@ export function ConfigPanel() {
                     className={`module-toggle ${active ? 'active' : ''}`}
                     onClick={() => handleToggleModule(mod.id)}
                     disabled={running}
-                    title={`${mod.label} (+${Math.round(mod.energyCost * 100)}% к расходу энергии станка)`}
+                    title={t('config.moduleToggleTitle', { label: modLabel, pct: Math.round(mod.energyCost * 100) })}
                   >
-                    {mod.label}
+                    {modLabel}
                   </button>
                 );
               })}
@@ -214,14 +238,14 @@ export function ConfigPanel() {
               className="trigger-miner"
               onClick={handleTriggerMiner}
               disabled={!running}
-              title="Запустить шахту (доступно при running)"
+              title={t('config.triggerMinerTitle')}
             >
-              ▶ Вбросить
+              {t('config.triggerMiner')}
             </button>
 
             {entity.config['mode'] === 'webhook' && webhookUrl && (
               <div className="webhook-section">
-                <label className="config-label">Webhook URL</label>
+                <label className="config-label">{t('config.webhookUrlLabel')}</label>
                 <div className="webhook-url-group">
                   <input
                     type="text"
@@ -232,9 +256,9 @@ export function ConfigPanel() {
                   <button
                     className="webhook-copy"
                     onClick={handleCopyWebhook}
-                    title="Copy webhook URL"
+                    title={t('config.copyWebhookTitle')}
                   >
-                    Copy
+                    {t('config.copy')}
                   </button>
                 </div>
               </div>
@@ -247,16 +271,16 @@ export function ConfigPanel() {
           <div className="config-special">
             <div className="energy-readout">
               {energy
-                ? `Заряд: ${Math.round(energy.charge)} / ${Math.round(energy.capacity)}`
-                : 'Заряд: — (фабрика не запущена)'}
+                ? t('config.chargeReadout', { charge: Math.round(energy.charge), capacity: Math.round(energy.capacity) })
+                : t('config.chargeReadoutOffline')}
             </div>
             <button
               className="trigger-miner"
               onClick={handleRecharge}
               disabled={!running}
-              title="Пополнить энергию до максимума (доступно при running)"
+              title={t('config.rechargeTitle')}
             >
-              ⚡ Зарядить
+              {t('config.recharge')}
             </button>
           </div>
         )}
@@ -266,7 +290,9 @@ export function ConfigPanel() {
           <div className="status-badge" data-status={status.status || 'idle'}>
             {status.status || 'idle'}
           </div>
-          {status.error && <div className="status-error">{status.error}</div>}
+          {status.error && (
+            <div className="status-error">{translateEngineError(status.error, locale)}</div>
+          )}
         </div>
 
         {/* Последний вход/выход */}
@@ -274,13 +300,13 @@ export function ConfigPanel() {
           <div className="config-io">
             {status.lastIn !== undefined && (
               <details className="io-collapsible">
-                <summary>Последний вход</summary>
+                <summary>{t('config.lastIn')}</summary>
                 <JsonView value={status.lastIn} />
               </details>
             )}
             {status.lastOut !== undefined && (
               <details className="io-collapsible">
-                <summary>Последний выход</summary>
+                <summary>{t('config.lastOut')}</summary>
                 <JsonView value={status.lastOut} />
               </details>
             )}

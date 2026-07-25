@@ -6,6 +6,7 @@ import { GameTransport, consumePacket, dropPacket } from '../game/packets';
 import { rocketLaunch } from '../game/fx';
 import { triggerManipulatorGrab, triggerManipulatorRelease } from '../game/machines';
 import { useStore } from './store';
+import { t, translateEngineError } from '../i18n/dictionaries';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? 'http://localhost:8787';
 
@@ -19,6 +20,19 @@ let starting = false;
 // остановить. Флаг просит startRun() не поднимать фабрику вовсе, когда асинхронная часть
 // закончится, вместо того чтобы молча проигнорировать клик Stop.
 let stopRequestedDuringStart = false;
+
+// Баг «переключились со вкладки и вернулись — предметы копятся, не обрабатываются»:
+// wall-clock setInterval шахты (core/engine.ts) не останавливается браузером на скрытой
+// вкладке, а анимация пакетов в game/packets.ts держится на Ticker.shared (requestAnimationFrame),
+// который на скрытой вкладке просто не вызывается. В итоге шахта продолжает спавнить пакеты,
+// а рендер не может их разобрать — растущий backlog. Держим Engine и рендерер синхронно
+// на паузе, пока вкладка не видна; уже летящие/стоящие в очереди пакеты не трогаем —
+// они доедут как обычно, когда Ticker снова пойдёт (docs/02, docs/04).
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    engine?.setPaused(document.hidden);
+  });
+}
 
 /**
  * Таймаут на fetch к нашему серверу — если он зависнет (не апстрим-LLM, а именно наш /llm
@@ -148,7 +162,7 @@ function setupEventHandler() {
         // error → лом+дым; dead-end/ttl → падение с fade (тост даёт node-status error)
         dropPacket(event.packetId, event.reason);
         if (event.reason !== 'error') {
-          store.toast(`✕ пакет упал (${event.reason})`);
+          store.toast(t('toast.packetDropped', store.locale, { reason: event.reason }));
           console.log('[drop]', event.packetId, event.reason);
         }
         break;
@@ -157,7 +171,8 @@ function setupEventHandler() {
         store.setStatus(event.nodeId, event.status, event.error);
         if (event.status === 'error' && event.error) {
           const kind = store.entities[event.nodeId]?.kind ?? '?';
-          store.toast(`⚠ ${kind} #${event.nodeId}: ${event.error}`);
+          const errorText = translateEngineError(event.error, store.locale);
+          store.toast(`⚠ ${kind} #${event.nodeId}: ${errorText}`);
           console.warn('[node error]', kind, event.nodeId, event.error);
         }
         break;
@@ -167,13 +182,19 @@ function setupEventHandler() {
         // Лог вход→выход каждого станка: в панель логов (LogsPanel) и в консоль.
         const kind = store.entities[event.nodeId]?.kind ?? '?';
         const label = `${kind} #${event.nodeId}`;
-        const parts: string[] = [];
-        if (event.lastIn !== undefined) parts.push(`IN ${logPreview(event.lastIn)}`);
-        if (event.lastOut !== undefined) parts.push(`OUT ${logPreview(event.lastOut)}`);
-        if (parts.length > 0) {
-          store.toast(`${label}: ${parts.join('  →  ')}`);
-          console.log('[io]', label, { in: event.lastIn, out: event.lastOut });
+        // silo: финальный node-io (lastIn без lastOut) несёт тот же payload, что и
+        // следом идущий 'result' → pushResult (см. engine.ts, ветка 'done'). ResultPanel
+        // уже покажет этот результат — не дублируем его ещё и как запись в LogsPanel.
+        const isSiloFinalIo = kind === 'silo' && event.lastOut === undefined;
+        if (!isSiloFinalIo) {
+          const parts: string[] = [];
+          if (event.lastIn !== undefined) parts.push(`IN ${logPreview(event.lastIn)}`);
+          if (event.lastOut !== undefined) parts.push(`OUT ${logPreview(event.lastOut)}`);
+          if (parts.length > 0) {
+            store.toast(`${label}: ${parts.join('  →  ')}`);
+          }
         }
+        console.log('[io]', label, { in: event.lastIn, out: event.lastOut });
         break;
       }
 
@@ -211,7 +232,7 @@ export async function startRun(): Promise<void> {
     // Проверка: есть ли хотя бы одна шахта
     const hasAnyMiner = Object.values(store.entities).some((e) => e.kind === 'miner');
     if (!hasAnyMiner) {
-      store.toast('Поставь шахту');
+      store.toast(t('toast.placeMiner', store.locale));
       return;
     }
 
@@ -252,6 +273,11 @@ export async function startRun(): Promise<void> {
 
     // Запускаем
     engine.start();
+    // Вкладка уже могла быть скрыта до нажатия Run (напр. запуск из другой вкладки) —
+    // синхронизируем паузу сразу, не дожидаясь следующего visibilitychange.
+    if (typeof document !== 'undefined') {
+      engine.setPaused(document.hidden);
+    }
     store.setRunning(true);
   } finally {
     starting = false;

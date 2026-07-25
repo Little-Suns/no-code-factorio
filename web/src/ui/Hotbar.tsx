@@ -1,47 +1,39 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useStore } from '../state/store';
 import type { MachineKind } from '../core/types';
+import { ALL_TOOLS, HOTKEYS, TOOL_DESCRIPTIONS, TOOL_ICONS } from './hotbarData';
+import { useT } from '../i18n';
 import './Hotbar.css';
 
-// Аккумулятор (E1) вне графа лент, но всё равно ставится мышью как обычный станок.
-const ALL_TOOLS: MachineKind[] = [
-  'belt', 'miner', 'assembler', 'splitter', 'mixer', 'silo',
-  'furnace', 'chest', 'lab', 'accumulator', 'webhook', 'manipulator',
-];
-const HOTKEYS: Record<MachineKind, string> = {
-  belt: '1',
-  miner: '2',
-  assembler: '3',
-  splitter: '4',
-  mixer: '5',
-  silo: '6',
-  webhook: '7',
-  furnace: '8',
-  chest: '9',
-  lab: '0',
-  accumulator: 'e',
-  manipulator: 'i',
-};
+// Явная аннотация обязательна: без неё Object.fromEntries выводит тип со значением
+// `MachineKind` (не `MachineKind | undefined`), и `KEY_TO_TOOL[e.key]` ниже типизируется
+// как гарантированно существующий ключ — хотя для немаппленной клавиши это `undefined`
+// в рантайме, и на этом стоит проверка `if (tool)`.
 const KEY_TO_TOOL: Partial<Record<string, MachineKind>> = Object.fromEntries(
   ALL_TOOLS.map((tool) => [HOTKEYS[tool], tool])
 );
 
-const TOOL_NAMES: Record<MachineKind, string> = {
-  belt: 'Belt',
-  miner: 'Miner',
-  assembler: 'Assembler',
-  splitter: 'Splitter',
-  mixer: 'Mixer',
-  silo: 'Silo',
-  furnace: 'Furnace',
-  chest: 'Chest',
-  lab: 'Lab',
-  accumulator: 'Accumulator',
-  webhook: 'Webhook',
-  manipulator: 'Manipulator',
+// Заголовки станков берём из общего i18n-словаря (ключ node.<kind>.title) — тот же
+// текст, что и в заголовке ConfigPanel, чтобы не дублировать перевод в двух местах.
+// TOOL_DESCRIPTIONS (hotbarData.tsx) пока не переведены — короткое описание роли
+// станка остаётся на русском во всех локалях, это отдельная задача на будущее.
+const TOOL_NAME_KEYS: Record<MachineKind, string> = {
+  belt: 'node.belt.title',
+  miner: 'node.miner.title',
+  assembler: 'node.assembler.title',
+  splitter: 'node.splitter.title',
+  mixer: 'node.mixer.title',
+  silo: 'node.silo.title',
+  furnace: 'node.furnace.title',
+  chest: 'node.chest.title',
+  lab: 'node.lab.title',
+  accumulator: 'node.accumulator.title',
+  webhook: 'node.webhook.title',
+  manipulator: 'node.manipulator.title',
 };
 
 export function Hotbar() {
+  const t = useT();
   const selectedTool = useStore((state) => state.selectedTool);
   const setTool = useStore((state) => state.setTool);
 
@@ -71,10 +63,11 @@ export function Hotbar() {
           key={tool}
           className={`hotbar-slot ${selectedTool === tool ? 'active' : ''}`}
           onClick={() => setTool(tool)}
-          title={`${TOOL_NAMES[tool]} (${HOTKEYS[tool]})`}
+          title={`${t(TOOL_NAME_KEYS[tool])} (${HOTKEYS[tool]}) — ${TOOL_DESCRIPTIONS[tool]}`}
+          aria-label={`${t(TOOL_NAME_KEYS[tool])} (${HOTKEYS[tool]})`}
         >
           <div className="hotbar-icon" data-tool={tool}>
-            {tool.charAt(0).toUpperCase()}
+            {TOOL_ICONS[tool]}
           </div>
           <span className="hotbar-hotkey">{HOTKEYS[tool]}</span>
         </button>

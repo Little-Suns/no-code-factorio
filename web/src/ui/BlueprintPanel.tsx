@@ -6,9 +6,12 @@ import {
   importBlueprintString,
   Blueprint,
 } from '../core/blueprint';
+import { LIBRARY_BLUEPRINTS } from '../core/blueprintLibrary';
+import { useT } from '../i18n';
 import './BlueprintPanel.css';
 
 export function BlueprintPanel() {
+  const t = useT();
   const blueprints = useStore((state) => state.blueprints);
   const pendingSelection = useStore((state) => state.pendingSelection);
   const blueprintPanelOpen = useStore((state) => state.blueprintPanelOpen);
@@ -42,7 +45,7 @@ export function BlueprintPanel() {
 
   const handleSave = () => {
     if (!pendingSelection) return;
-    const finalName = name.trim() || `Чертёж ${blueprints.length + 1}`;
+    const finalName = name.trim() || t('bp.namePlaceholder', { n: blueprints.length + 1 });
     addBlueprint(serializeBlueprint(pendingSelection, finalName));
     setPendingSelection(null);
     setName('');
@@ -55,7 +58,7 @@ export function BlueprintPanel() {
 
   const handleExport = (blueprint: Blueprint) => {
     navigator.clipboard.writeText(exportBlueprintString(blueprint));
-    toast(`Чертёж «${blueprint.name}» скопирован строкой`);
+    toast(t('toast.blueprintCopied', { name: blueprint.name }));
   };
 
   const handleImport = () => {
@@ -65,22 +68,22 @@ export function BlueprintPanel() {
       const blueprint = importBlueprintString(trimmed);
       addBlueprint(blueprint);
       setImportValue('');
-      toast(`Чертёж «${blueprint.name}» импортирован`);
+      toast(t('toast.blueprintImported', { name: blueprint.name }));
     } catch {
-      toast('Некорректная строка чертежа');
+      toast(t('toast.blueprintInvalid'));
     }
   };
 
   return (
     <div className={`blueprint-panel ${configOpen ? 'config-open' : ''}`}>
       <div className="blueprint-header">
-        <h3 className="blueprint-title">Чертежи</h3>
-        <button className="blueprint-icon-btn" onClick={handleClose} title="Collapse dock (B)">
+        <h3 className="blueprint-title">{t('bp.title')}</h3>
+        <button className="blueprint-icon-btn" onClick={handleClose} title={t('bp.collapseTitle')}>
           &#9662;
         </button>
       </div>
 
-      <div className="blueprint-hint">Выделить: зажми и потяни ЛКМ по полю фабрики</div>
+      <div className="blueprint-hint">{t('bp.hint')}</div>
 
       {pendingSelection && (
         <div className="blueprint-save-form">
@@ -88,40 +91,41 @@ export function BlueprintPanel() {
             className="blueprint-name-input"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder={`Чертёж ${blueprints.length + 1}`}
+            placeholder={t('bp.namePlaceholder', { n: blueprints.length + 1 })}
           />
           <div className="blueprint-save-actions">
             <button className="blueprint-btn primary" onClick={handleSave}>
-              Сохранить ({pendingSelection.length})
+              {t('bp.save', { n: pendingSelection.length })}
             </button>
             <button className="blueprint-btn" onClick={handleCancelSave}>
-              Отмена
+              {t('bp.cancel')}
             </button>
           </div>
         </div>
       )}
 
+      <div className="blueprint-section-title">{t('bp.myBlueprints')}</div>
       <div className="blueprint-list">
         {blueprints.length === 0 ? (
-          <div className="blueprint-empty">Нет чертежей</div>
+          <div className="blueprint-empty">{t('bp.empty')}</div>
         ) : (
           blueprints.map((bp) => (
             <div key={bp.id} className={`blueprint-item ${stampBlueprintId === bp.id ? 'active' : ''}`}>
-              <span className="blueprint-name" title={`${bp.entities.length} станков`}>
+              <span className="blueprint-name" title={t('bp.entitiesCountTitle', { n: bp.entities.length })}>
                 {bp.name}
               </span>
               <div className="blueprint-item-actions">
                 <button
                   className="blueprint-icon-btn"
                   onClick={() => setStampBlueprint(stampBlueprintId === bp.id ? null : bp.id)}
-                  title="Поставить"
+                  title={t('bp.stampTitle')}
                 >
                   ✥
                 </button>
-                <button className="blueprint-icon-btn" onClick={() => handleExport(bp)} title="Экспорт строкой">
+                <button className="blueprint-icon-btn" onClick={() => handleExport(bp)} title={t('bp.exportTitle')}>
                   ↓
                 </button>
-                <button className="blueprint-icon-btn" onClick={() => removeBlueprint(bp.id)} title="Удалить">
+                <button className="blueprint-icon-btn" onClick={() => removeBlueprint(bp.id)} title={t('bp.removeTitle')}>
                   ✕
                 </button>
               </div>
@@ -130,15 +134,37 @@ export function BlueprintPanel() {
         )}
       </div>
 
+      {/* Библиотека — статичные пресеты из коробки (blueprintLibrary.ts), read-only:
+          без экспорта/удаления, только «поставить», как обычный инструмент. */}
+      <div className="blueprint-section-title">{t('bp.library')}</div>
+      <div className="blueprint-list blueprint-list-library">
+        {LIBRARY_BLUEPRINTS.map((bp) => (
+          <div key={bp.id} className={`blueprint-item library ${stampBlueprintId === bp.id ? 'active' : ''}`}>
+            <span className="blueprint-name" title={t('bp.entitiesCountTitle', { n: bp.entities.length })}>
+              {bp.name}
+            </span>
+            <div className="blueprint-item-actions">
+              <button
+                className="blueprint-icon-btn"
+                onClick={() => setStampBlueprint(stampBlueprintId === bp.id ? null : bp.id)}
+                title={t('bp.stampTitle')}
+              >
+                ✥
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div className="blueprint-import">
         <input
           className="blueprint-import-input"
           value={importValue}
           onChange={(e) => setImportValue(e.target.value)}
-          placeholder="Строка чертежа для импорта"
+          placeholder={t('bp.importPlaceholder')}
         />
         <button className="blueprint-btn" onClick={handleImport}>
-          Загрузить
+          {t('bp.load')}
         </button>
       </div>
     </div>

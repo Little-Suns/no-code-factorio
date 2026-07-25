@@ -3,12 +3,14 @@
 
 import './grid';
 import './graph';
+import './manipulator-intake';
 import './rasterize';
 import './tpl';
 import './engine';
 import './nodes';
 import './demo';
 import './blueprint';
+import './blueprintLibrary';
 import './stress';
 
 console.log('✓ Check runner ready');

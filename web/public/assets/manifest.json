@@ -71,6 +71,18 @@
         "fps": 8
       }
     },
+    "webhook": {
+      "size": [
+        2,
+        2
+      ],
+      "idle": "webhook_idle.png",
+      "work": {
+        "file": "webhook_work.png",
+        "frames": 8,
+        "fps": 8
+      }
+    },
     "furnace": {
       "size": [
         2,

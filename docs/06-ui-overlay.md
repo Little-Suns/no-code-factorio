@@ -2,7 +2,7 @@
 
 React поверх canvas. Оверлеи — absolute-элементы с `pointer-events: auto`, корень оверлея — `pointer-events: none` (клики проходят в Pixi). Стили — по файлу на компонент (`ui/*.css`), без UI-библиотек, тема — CSS-переменные в `:root` (`web/index.html`).
 
-Тема "Factory.exe" (импортирована из claude.ai/design, дизайн/шрифты/цвета/расположения — без логики прототипа, там были баги): тёмная терминальная палитра — фон `#0e1013`, панели `#24272d` (приподнятая поверхность `#2f343b`), рамки `#0a0c0e` в 2px с pixel-bevel inset-тенями, акцент `#f0a030`, `--ok`/`--error`/`--idle` = `#5ecf7a`/`#e2483f`/`#5a5445`. Шрифты: `--f-disp` = Press Start 2P (заголовки, CTA-кнопки, glyph'ы Hotbar — у шрифта нет кириллицы, поэтому фоллбэк на IBM Plex Mono для русских подписей), `--f-body`/`--f-mono` = IBM Plex Mono (всё остальное). PixiJS-канвас (`game/app.ts`/`assets.ts`/`machines.ts`) тоже перекрашен под тему — фон, сетка, цвета плейсхолдеров станков (`PLACEHOLDER_COLORS`), статус-лампа.
+Тема "Factory.exe" (импортирована из claude.ai/design, дизайн/шрифты/цвета/расположения — без логики прототипа, там были баги): тёмная терминальная палитра — фон `#0e1013`, панели `#24272d` (приподнятая поверхность `#2f343b`), рамки `#0a0c0e` в 2px с pixel-bevel inset-тенями, акцент `#f0a030`, `--ok`/`--error`/`--idle` = `#5ecf7a`/`#e2483f`/`#5a5445`. Шрифты: `--f-disp` = Press Start 2P (заголовки, CTA-кнопки — у шрифта нет кириллицы, поэтому фоллбэк на IBM Plex Mono для русских подписей), `--f-body`/`--f-mono` = IBM Plex Mono (всё остальное; иконки Hotbar — инлайн-SVG, шрифта не используют). PixiJS-канвас (`game/app.ts`/`assets.ts`/`machines.ts`) тоже перекрашен под тему — фон, сетка, цвета плейсхолдеров станков (`PLACEHOLDER_COLORS`), статус-лампа.
 
 ## Компоненты — `web/src/ui/`
 
@@ -10,8 +10,8 @@ React поверх canvas. Оверлеи — absolute-элементы с `poin
 Монтирует Pixi (`game/app.ts`) в `<div ref>`, поверх — TopBar, Hotbar, ConfigPanel, ResultPanel, Toasts.
 
 ### Hotbar.tsx (низ по центру, стиль инвентаря Factorio)
-- Слоты в порядке: belt, miner, assembler, splitter, mixer, silo, telegram, затем furnace, chest, lab, accumulator (усиление — можно скрыть за флагом). Хоткеи 1..9, 0.
-- Иконка — мини-плейсхолдер цвета станка (или спрайт из реестра), подпись — title из `NODE_DEFS`, выбранный слот подсвечен.
+- Слоты в порядке: `belt, miner, assembler, splitter, mixer, silo` (MVP-ядро), `manipulator` (обязателен для связи станок↔станок, поднят из усиления — чаще всего встречается в demo.json), `webhook` (второй терминал-узел, рядом с `silo`), затем усиление: `accumulator, furnace, chest, lab`. Данные (`ALL_TOOLS`/`HOTKEYS`/`TOOL_NAMES`/`TOOL_DESCRIPTIONS`/`TOOL_ICONS`) вынесены в `ui/hotbarData.tsx`. Хоткеи 1..9, 0, `e`, `i` — заданы по kind, не по позиции в массиве.
+- Иконка — компактный инлайн-SVG глиф (без иконочных библиотек, геометрические фигуры под роль станка), цвет — по `data-tool` в `Hotbar.css` (то же цветовое соответствие kind→цвет, что и в остальном UI). Тултип (`title`) — имя + хоткей + короткое описание роли станка (из docs/05), выбранный слот подсвечен.
 - Клик/хоткей → `store.setTool(kind)`; повторно или Esc → сброс.
 
 ### TopBar.tsx (верх)

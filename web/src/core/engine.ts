@@ -43,6 +43,15 @@ export class Engine {
   // Энергослой (E1, усиление): выключен, если на карте нет ни одного аккумулятора (docs/04)
   private energyEnabled = false;
   private energy = { charge: 0, capacity: 0 };
+  // Баг «фоновая вкладка»: setInterval шахты — wall-clock таймер, браузер не
+  // останавливает его при скрытой вкладке (максимум троттлит), а движение пакетов
+  // (game/packets.ts, Ticker.shared → requestAnimationFrame) встаёт полностью:
+  // rAF не вызывается для скрытых вкладок. Без этого флага шахта продолжает
+  // спавнить пакеты по таймеру, они копятся в очередях/на буферах смесителя,
+  // пока рендер не может их разобрать — после возврата на вкладку виден внезапный
+  // затор. runtime.ts на document.visibilitychange зовёт setPaused(document.hidden) —
+  // симметрично паузе рендерера, не даём миру расходиться, пока его никто не видит.
+  private paused = false;
 
   constructor(
     private entities: Record<string, Entity>,
@@ -60,7 +69,7 @@ export class Engine {
         if (intervalSec > 0) {
           // Без window.* — core обязан работать headless (tsx-проверки под node)
           const id = setInterval(() => {
-            if (!this.abortController.signal.aborted) {
+            if (!this.abortController.signal.aborted && !this.paused) {
               this.triggerMiner(entity.id);
             }
           }, intervalSec * 1000);
@@ -72,7 +81,11 @@ export class Engine {
     // Подписываемся на вебхуки
     if (this.deps.webhooks) {
       this.unsubscribeWebhooks = this.deps.webhooks((nodeId, body) => {
-        if (!this.abortController.signal.aborted) {
+        // Пока вкладка скрыта — не спавним: событие от внешнего сервиса реальное,
+        // но копить пакеты, которые рендер не сможет разобрать (rAF стоит), — тот
+        // же баг, что и с интервалом шахты. Пришедший во время паузы вебхук тихо
+        // теряется (docs/04 не даёт гарантий доставки вебхуков — как и раньше при stop()).
+        if (!this.abortController.signal.aborted && !this.paused) {
           // Найдём шахту с этим ID и спавним пакет с телом
           const miner = this.entities[nodeId];
           if (miner && miner.kind === 'miner') {
@@ -93,6 +106,20 @@ export class Engine {
       this.energy.charge = this.energy.capacity; // полный заряд на старте
       this.emit({ t: 'energy', charge: this.energy.charge, capacity: this.energy.capacity });
     }
+  }
+
+  /**
+   * Пауза/резюме источников новых пакетов (interval-шахты и вебхуки), не трогая
+   * уже запущенные цепочки доставки/очереди — только то, что порождает новую работу.
+   * Вызывается снаружи (runtime.ts) по document.visibilitychange: скрытая вкладка
+   * останавливает Ticker.shared (rAF) в game/packets.ts, движение пакетов встаёт,
+   * но wall-clock setInterval шахты сам не остановится — без этой паузы фабрика
+   * продолжит спавнить пакеты, которые рендер разобрать не может (растущий backlog).
+   * Уже находящиеся в полёте/в очереди пакеты паузу не замечают и доедут как обычно —
+   * это ровно то, что нужно: мир просто перестаёт расти, пока на него не смотрят.
+   */
+  setPaused(paused: boolean): void {
+    this.paused = paused;
   }
 
   /**
