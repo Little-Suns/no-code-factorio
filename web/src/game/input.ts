@@ -2,7 +2,7 @@ import { Sprite, Point, Graphics } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { TILE } from './app';
 import { getTexture } from './assets';
-import { MANIPULATOR_VISUAL_SCALE, SILO_VISUAL_SCALE, SILO_Y_OFFSET } from './machines';
+import { MANIPULATOR_VISUAL_SCALE, SILO_VISUAL_SCALE, SILO_Y_OFFSET, LAB_VISUAL_SCALE_Y } from './machines';
 import { useStore } from '../state/store';
 import { footprintTiles, canPlace } from '../core/grid';
 import { instantiateBlueprint, canPlaceBlueprint } from '../core/blueprint';
@@ -21,7 +21,7 @@ const ENTITY_HL_COLOR = 0x5ad1ff;
 // Размеры при dir=0 — для пивота ghost (дублирует core/grid, там getSize приватный)
 const SIZES: Record<MachineKind, [number, number]> = {
   belt: [1, 1], miner: [2, 2], furnace: [2, 2], assembler: [2, 2],
-  splitter: [2, 1], mixer: [3, 3], chest: [1, 1], lab: [2, 1],
+  splitter: [2, 1], mixer: [3, 3], chest: [1, 1], lab: [2, 2],
   silo: [3, 3], accumulator: [2, 2], webhook: [2, 2],
   manipulator: [1, 1],
 };
@@ -270,9 +270,12 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
     const [w, h] = SIZES[tool];
     const rw = ghostDir % 2 === 1 ? h : w;
     const rh = ghostDir % 2 === 1 ? w : h;
-    // Текстура может быть больше футпринта (assembler: спрайт 3×3, футпринт 2×2) —
-    // пивот по размеру текстуры, позиция по футпринту → текстура центрируется на клетках.
-    const [sw, sh] = tool === 'assembler' ? [3, 3] : [w, h];
+    // Текстура может быть больше или меньше футпринта — пивот по размеру текстуры,
+    // позиция по футпринту → текстура центрируется/растягивается на клетках.
+    // assembler: спрайт 3×3, футпринт 2×2 (арт с прозрачным бортиком, центрируется).
+    // lab: спрайт (арт) 2×1, футпринт теперь 2×2 (докс/03, инвариант к повороту) —
+    // тянем по высоте (LAB_VISUAL_SCALE_Y), см. machines.ts.
+    const [sw, sh] = tool === 'assembler' ? [3, 3] : tool === 'lab' ? [2, 1] : [w, h];
 
     ghostSprite.visible = true;
     ghostSprite.pivot.set((sw * TILE) / 2, (sh * TILE) / 2);
@@ -280,10 +283,11 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
     if (tool === 'silo') ghostSprite.position.y -= SILO_Y_OFFSET;
     ghostSprite.angle = ghostDir * 90;
     // manipulator: тот же увеличенный масштаб + дефолтное зеркало, что и у реально
-    // поставленного станка (machines.ts) — иначе ghost выглядит как старый мелкий спрайт
+    // поставленного станка (machines.ts) — иначе ghost выглядит как старый мелкий спрайт.
+    // lab: та же вертикальная растяжка арта, что и у реально поставленного станка.
     ghostSprite.scale.set(
       tool === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : tool === 'silo' ? SILO_VISUAL_SCALE : 1,
-      tool === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : tool === 'silo' ? SILO_VISUAL_SCALE : 1
+      tool === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : tool === 'silo' ? SILO_VISUAL_SCALE : tool === 'lab' ? LAB_VISUAL_SCALE_Y : 1
     );
 
     const test: Entity = { id: 'ghost', kind: tool, pos: tile, dir: ghostDir, config: {} };

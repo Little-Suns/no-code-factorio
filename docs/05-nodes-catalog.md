@@ -87,7 +87,7 @@ export type Handler = (ctx: NodeCtx) => Promise<HandlerResult>;
 - schema: `batchSize` (number, дефолт 5).
 - handler: копит во внутреннем буфере движка; недобор → `{ done: true }` (+`result` для инспектора); набралось → `{ out: массив }` — пачка едет дальше (batch-обработка агентом-аналитиком).
 
-### lab — Лаборатория / Критик (2×1)
+### lab — Лаборатория / Критик (2×2)
 - schema: `criteria` (textarea, placeholder «Текст вежлив, без воды, до 500 знаков»), outItem на ветке rework: verdict.
 - handler: `llm({ system: 'Ты критик. По критериям ответь первой строкой PASS или REWORK, далее замечания.', prompt: criteria + текст })`. PASS → `{ branch: 'pass', out: data }`; иначе → `{ branch: 'rework', out: { draft: data, critique } }` — лента rework строится назад в assembler: петля «написал → проверил → переписал». От вечного круга защищает ttl.
 

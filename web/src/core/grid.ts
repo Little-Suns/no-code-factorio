@@ -12,9 +12,9 @@ function getSize(kind: MachineKind): { w: number; h: number } {
     case 'accumulator':
     case 'webhook':
     case 'assembler':
+    case 'lab':
       return { w: 2, h: 2 };
     case 'splitter':
-    case 'lab':
       return { w: 2, h: 1 };
     case 'mixer':
     case 'silo':

@@ -88,9 +88,9 @@ function getSize(kind: MachineKind): { w: number; h: number } {
     case 'accumulator':
     case 'webhook':
     case 'assembler':
+    case 'lab':
       return { w: 2, h: 2 };
     case 'splitter':
-    case 'lab':
       return { w: 2, h: 1 };
     case 'mixer':
     case 'silo':
@@ -103,11 +103,20 @@ function getSize(kind: MachineKind): { w: number; h: number } {
 // Размер ТЕКСТУРЫ в тайлах (может отличаться от футпринта getSize). У assembler спрайт
 // авторен на 3×3 с прозрачным бортиком, а футпринт ужат до 2×2 — текстура центрируется
 // на футпринте (пивот по этому размеру, позиция по футпринту), арт заполняет 2×2, поля
-// вылезают прозрачными. Для остальных станков совпадает с футпринтом.
+// вылезают прозрачными. У lab футпринт расширен до 2×2 (докс/03 — раньше 2×1 занимал
+// разные тайлы при повороте, теперь квадрат, инвариантен к dir), а арт (lab_idle/work.png,
+// см. manifest.json) остался авторен на 2×1 — растягиваем по высоте (LAB_VISUAL_SCALE_Y ниже),
+// а не центрируем, иначе половина клетки осталась бы пустой. Для остальных станков совпадает
+// с футпринтом.
 function getSpriteSize(kind: MachineKind): { w: number; h: number } {
   if (kind === 'assembler') return { w: 3, h: 3 };
+  if (kind === 'lab') return { w: 2, h: 1 };
   return getSize(kind);
 }
+
+// lab: арт 2×1 (128×64), футпринт теперь 2×2 — тянем текстуру по высоте вдвое, чтобы
+// заполнить клетку целиком (как SILO_VISUAL_SCALE выше, только не по обеим осям, а по Y).
+export const LAB_VISUAL_SCALE_Y = 2;
 
 function updateMachines(entities: Record<string, Entity>, layer: Container): void {
   const existingIds = new Set(machineSprites.keys());
@@ -206,6 +215,8 @@ function updateMachines(entities: Record<string, Entity>, layer: Container): voi
       machineSprite.sprite.scale.set(MANIPULATOR_VISUAL_SCALE, mirrored * MANIPULATOR_VISUAL_SCALE);
     } else if (entity.kind === 'silo') {
       machineSprite.sprite.scale.set(SILO_VISUAL_SCALE);
+    } else if (entity.kind === 'lab') {
+      machineSprite.sprite.scale.set(1, LAB_VISUAL_SCALE_Y);
     }
   }
 }

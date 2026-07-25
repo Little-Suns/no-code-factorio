@@ -113,7 +113,7 @@ export const NODE_DEFS: Record<MachineKind, NodeDef> = {
   lab: {
     kind: 'lab',
     title: 'Лаборатория / Критик',
-    size: { w: 2, h: 1 },
+    size: { w: 2, h: 2 },
     schema: labSchema,
     handler: labHandler,
   },
