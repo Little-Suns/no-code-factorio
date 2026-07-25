@@ -42,40 +42,40 @@ assert(offset.x === 0 && offset.y === 2 - 1 - 1, 'rotOffset dir=3: (1,0) → (0,
 console.log('✓ rotOffset OK');
 
 // footprint дублера — 2×2 (инвариант к dir)
-console.log('Testing footprint for splitter dir=1...');
-const splitterDir1: Entity = {
-  id: 'splitter1',
-  kind: 'splitter',
+console.log('Testing footprint for duplicator dir=1...');
+const duplicatorDir1: Entity = {
+  id: 'duplicator1',
+  kind: 'duplicator',
   pos: { x: 0, y: 0 },
   dir: 1,
   config: {},
 };
-const tiles = footprintTiles(splitterDir1);
-assert(tiles.length === 4, `footprint splitter (2×2) should have 4 tiles, got ${tiles.length}`);
+const tiles = footprintTiles(duplicatorDir1);
+assert(tiles.length === 4, `footprint duplicator (2×2) should have 4 tiles, got ${tiles.length}`);
 const tileSet = new Set(tiles.map((t) => `${t.x},${t.y}`));
 for (const t of ['0,0', '1,0', '0,1', '1,1']) {
-  assert(tileSet.has(t), `splitter 2×2 should contain tile (${t})`);
+  assert(tileSet.has(t), `duplicator 2×2 should contain tile (${t})`);
 }
 
-console.log('✓ footprint splitter dir=1 OK');
+console.log('✓ footprint duplicator dir=1 OK');
 
 // порты дублера при dir=0 — оба FRONT-тайла с branch 'out'
-console.log('Testing outPorts for splitter dir=0...');
-const splitterDir0: Entity = {
-  id: 'splitter0',
-  kind: 'splitter',
+console.log('Testing outPorts for duplicator dir=0...');
+const duplicatorDir0: Entity = {
+  id: 'duplicator0',
+  kind: 'duplicator',
   pos: { x: 0, y: 0 },
   dir: 0,
   config: {},
 };
-const ports = outPorts(splitterDir0);
-assert(ports.length === 2, `splitter dir=0 should have 2 output ports, got ${ports.length}`);
+const ports = outPorts(duplicatorDir0);
+assert(ports.length === 2, `duplicator dir=0 should have 2 output ports, got ${ports.length}`);
 assert(ports.every((p) => p.branch === 'out'), 'дублер: оба порта должны быть branch out');
 const portTiles = new Set(ports.map((p) => `${p.tile.x},${p.tile.y}`));
 assert(portTiles.has('0,-1') && portTiles.has('1,-1'),
   `дублер dir=0: порты должны быть на (0,-1) и (1,-1), got ${[...portTiles].join(' ')}`);
 
-console.log('✓ outPorts splitter dir=0 OK');
+console.log('✓ outPorts duplicator dir=0 OK');
 
 // mixer имеет входы с трёх сторон (BACK, LEFT, RIGHT)
 console.log('Testing inTiles for mixer...');

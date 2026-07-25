@@ -283,16 +283,13 @@
     },
     {
       "id": "sp1demo",
-      "kind": "splitter",
+      "kind": "duplicator",
       "pos": {
         "x": 7,
         "y": 9
       },
       "dir": 1,
-      "config": {
-        "mode": "llm",
-        "question": "Это позитивный отзыв?"
-      }
+      "config": {}
     },
     {
       "id": "tt2",

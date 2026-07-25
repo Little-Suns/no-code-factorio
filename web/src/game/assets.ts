@@ -24,7 +24,7 @@ const PLACEHOLDER_COLORS: Record<string, number> = {
   miner: 0xf0a030,
   furnace: 0xd97b2e,
   assembler: 0x3aa0e0,
-  splitter: 0xe2483f,
+  duplicator: 0xe2483f,
   mixer: 0xa06ce0,
   chest: 0xa08a5f,
   lab: 0x5ecf7a,

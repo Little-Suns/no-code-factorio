@@ -49,7 +49,7 @@
 .config-kind[data-kind='miner'] { color: #f0a030; }
 .config-kind[data-kind='furnace'] { color: #d97b2e; }
 .config-kind[data-kind='assembler'] { color: #3aa0e0; }
-.config-kind[data-kind='splitter'] { color: #e2483f; }
+.config-kind[data-kind='duplicator'] { color: #e2483f; }
 .config-kind[data-kind='mixer'] { color: #a06ce0; }
 .config-kind[data-kind='silo'] { color: #ef7a3d; }
 .config-kind[data-kind='chest'] { color: #a08a5f; }

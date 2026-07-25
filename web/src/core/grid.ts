@@ -13,7 +13,7 @@ function getSize(kind: MachineKind): { w: number; h: number } {
     case 'webhook':
     case 'assembler':
     case 'lab':
-    case 'splitter':
+    case 'duplicator':
       return { w: 2, h: 2 };
     case 'mixer':
     case 'silo':
@@ -111,7 +111,7 @@ export function outPorts(entity: Entity): { tile: Vec; branch: Branch }[] {
       }
       break;
 
-    case 'splitter': {
+    case 'duplicator': {
       // Дублер: оба FRONT-тайла — выходы branch 'out'. Движок спавнит клон пакета
       // на каждый 'out'-edge → одна копия на каждый выход.
       const leftOffset = rotOffset(0, -1, baseSize.w, baseSize.h, entity.dir);
@@ -216,7 +216,7 @@ export function inTiles(entity: Entity): Set<string> {
       ];
       break;
 
-    case 'splitter':
+    case 'duplicator':
       // BACK оба тайла
       inputDirs = [{ side: 'back', localTiles: [[0, baseSize.h - 1], [1, baseSize.h - 1]] }];
       break;

@@ -40,7 +40,7 @@ getTexture(key: string, state: 'idle' | 'work'): Texture | Texture[]   // Textur
 
 - Загрузка: манифест → `Assets.load` → нарезка кадров (`Texture` + `Rectangle`).
 - **Нет ключа или файл не загрузился → программный плейсхолдер** (`Graphics` → `generateTexture`): скруглённый прямоугольник цвета станка + крупная буква + белая стрелка направления (обязательна — иначе ориентация не читается).
-- Цвета плейсхолдеров: belt `#8a8f98`, miner `#d9a441`, furnace `#c0653a`, assembler `#4a90d9`, splitter `#d94a6a`, mixer `#9b59d0`, chest `#7f8c8d`, lab `#2abfa4`, silo `#e74c3c`, telegram `#2aabee`, accumulator `#f39c12`, manipulator `#6fa8c9`; предметы: text `#e8e4d8`, json `#4ade80`, image `#7fb3d5`, verdict `#f1c40f`, batch `#b87333`, scrap `#555555`.
+- Цвета плейсхолдеров: belt `#8a8f98`, miner `#d9a441`, furnace `#c0653a`, assembler `#4a90d9`, duplicator `#e2483f`, mixer `#9b59d0`, chest `#7f8c8d`, lab `#2abfa4`, silo `#e74c3c`, telegram `#2aabee`, accumulator `#f39c12`, manipulator `#6fa8c9`; предметы: text `#e8e4d8`, json `#4ade80`, image `#7fb3d5`, verdict `#f1c40f`, batch `#b87333`, scrap `#555555`.
 
 ## Отрисовка сущностей
 
@@ -72,7 +72,7 @@ const TILE_MS = 400;   // скорость ленты
 | miner | idle + 4 work | 128×128 |
 | furnace | idle + 4 work | 128×128 |
 | assembler | idle + 4 work | 192×192 |
-| splitter (смотрит вверх, 2 тайла шириной) | idle + 4 work | 128×64 |
+| duplicator (смотрит вверх, 2 тайла шириной, футпринт 2×2) | 16 work | 128×64 |
 | mixer | idle + 4 work | 192×192 |
 | chest | idle | 64×64 |
 | lab | idle + 4 work | 128×64 |

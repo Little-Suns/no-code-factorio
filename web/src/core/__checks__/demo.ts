@@ -12,7 +12,7 @@ const __dirname = dirname(__filename);
 
 // Список допустимых типов машин
 const VALID_KINDS: Set<MachineKind> = new Set([
-  'belt', 'miner', 'assembler', 'splitter', 'mixer', 'silo',
+  'belt', 'miner', 'assembler', 'duplicator', 'mixer', 'silo',
   'furnace', 'chest', 'lab', 'accumulator', 'webhook', 'manipulator',
 ]);
 

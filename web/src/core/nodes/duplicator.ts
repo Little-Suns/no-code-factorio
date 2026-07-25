@@ -8,15 +8,15 @@
 import { Handler, NodeCtx } from '../engine';
 import { Field } from './index';
 
-export const splitterSchema: Field[] = [];
+export const duplicatorSchema: Field[] = [];
 
 // Визуальная пауза, тот же принцип, что у silo (см. silo.ts): без неё handler резолвится
 // за один тик, working сменяется на ok быстрее одного кадра рендера, и work-анимация
-// (splitter_work.png, 16 кадров) физически не успевает отрисоваться — станок выглядит
+// (duplicator_work.png, 16 кадров) физически не успевает отрисоваться — станок выглядит
 // так, будто анимации вообще нет. 16 кадров × animationSpeed 0.1 (machines.ts) ≈ 2.7с.
 const DUPLICATE_MS = 2700;
 
-export const splitterHandler: Handler = async (ctx: NodeCtx) => {
+export const duplicatorHandler: Handler = async (ctx: NodeCtx) => {
   await new Promise((resolve) => setTimeout(resolve, DUPLICATE_MS));
   return { out: ctx.data };
 };

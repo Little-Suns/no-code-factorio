@@ -12,7 +12,7 @@
 | miner | 2×2 | — | FRONT, оба тайла (`out`) |
 | furnace | 2×2 | BACK | FRONT (`out`) |
 | assembler | 3×3 | BACK | FRONT (`out`) |
-| splitter | 2×1 | BACK, оба тайла | FRONT левого тайла = `true`, правого = `false` |
+| duplicator | 2×2 | BACK, оба тайла | оба FRONT-тайла = `out` (клон пакета на каждый выход, без ветвления по условию) |
 | mixer | 3×3 | BACK + LEFT + RIGHT (все тайлы этих сторон) | FRONT, центральный тайл (`out`) |
 | chest | 1×1 | BACK + LEFT + RIGHT | FRONT (`out`) |
 | lab | 2×2 | BACK, оба нижних тайла | FRONT левого верхнего = `pass`, правого верхнего = `rework` |
@@ -114,6 +114,6 @@ trace(start, fromManipulator, manipulatorIntake):
 
 ## Задачи и acceptance criteria
 
-- B1: `types.ts`, `grid.ts` (footprint, rotOffset, порты, занятость), `__checks__/grid.ts`. AC: asserts на rotOffset для всех 4 dir; footprint сплиттера при dir=1 занимает 1×2; порты splitter дают `true` слева; mixer имеет входы с трёх сторон.
+- B1: `types.ts`, `grid.ts` (footprint, rotOffset, порты, занятость), `__checks__/grid.ts`. AC: asserts на rotOffset для всех 4 dir; footprint дублера (2×2) инвариантен к dir; порты дублера — оба FRONT-тайла, branch `out`; mixer имеет входы с трёх сторон.
 - B2: `graph.ts`, `__checks__/graph.ts`. AC: мир «miner → 2 ленты → манипулятор → assembler» даёт 2 edge (miner→манипулятор, манипулятор→assembler); лента в никуда → `to: null`; кольцо лент не подвешивает trace; lab-петля через манипулятор образует корректный Edge назад; два станка впритык без манипулятора → 0 edges.
 - A3: input + ghost + hotbar (совместно с docs/06). AC: цепочка «шахта → 5 лент → станок → лента → ракета» собирается мышью за минуту; R и снос работают.

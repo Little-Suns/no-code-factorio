@@ -22,6 +22,12 @@ function e(id: string, kind: Entity['kind'], x: number, y: number, config: Recor
   return { id, kind, pos: { x, y }, dir: 1, config };
 }
 
+// Как e(), но с явным dir — нужен только лентам, которые поворачивают трассу
+// (dir=0 север / dir=2 юг), сами станки в пресетах ниже всегда dir=1 (восток).
+function eDir(id: string, kind: Entity['kind'], x: number, y: number, dir: Entity['dir'], config: Record<string, unknown> = {}): Entity {
+  return { id, kind, pos: { x, y }, dir, config };
+}
+
 // 1. Ячейка обработки: шахта → манипулятор → ассемблер (LLM-суммаризатор).
 // Только один из двух выходных портов майнера подключён намеренно: майнер 2×2 физически
 // отдаёт FRONT с обоих тайлов, и demo.json (B3) подключает оба через отдельные
@@ -44,11 +50,11 @@ const processingCell: Blueprint = {
 // 2. Дублер на 2 выхода: дублер (2×2) → манипулятор → сундук на каждой ветке.
 // Оба выхода — одна и та же копия входа (движок клонирует пакет на каждый выход).
 // Порты 2×2-дублера dir=1: (2,0) и (2,1) → ленты веток начинаются там.
-const splitterBranch: Blueprint = {
-  id: 'lib-splitter-branch',
+const duplicatorBranch: Blueprint = {
+  id: 'lib-duplicator-branch',
   name: 'Дублер на 2 выхода',
   entities: [
-    e('sb-splitter', 'splitter', 0, 0),
+    e('sb-duplicator', 'duplicator', 0, 0),
     e('sb-belt-a', 'belt', 2, 0),
     e('sb-manip-a', 'manipulator', 3, 0),
     e('sb-chest-a', 'chest', 4, 0, { batchSize: 1 }),
@@ -106,13 +112,82 @@ const furnaceBuffer: Blueprint = {
   ],
 };
 
+// 6. Ревью-конвейер с алертом (большой пресет): шахта → ассемблер (классификатор
+// тональности) → манипулятор → дублер → ОДНОВРЕМЕННО обе копии: силос (архив) и
+// вебхук (алерт в Discord/Slack). Показывает дублер не как игрушку («2 сундука»,
+// см. duplicatorBranch выше), а в реальном сценарии фан-аута одного результата
+// сразу в архив и в уведомление. Геометрия портов дублера (2×2, dir=1): FRONT-порты
+// на (x+2,y) и (x+2,y+1) — левый идёт прямо в силос, правый уходит south-south-east
+// в вебхук, обходя 3×3-футпринт силоса снизу.
+const reviewAlertLine: Blueprint = {
+  id: 'lib-review-alert',
+  name: 'Ревью-конвейер с алертом',
+  entities: [
+    e('ra-miner', 'miner', 0, 0, { mode: 'text', text: 'Товар пришёл с браком, требую возврат денег.', intervalSec: 0 }),
+    e('ra-belt-1', 'belt', 2, 0),
+    e('ra-manip-1', 'manipulator', 3, 0),
+    e('ra-assembler', 'assembler', 4, 0, { recipe: 'sentiment', modules: [] }),
+    e('ra-belt-2', 'belt', 6, 0),
+    e('ra-manip-2', 'manipulator', 7, 0),
+    e('ra-dup', 'duplicator', 8, 0),
+    e('ra-belt-a', 'belt', 10, 0),
+    e('ra-manip-a', 'manipulator', 11, 0),
+    e('ra-silo', 'silo', 12, 0),
+    eDir('ra-belt-b1', 'belt', 10, 1, 2),
+    eDir('ra-belt-b2', 'belt', 10, 2, 2),
+    e('ra-belt-b3', 'belt', 10, 3),
+    e('ra-manip-b', 'manipulator', 11, 3),
+    e('ra-webhook', 'webhook', 12, 3, {
+      url: 'https://your-webhook-url.example.com/alert',
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{"content": "⚠️ {{text}}"}',
+    }),
+  ],
+};
+
+// 7. Мультиисточник + смеситель (большой пресет): два независимых конвейера
+// (шахта → ассемблер-суммаризатор каждый) сводятся в mixer (BACK-сторона, две разные
+// строки её западного столбца) → LLM-синтез объединяет оба саммари в один отчёт →
+// силос. Второй источник заходит в mixer «сверху» — три ленты обходят его FRONT-порт
+// снизу вверх до нужной строки BACK-столбца, тот же приём, что у mixerJoin выше,
+// только с полноценными ассемблерами на обоих входах вместо голых лент.
+const multiSourceMixer: Blueprint = {
+  id: 'lib-multi-source-mixer',
+  name: 'Мультиисточник + смеситель',
+  entities: [
+    e('ms-miner-a', 'miner', 0, 0, { mode: 'text', text: 'Жалобы на медленную загрузку сайта.', intervalSec: 0 }),
+    e('ms-belt-a1', 'belt', 2, 0),
+    e('ms-manip-a1', 'manipulator', 3, 0),
+    e('ms-asm-a', 'assembler', 4, 0, { recipe: 'summarizer', modules: [] }),
+    e('ms-belt-a2', 'belt', 6, 0),
+    e('ms-manip-a2', 'manipulator', 7, 0),
+
+    e('ms-miner-b', 'miner', 0, 3, { mode: 'text', text: 'Хвалят скорость поддержки и вежливость.', intervalSec: 0 }),
+    e('ms-belt-b1', 'belt', 2, 3),
+    e('ms-manip-b1', 'manipulator', 3, 3),
+    e('ms-asm-b', 'assembler', 4, 3, { recipe: 'summarizer', modules: [] }),
+    e('ms-belt-b2', 'belt', 6, 3),
+    eDir('ms-belt-b2b', 'belt', 7, 3, 0),
+    eDir('ms-belt-b3', 'belt', 7, 2, 0),
+    e('ms-manip-b2', 'manipulator', 7, 1),
+
+    e('ms-mixer', 'mixer', 8, 0, { mode: 'llm', prompt: 'Объедини версии в один отчёт для менеджера.' }),
+    e('ms-belt-out', 'belt', 11, 1),
+    e('ms-manip-out', 'manipulator', 12, 1),
+    e('ms-silo', 'silo', 13, 1),
+  ],
+};
+
 /** Библиотека пресетов — read-only, показывается отдельным разделом в BlueprintPanel. */
 export const LIBRARY_BLUEPRINTS: Blueprint[] = [
   processingCell,
-  splitterBranch,
+  duplicatorBranch,
   mixerJoin,
   summarizerLine,
   furnaceBuffer,
+  reviewAlertLine,
+  multiSourceMixer,
 ];
 
 export function findLibraryBlueprint(id: string): Blueprint | undefined {

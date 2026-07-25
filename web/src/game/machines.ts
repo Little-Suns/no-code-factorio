@@ -89,7 +89,7 @@ function getSize(kind: MachineKind): { w: number; h: number } {
     case 'webhook':
     case 'assembler':
     case 'lab':
-    case 'splitter':
+    case 'duplicator':
       return { w: 2, h: 2 };
     case 'mixer':
     case 'silo':
@@ -109,8 +109,8 @@ function getSize(kind: MachineKind): { w: number; h: number } {
 // с футпринтом.
 function getSpriteSize(kind: MachineKind): { w: number; h: number } {
   if (kind === 'assembler') return { w: 3, h: 3 };
-  // lab и splitter: арт авторен 2×1 (128×64), футпринт теперь 2×2 — растягиваем по Y (ниже)
-  if (kind === 'lab' || kind === 'splitter') return { w: 2, h: 1 };
+  // lab и duplicator: арт авторен 2×1 (128×64), футпринт теперь 2×2 — растягиваем по Y (ниже)
+  if (kind === 'lab' || kind === 'duplicator') return { w: 2, h: 1 };
   return getSize(kind);
 }
 
@@ -122,11 +122,11 @@ function getSpriteSize(kind: MachineKind): { w: number; h: number } {
 // (getSpriteSize центрирует нетронутую текстуру в футпринте, оставляя пустую половину
 // клетки) — сознательно не взята: заполнение клетки важнее геометрической точности арта.
 export const LAB_VISUAL_SCALE_Y = 2;
-// splitter (дублер): в кадре 128×64 сам механизм — компактный квадрат ~64×64 по центру
+// duplicator (дублер): в кадре 128×64 сам механизм — компактный квадрат ~64×64 по центру
 // с прозрачными полями по бокам. Y-растяжка (как lab) искажала бы квадрат в прямоугольник —
 // вместо этого центрируем нативный кадр (getSpriteSize=2×1, пивот по нему) и увеличиваем
 // РАВНОМЕРНО, чтобы девайс дорос до клетки 2×2 без искажения (по образцу assembler/silo).
-export const SPLITTER_VISUAL_SCALE = 2;
+export const DUPLICATOR_VISUAL_SCALE = 2;
 // assembler: спрайт авторен на 3×3, футпринт ужат до 2×2 (3624a4c), но масштаб под это
 // сжатие никогда не добавили — текстура рисовалась в НАТИВНЫЕ 192×192 и вылезала за
 // пределы своей клетки на ~32px на сторону (позиция по футпринту, пивот по текстуре
@@ -236,9 +236,9 @@ function updateMachines(entities: Record<string, Entity>, layer: Container): voi
     } else if (entity.kind === 'lab') {
       // арт 2×1 в футпринте 2×2 — тянем по Y вдвое, чтобы заполнить клетку
       machineSprite.sprite.scale.set(1, LAB_VISUAL_SCALE_Y);
-    } else if (entity.kind === 'splitter') {
+    } else if (entity.kind === 'duplicator') {
       // квадратный девайс по центру кадра — равномерный зум, без искажения
-      machineSprite.sprite.scale.set(SPLITTER_VISUAL_SCALE);
+      machineSprite.sprite.scale.set(DUPLICATOR_VISUAL_SCALE);
     } else if (entity.kind === 'assembler') {
       // 3×3-арт в 2×2-клетке — равномерный даунскейл, иначе вылезает на соседние тайлы
       machineSprite.sprite.scale.set(ASSEMBLER_VISUAL_SCALE);

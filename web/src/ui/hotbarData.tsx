@@ -8,7 +8,7 @@ import type { MachineKind } from '../core/types';
  */
 
 // Порядок по приоритету из CLAUDE.md: MVP-ядро (belt, miner, assembler,
-// splitter, mixer, silo) → manipulator поднят из «усиления» в конец ядра,
+// duplicator, mixer, silo) → manipulator поднят из «усиления» в конец ядра,
 // т.к. он обязателен для ЛЮБОЙ передачи станок↔станок (docs/03) и
 // используется в demo.json чаще любого другого усиления (3 инстанса) —
 // без него между непримыкающими станками просто нет рабочего Edge. webhook
@@ -19,7 +19,7 @@ export const ALL_TOOLS: MachineKind[] = [
   'belt',
   'miner',
   'assembler',
-  'splitter',
+  'duplicator',
   'mixer',
   'silo',
   'manipulator',
@@ -34,7 +34,7 @@ export const HOTKEYS: Record<MachineKind, string> = {
   belt: '1',
   miner: '2',
   assembler: '3',
-  splitter: '4',
+  duplicator: '4',
   mixer: '5',
   silo: '6',
   webhook: '7',
@@ -49,7 +49,7 @@ export const TOOL_NAMES: Record<MachineKind, string> = {
   belt: 'Belt',
   miner: 'Miner',
   assembler: 'Assembler',
-  splitter: 'Duplicator',
+  duplicator: 'Duplicator',
   mixer: 'Mixer',
   silo: 'Silo',
   furnace: 'Furnace',
@@ -97,7 +97,7 @@ export const TOOL_ICONS: Record<MachineKind, JSX.Element> = {
       <path d="M6.5 6.5 L8.6 8.6 M15.4 15.4 L17.5 17.5 M6.5 17.5 L8.6 15.4 M15.4 8.6 L17.5 6.5" />
     </svg>
   ),
-  splitter: (
+  duplicator: (
     <svg viewBox="0 0 24 24" width="22" height="22" {...strokeProps}>
       <path d="M4 12 L11 12" />
       <path d="M11 12 L19 5" />
@@ -106,7 +106,7 @@ export const TOOL_ICONS: Record<MachineKind, JSX.Element> = {
   ),
   mixer: (
     // Воронка-смеситель: широкий раструб сводит несколько входов в один узкий выход
-    // (отдельная фигура, не зеркало splitter, — различима и по форме, не только по цвету).
+    // (отдельная фигура, не зеркало duplicator, — различима и по форме, не только по цвету).
     <svg viewBox="0 0 24 24" width="22" height="22" {...strokeProps}>
       <path d="M4 5 L20 5 L13.5 13 L13.5 19.5 L10.5 19.5 L10.5 13 Z" />
     </svg>

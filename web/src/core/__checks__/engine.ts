@@ -94,9 +94,9 @@ async function testSimplePipeline() {
 }
 
 /**
- * AC2: splitter ведёт пакеты по true/false согласно условию
+ * AC2: duplicator ведёт пакеты по true/false согласно условию
  */
-async function testSplitter() {
+async function testDuplicator() {
   const events: EngineEvent[] = [];
 
   const entities: Record<string, Entity> = {
@@ -107,9 +107,9 @@ async function testSplitter() {
       dir: 0,
       config: { mode: 'text', text: 'data' },
     },
-    splitter1: {
-      id: 'splitter1',
-      kind: 'splitter',
+    duplicator1: {
+      id: 'duplicator1',
+      kind: 'duplicator',
       pos: { x: 5, y: 0 },
       dir: 0,
       config: { condition: 'true' }, // на которую ветку идёт
@@ -135,19 +135,19 @@ async function testSplitter() {
       id: 'e1:out:0',
       from: 'miner1',
       branch: 'out',
-      to: 'splitter1',
+      to: 'duplicator1',
       path: [{ x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }, { x: 4, y: 0 }],
     },
     {
       id: 'e2:true:0',
-      from: 'splitter1',
+      from: 'duplicator1',
       branch: 'true',
       to: 'silo_true',
       path: [{ x: 6, y: -1 }, { x: 7, y: -1 }, { x: 8, y: -1 }, { x: 9, y: -1 }],
     },
     {
       id: 'e3:false:0',
-      from: 'splitter1',
+      from: 'duplicator1',
       branch: 'false',
       to: 'silo_false',
       path: [{ x: 6, y: 1 }, { x: 7, y: 1 }, { x: 8, y: 1 }, { x: 9, y: 1 }],
@@ -155,7 +155,7 @@ async function testSplitter() {
   ];
 
   const handlers: Record<string, (ctx: NodeCtx) => Promise<HandlerResult>> = {
-    splitter: async (ctx) => {
+    duplicator: async (ctx) => {
       // Условие из config: true → идёт по true ветке
       const branch = (ctx.config.condition as string) === 'true' ? 'true' : 'false';
       return { out: ctx.data, branch };
@@ -178,10 +178,10 @@ async function testSplitter() {
   const resultsInTrue = resultEvents.filter((e) => e.nodeId === 'silo_true');
 
   if (resultsInTrue.length === 0) {
-    throw new Error('AC2: splitter не отправил пакет в silo_true');
+    throw new Error('AC2: duplicator не отправил пакет в silo_true');
   }
 
-  console.log('✓ AC2: splitter branching OK');
+  console.log('✓ AC2: duplicator branching OK');
 }
 
 /**
@@ -1158,7 +1158,7 @@ async function testDuplicatorTwoCopies() {
 
   const entities: Record<string, Entity> = {
     miner1: { id: 'miner1', kind: 'miner', pos: { x: 0, y: 0 }, dir: 0, config: { mode: 'text', text: 'x' } },
-    dup1: { id: 'dup1', kind: 'splitter', pos: { x: 5, y: 0 }, dir: 0, config: {} },
+    dup1: { id: 'dup1', kind: 'duplicator', pos: { x: 5, y: 0 }, dir: 0, config: {} },
     siloA: { id: 'siloA', kind: 'silo', pos: { x: 10, y: -1 }, dir: 0, config: {} },
     siloB: { id: 'siloB', kind: 'silo', pos: { x: 10, y: 1 }, dir: 0, config: {} },
   };
@@ -1170,7 +1170,7 @@ async function testDuplicatorTwoCopies() {
   ];
 
   const handlers: Record<string, (ctx: NodeCtx) => Promise<HandlerResult>> = {
-    splitter: async (ctx) => ({ out: ctx.data }),
+    duplicator: async (ctx) => ({ out: ctx.data }),
     silo: async () => ({ done: true }),
   };
 
@@ -1251,7 +1251,7 @@ async function testMinerUndefinedDataFreshIds() {
 (async () => {
   try {
     await testSimplePipeline();
-    await testSplitter();
+    await testDuplicator();
     await testMixer();
     await testHandlerError();
     await testLabLoop();

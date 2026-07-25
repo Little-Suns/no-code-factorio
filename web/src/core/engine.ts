@@ -138,7 +138,7 @@ export class Engine {
    * механические станки — константа 10.
    */
   private getEnergyCost(node: Entity, packet: Packet): number {
-    // splitter здесь НЕ значится: его handler не зовёт ctx.llm (тупой размножитель),
+    // duplicator здесь НЕ значится: его handler не зовёт ctx.llm (тупой размножитель),
     // LLM-тариф переплачивал бы его в ~40 раз и ронял большие пакеты по capacity.
     const LLM_KINDS = new Set(['assembler', 'mixer', 'lab']);
     if (!LLM_KINDS.has(node.kind)) return 10;
@@ -590,7 +590,7 @@ export class Engine {
           });
         }
       } else {
-        // Выход (assembler, splitter, etc.)
+        // Выход (assembler, duplicator, etc.)
         const branch = 'branch' in result ? result.branch : 'out';
         // lab/rework — явный outItem verdict (docs/05), для остальных веток — обычное правило
         let outItem = this.getOutItem(node, result.out);

@@ -36,10 +36,12 @@ console.log('Testing blueprintLibrary...');
 // тест, а не молча пройти на ">0".
 const EXPECTED_LIVE_EDGES: Record<string, number> = {
   'lib-processing-cell': 2, // miner->manip, manip->assembler
-  'lib-splitter-branch': 4, // дублер->manip ×2 (обе копии), manip->chest ×2
+  'lib-duplicator-branch': 4, // дублер->manip ×2 (обе копии), manip->chest ×2
   'lib-mixer-join': 4, // manip(top/bottom)->mixer, mixer->manip(out), manip->chest
   'lib-summarizer-line': 4, // miner->manip, manip->assembler, assembler->manip, manip->silo
   'lib-furnace-buffer': 3, // manip->furnace, furnace->manip, manip->chest
+  'lib-review-alert': 8, // miner->manip, manip->assembler, assembler->manip, manip->dup, dup->manip×2, manip->silo, manip->webhook
+  'lib-multi-source-mixer': 10, // (miner->manip, manip->assembler, assembler->manip)×2, manip->mixer×2, mixer->manip, manip->silo
 };
 
 assert(LIBRARY_BLUEPRINTS.length >= 3, 'library: минимум 3 пресета');

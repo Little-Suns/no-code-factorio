@@ -51,7 +51,7 @@
 .hotbar-icon[data-tool='miner'] { color: #f0a030; }
 .hotbar-icon[data-tool='furnace'] { color: #d97b2e; }
 .hotbar-icon[data-tool='assembler'] { color: #3aa0e0; }
-.hotbar-icon[data-tool='splitter'] { color: #e2483f; }
+.hotbar-icon[data-tool='duplicator'] { color: #e2483f; }
 .hotbar-icon[data-tool='mixer'] { color: #a06ce0; }
 .hotbar-icon[data-tool='silo'] { color: #ef7a3d; }
 .hotbar-icon[data-tool='chest'] { color: #a08a5f; }

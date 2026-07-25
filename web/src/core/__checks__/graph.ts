@@ -254,9 +254,9 @@ console.log('✓ Test 4 OK');
 // Test 5: дублер — оба FRONT-порта дают edges с branch 'out' (по одной копии на выход)
 console.log('Test 5: duplicator — two out-branch edges');
 {
-  const splitter: Entity = {
-    id: 'splitter1',
-    kind: 'splitter',
+  const duplicator: Entity = {
+    id: 'duplicator1',
+    kind: 'duplicator',
     pos: { x: 30, y: 30 },
     dir: 0,
     config: {},
@@ -266,14 +266,14 @@ console.log('Test 5: duplicator — two out-branch edges');
   const belt1: Entity = { id: 'bt', kind: 'belt', pos: { x: 30, y: 29 }, dir: 0, config: {} };
   const belt2: Entity = { id: 'bf', kind: 'belt', pos: { x: 31, y: 29 }, dir: 0, config: {} };
 
-  const entities = { splitter1: splitter, bt: belt1, bf: belt2 };
+  const entities = { duplicator1: duplicator, bt: belt1, bf: belt2 };
 
   const edges = buildGraph(entities);
-  const splitterEdges = edges.filter((e) => e.from === 'splitter1');
+  const duplicatorEdges = edges.filter((e) => e.from === 'duplicator1');
 
-  assert(splitterEdges.length === 2, `Duplicator should have 2 edges, got ${splitterEdges.length}`);
-  assert(splitterEdges.every((e) => e.branch === 'out'), 'дублер: оба edge должны быть branch out');
-  assert(splitterEdges.every((e) => e.to === null), 'без манипулятора оба выхода — тупики (ленты в никуда)');
+  assert(duplicatorEdges.length === 2, `Duplicator should have 2 edges, got ${duplicatorEdges.length}`);
+  assert(duplicatorEdges.every((e) => e.branch === 'out'), 'дублер: оба edge должны быть branch out');
+  assert(duplicatorEdges.every((e) => e.to === null), 'без манипулятора оба выхода — тупики (ленты в никуда)');
 }
 console.log('✓ Test 5 OK');
 

@@ -33,7 +33,7 @@ export interface NodeDef {
 // Import handlers и schemas
 import { minerHandler, minerSchema } from './miner';
 import { assemblerHandler, assemblerSchema } from './assembler';
-import { splitterHandler, splitterSchema } from './splitter';
+import { duplicatorHandler, duplicatorSchema } from './duplicator';
 import { mixerHandler, mixerSchema } from './mixer';
 import { siloHandler, siloSchema } from './silo';
 import { furnaceHandler, furnaceSchema } from './furnace';
@@ -63,12 +63,12 @@ export const NODE_DEFS: Record<MachineKind, NodeDef> = {
     schema: assemblerSchema,
     handler: assemblerHandler,
   },
-  splitter: {
-    kind: 'splitter',
+  duplicator: {
+    kind: 'duplicator',
     title: 'Дублер',
     size: { w: 2, h: 2 },
-    schema: splitterSchema,
-    handler: splitterHandler,
+    schema: duplicatorSchema,
+    handler: duplicatorHandler,
   },
   mixer: {
     kind: 'mixer',

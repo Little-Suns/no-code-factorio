@@ -1,6 +1,6 @@
 /**
  * Проверки для станков (B4 + B5 + E2).
- * B4: assembler-llm, splitter-expr/llm, mixer-concat/llm, miner-url.
+ * B4: assembler-llm, duplicator-expr/llm, mixer-concat/llm, miner-url.
  * B5 (2 AC): furnace (return/undefined), lab (PASS/REWORK).
  * E2 (1 AC, 3 сценария): assembler-модули — tools в llm, memory в prompt, без модуля не подмешивается.
  */
@@ -24,7 +24,7 @@ const mockLlm = async (req: {
 
   // Плагины для тестирования разных режимов
   if (req.system?.includes('YES или NO')) {
-    // Splitter LLM режим
+    // Duplicator LLM режим
     if (req.prompt.includes('positive')) {
       return 'YES, это позитивно';
     }
@@ -129,8 +129,8 @@ async function testAssemblerRecipeFallback() {
 // ============================================================================
 
 async function testDuplicatorPassthrough() {
-  const handler = NODE_DEFS.splitter.handler as Handler;
-  if (!handler) throw new Error('splitter handler missing');
+  const handler = NODE_DEFS.duplicator.handler as Handler;
+  if (!handler) throw new Error('duplicator handler missing');
 
   const ctx: NodeCtx = {
     config: {},
@@ -455,7 +455,7 @@ function testRegistry() {
   const kinds = [
     'miner',
     'assembler',
-    'splitter',
+    'duplicator',
     'mixer',
     'silo',
     'furnace',

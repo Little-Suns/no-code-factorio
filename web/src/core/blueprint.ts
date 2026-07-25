@@ -100,7 +100,7 @@ export function exportBlueprintString(blueprint: Blueprint): string {
 }
 
 const VALID_KINDS = new Set<MachineKind>([
-  'belt', 'miner', 'assembler', 'splitter', 'mixer', 'silo',
+  'belt', 'miner', 'assembler', 'duplicator', 'mixer', 'silo',
   'furnace', 'chest', 'lab', 'accumulator', 'webhook', 'manipulator',
 ]);
 
