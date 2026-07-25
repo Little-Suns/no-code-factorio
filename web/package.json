@@ -6,7 +6,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "typecheck": "tsc --noEmit",
-    "check": "tsx src/core/__checks__/run.ts"
+    "check": "NODE_OPTIONS=--experimental-global-webcrypto tsx src/core/__checks__/run.ts"
   },
   "dependencies": {
     "pixi-viewport": "^6.0.3",
