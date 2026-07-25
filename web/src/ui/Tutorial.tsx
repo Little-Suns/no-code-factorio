@@ -1,21 +1,25 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { useStore } from '../state/store';
-import { useT } from '../i18n';
+import { useT, LOCALES, LOCALE_NAMES } from '../i18n';
 import './Tutorial.css';
 
 /**
  * Обучалка первого запуска: пошаговый тур с подсветкой реальных элементов UI
  * (по атрибуту `data-tutorial="<id>"`, расставлен в Hotbar.tsx/TopBar.tsx).
  * Автостарт/флаг «видел» — state/tutorialPersist.ts. Шаги без `target` — по центру
- * экрана, без подсветки (вступление, общие советы).
+ * экрана, без подсветки (вступление, общие советы). Первый шаг — выбор языка
+ * (не через t(), т.к. до выбора язык может быть неподходящим): дальше весь тур
+ * идёт уже на выбранном.
  */
 interface Step {
   target: string | null;
   titleKey: string;
   descKey: string;
+  lang?: boolean;
 }
 
 const STEPS: Step[] = [
+  { target: null, titleKey: '', descKey: '', lang: true },
   { target: null, titleKey: 'tutorial.step.welcome.title', descKey: 'tutorial.step.welcome.desc' },
   { target: 'hotbar', titleKey: 'tutorial.step.hotbar.title', descKey: 'tutorial.step.hotbar.desc' },
   { target: null, titleKey: 'tutorial.step.place.title', descKey: 'tutorial.step.place.desc' },
@@ -57,6 +61,8 @@ export function Tutorial() {
   const step = useStore((s) => s.tutorialStep);
   const setTutorialStep = useStore((s) => s.setTutorialStep);
   const skipTutorial = useStore((s) => s.skipTutorial);
+  const locale = useStore((s) => s.locale);
+  const setLocale = useStore((s) => s.setLocale);
   const [rect, setRect] = useState<Rect | null>(null);
 
   const current = STEPS[step];
@@ -75,6 +81,10 @@ export function Tutorial() {
   const isLast = step === STEPS.length - 1;
   const handleNext = () => (isLast ? skipTutorial() : setTutorialStep(step + 1));
   const handlePrev = () => setTutorialStep(Math.max(0, step - 1));
+  const handlePickLang = (loc: (typeof LOCALES)[number]) => {
+    setLocale(loc);
+    setTutorialStep(step + 1);
+  };
 
   // «Дырка» подсветки: без цели — точка по центру экрана (box-shadow всё равно
   // закрывает весь вьюпорт тёмным, дырка 0×0 незаметна).
@@ -100,19 +110,44 @@ export function Tutorial() {
       />
       <div className="tutorial-card" style={cardStyle}>
         <div className="tutorial-step-count">{step + 1} / {STEPS.length}</div>
-        <h3 className="tutorial-title">{t(current.titleKey)}</h3>
-        <p className="tutorial-desc">{t(current.descKey)}</p>
-        <div className="tutorial-actions">
-          <button className="tutorial-skip" onClick={skipTutorial}>{t('tutorial.skip')}</button>
-          <div className="tutorial-nav">
-            {step > 0 && (
-              <button className="tutorial-prev" onClick={handlePrev}>{t('tutorial.prev')}</button>
-            )}
-            <button className="tutorial-next" onClick={handleNext}>
-              {isLast ? t('tutorial.finish') : t('tutorial.next')}
-            </button>
-          </div>
-        </div>
+        {current.lang ? (
+          <>
+            <h3 className="tutorial-title">Choose language · Выберите язык · 选择语言</h3>
+            <p className="tutorial-desc">
+              Switchable anytime via the 🌐 button · Сменить можно в любой момент кнопкой 🌐 · 随时可通过 🌐 按钮切换
+            </p>
+            <div className="tutorial-actions">
+              <button className="tutorial-skip" onClick={skipTutorial}>{t('tutorial.skip')}</button>
+              <div className="tutorial-nav">
+                {LOCALES.map((loc) => (
+                  <button
+                    key={loc}
+                    className={`tutorial-lang-option ${locale === loc ? 'active' : ''}`}
+                    onClick={() => handlePickLang(loc)}
+                  >
+                    {LOCALE_NAMES[loc]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <h3 className="tutorial-title">{t(current.titleKey)}</h3>
+            <p className="tutorial-desc">{t(current.descKey)}</p>
+            <div className="tutorial-actions">
+              <button className="tutorial-skip" onClick={skipTutorial}>{t('tutorial.skip')}</button>
+              <div className="tutorial-nav">
+                {step > 0 && (
+                  <button className="tutorial-prev" onClick={handlePrev}>{t('tutorial.prev')}</button>
+                )}
+                <button className="tutorial-next" onClick={handleNext}>
+                  {isLast ? t('tutorial.finish') : t('tutorial.next')}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

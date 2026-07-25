@@ -111,3 +111,26 @@
 .tutorial-next:hover {
   background: var(--accent);
 }
+
+.tutorial-lang-option {
+  padding: 6px 14px;
+  background: var(--dirt);
+  border: 2px solid var(--panel-border);
+  color: var(--text-muted);
+  font-family: var(--f-mono);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tutorial-lang-option:hover {
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+
+.tutorial-lang-option.active {
+  background: var(--accent-dim);
+  border-color: var(--panel-border);
+  color: var(--bg);
+}
