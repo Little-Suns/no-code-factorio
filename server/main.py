@@ -97,7 +97,7 @@ async def llm_endpoint(request: Request):
             toggle_key = node_id if isinstance(node_id, str) else "default"
             _critic_toggles[toggle_key] = not _critic_toggles.get(toggle_key, False)
             text = "PASS" if _critic_toggles[toggle_key] else "REWORK: needs improvement"
-        elif "YES or NO" in prompt or "YES или NO" in prompt:
+        elif "YES or NO" in prompt or "YES или NO" in prompt or "YES или NO" in system or "YES or NO" in system:
             text = random.choice(["YES", "NO"])
         elif "web-search" in tools:
             text = f"[mock][web-search] {prompt[:200]}"
