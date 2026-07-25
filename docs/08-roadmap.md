@@ -84,6 +84,7 @@
   - state/persist.ts: initPersist() с debounce 500мс, загрузка при старте, подписка на entities
   - web/public/demo.json: две фабрики (miner1→assembler→silo, miner2→telegram), 21 entity, компактная раскладка (0,0)-(16,11)
   - __checks__/demo.ts: валидация JSON, граф, цепочка miner→assembler→silo
+  - **Актуализация (chore/refresh-demo-factory)**: `telegram` уже был убран из `MachineKind` веткой `feat/remove-telegram`, но вторая фабрика в demo.json ссылалась на второй сценарий из docs/00 (шахта-вебхук → сплиттер-LLM → telegram-алерт), который больше не существует в коде — второй factory-блок фактически стал мёртвым текстом в этой заметке. Пересобрал вторую фабрику: `miner2` (негативный отзыв) → `manipulator` (оба порта шахты) → `splitter` (mode llm, «Это позитивный отзыв?») → true-ветка → `manipulator` → второй `silo`, false-ветка → `manipulator` → `webhook` (замена telegram — Discord/Slack-совместимый алерт с `{{text}}`). 38 entities, 14 connected edges, `typecheck`/`__checks__/demo.ts` зелёные.
 
 ## Трек D — ассеты (вне кода, параллельно)
 
