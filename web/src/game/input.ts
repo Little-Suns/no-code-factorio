@@ -2,7 +2,7 @@ import { Sprite, Point, Graphics } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { TILE } from './app';
 import { getTexture } from './assets';
-import { MANIPULATOR_VISUAL_SCALE, SILO_VISUAL_SCALE, SILO_Y_OFFSET, LAB_VISUAL_SCALE_Y } from './machines';
+import { MANIPULATOR_VISUAL_SCALE, SILO_VISUAL_SCALE, SILO_Y_OFFSET, LAB_VISUAL_SCALE_Y, SPLITTER_VISUAL_SCALE } from './machines';
 import { useStore } from '../state/store';
 import { t } from '../i18n/dictionaries';
 import { footprintTiles, canPlace } from '../core/grid';
@@ -172,8 +172,8 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
       sprite.position.set(e.pos.x * TILE + (rw * TILE) / 2, e.pos.y * TILE + (rh * TILE) / 2);
       sprite.angle = e.dir * 90;
       sprite.scale.set(
-        e.kind === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : 1,
-        e.kind === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : e.kind === 'lab' || e.kind === 'splitter' ? LAB_VISUAL_SCALE_Y : 1
+        e.kind === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : e.kind === 'splitter' ? SPLITTER_VISUAL_SCALE : 1,
+        e.kind === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : e.kind === 'splitter' ? SPLITTER_VISUAL_SCALE : e.kind === 'lab' ? LAB_VISUAL_SCALE_Y : 1
       );
       sprite.tint = ok ? TINT_OK : TINT_BAD;
     });
@@ -292,8 +292,8 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
     // поставленного станка (machines.ts) — иначе ghost выглядит как старый мелкий спрайт.
     // lab: та же вертикальная растяжка арта, что и у реально поставленного станка.
     ghostSprite.scale.set(
-      tool === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : tool === 'silo' ? SILO_VISUAL_SCALE : 1,
-      tool === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : tool === 'silo' ? SILO_VISUAL_SCALE : tool === 'lab' || tool === 'splitter' ? LAB_VISUAL_SCALE_Y : 1
+      tool === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : tool === 'silo' ? SILO_VISUAL_SCALE : tool === 'splitter' ? SPLITTER_VISUAL_SCALE : 1,
+      tool === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : tool === 'silo' ? SILO_VISUAL_SCALE : tool === 'splitter' ? SPLITTER_VISUAL_SCALE : tool === 'lab' ? LAB_VISUAL_SCALE_Y : 1
     );
 
     const test: Entity = { id: 'ghost', kind: tool, pos: tile, dir: ghostDir, config: {} };

@@ -122,6 +122,11 @@ function getSpriteSize(kind: MachineKind): { w: number; h: number } {
 // (getSpriteSize центрирует нетронутую текстуру в футпринте, оставляя пустую половину
 // клетки) — сознательно не взята: заполнение клетки важнее геометрической точности арта.
 export const LAB_VISUAL_SCALE_Y = 2;
+// splitter (дублер): в кадре 128×64 сам механизм — компактный квадрат ~64×64 по центру
+// с прозрачными полями по бокам. Y-растяжка (как lab) искажала бы квадрат в прямоугольник —
+// вместо этого центрируем нативный кадр (getSpriteSize=2×1, пивот по нему) и увеличиваем
+// РАВНОМЕРНО, чтобы девайс дорос до клетки 2×2 без искажения (по образцу assembler/silo).
+export const SPLITTER_VISUAL_SCALE = 2;
 
 function updateMachines(entities: Record<string, Entity>, layer: Container): void {
   const existingIds = new Set(machineSprites.keys());
@@ -220,9 +225,12 @@ function updateMachines(entities: Record<string, Entity>, layer: Container): voi
       machineSprite.sprite.scale.set(MANIPULATOR_VISUAL_SCALE, mirrored * MANIPULATOR_VISUAL_SCALE);
     } else if (entity.kind === 'silo') {
       machineSprite.sprite.scale.set(SILO_VISUAL_SCALE);
-    } else if (entity.kind === 'lab' || entity.kind === 'splitter') {
-      // арт 2×1 в футпринте 2×2 — тянем по Y вдвое, чтобы заполнить клетку (см. lab)
+    } else if (entity.kind === 'lab') {
+      // арт 2×1 в футпринте 2×2 — тянем по Y вдвое, чтобы заполнить клетку
       machineSprite.sprite.scale.set(1, LAB_VISUAL_SCALE_Y);
+    } else if (entity.kind === 'splitter') {
+      // квадратный девайс по центру кадра — равномерный зум, без искажения
+      machineSprite.sprite.scale.set(SPLITTER_VISUAL_SCALE);
     }
   }
 }
