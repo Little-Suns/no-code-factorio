@@ -16,6 +16,7 @@ export function ConfigPanel() {
   const entities = useStore((state) => state.entities);
   const running = useStore((state) => state.running);
   const nodeStatus = useStore((state) => state.nodeStatus);
+  const results = useStore((state) => state.results);
   const energy = useStore((state) => state.energy);
   const setConfig = useStore((state) => state.setConfig);
   const select = useStore((state) => state.select);
@@ -284,6 +285,32 @@ export function ConfigPanel() {
             </button>
           </div>
         )}
+
+        {/* Спец-блок для chest: содержимое буфера (все накопленные items, не только последний) */}
+        {entity.kind === 'chest' && (() => {
+          const latest = results[entity.id]?.[0]?.data as
+            | { buffered: number; batchSize: number; items: unknown[]; flushed?: boolean }
+            | undefined;
+          if (!latest) {
+            return <div className="config-special chest-buffer-empty">{t('config.chestEmpty')}</div>;
+          }
+          return (
+            <div className="config-special">
+              <label className="config-label">
+                {latest.flushed
+                  ? t('config.chestFlushed', { count: latest.items.length })
+                  : t('config.chestBuffer', { count: latest.buffered, batchSize: latest.batchSize })}
+              </label>
+              <div className="chest-buffer-list">
+                {latest.items.map((item, idx) => (
+                  <div key={idx} className="chest-buffer-item">
+                    <JsonView value={item} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Статус */}
         <div className="config-status">

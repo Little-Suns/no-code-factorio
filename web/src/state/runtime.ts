@@ -327,3 +327,28 @@ export function rechargeAccumulator(): void {
 
   engine.rechargeEnergy();
 }
+
+/**
+ * Дебаг-режим (кнопки Пауза/Шаг в TopBar, docs/04): паузит источники новых пакетов
+ * и ставит уже летящие/входящие пакеты на ворота движка. Стор — источник истины для UI
+ * (кнопки читают store.debugMode), engine.setDebugMode() — зеркало на стороне движка.
+ */
+export function setDebugMode(enabled: boolean): void {
+  if (!engine) {
+    console.warn('Engine not running');
+    return;
+  }
+  engine.setDebugMode(enabled);
+  useStore.getState().setDebugMode(enabled);
+}
+
+/**
+ * Один шаг отладки (кнопка «Шаг»): пропускает ровно одно ожидающее событие движка.
+ */
+export function stepDebug(): void {
+  if (!engine) {
+    console.warn('Engine not running');
+    return;
+  }
+  engine.step();
+}

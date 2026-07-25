@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { useStore } from '../state/store';
-import { startRun, stopRun } from '../state/runtime';
+import { startRun, stopRun, setDebugMode, stepDebug } from '../state/runtime';
 import type { Entity } from '../core/types';
 import { useT, LOCALES, LOCALE_NAMES } from '../i18n';
 import './TopBar.css';
@@ -10,6 +10,7 @@ const ENERGY_SEGMENTS = 10;
 export function TopBar() {
   const t = useT();
   const running = useStore((state) => state.running);
+  const debugMode = useStore((state) => state.debugMode);
   const entities = useStore((state) => state.entities);
   const loadWorld = useStore((state) => state.loadWorld);
   const energy = useStore((state) => state.energy);
@@ -20,6 +21,8 @@ export function TopBar() {
   const logsPanelOpen = useStore((state) => state.logsPanelOpen);
   const setLogsPanelOpen = useStore((state) => state.setLogsPanelOpen);
   const logsUnread = useStore((state) => state.logsUnread);
+  const searchOpen = useStore((state) => state.searchOpen);
+  const setSearchOpen = useStore((state) => state.setSearchOpen);
   const locale = useStore((state) => state.locale);
   const setLocale = useStore((state) => state.setLocale);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -60,6 +63,16 @@ export function TopBar() {
     } else {
       startRun();
     }
+  };
+
+  const handleTogglePause = () => {
+    if (!running) return;
+    setDebugMode(!debugMode);
+  };
+
+  const handleStep = () => {
+    if (!running || !debugMode) return;
+    stepDebug();
   };
 
   const handleExport = () => {
@@ -132,6 +145,23 @@ export function TopBar() {
           {running ? t('top.stop') : t('top.run')}
         </button>
 
+        <button
+          className={`icon-button ${debugMode ? 'active' : ''}`}
+          onClick={handleTogglePause}
+          disabled={!running}
+          title={debugMode ? t('top.debugResumeTitle') : t('top.debugPauseTitle')}
+        >
+          {debugMode ? `▶ ${t('top.debugResume')}` : `⏸ ${t('top.debugPause')}`}
+        </button>
+        <button
+          className="icon-button"
+          onClick={handleStep}
+          disabled={!running || !debugMode}
+          title={t('top.debugStepTitle')}
+        >
+          ⏭ {t('top.debugStep')}
+        </button>
+
         <span className="entity-counter" title={`${t('top.entities')}: ${entityCount}`}>
           <span>{t('top.entities')}</span>
           <span className="entity-counter-value">{entityCount}</span>
@@ -159,6 +189,13 @@ export function TopBar() {
       </div>
 
       <div className="top-bar-right">
+        <button
+          className={`icon-button ${searchOpen ? 'active' : ''}`}
+          onClick={() => setSearchOpen(!searchOpen)}
+          title={t('top.searchTitle')}
+        >
+          🔍 {t('top.search')}
+        </button>
         <button
           className="icon-button"
           onClick={handleCycleLocale}

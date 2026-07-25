@@ -15,6 +15,7 @@ const HTML_LANG: Record<Locale, string> = { ru: 'ru', en: 'en', zh: 'zh-Hans' };
 export interface Store {
   entities: Record<string, Entity>;
   running: boolean;
+  debugMode: boolean; // пошаговая отладка (кнопки Пауза/Шаг в TopBar) — зеркалит Engine.setDebugMode
   selectedTool: MachineKind | null;
   selectedEntityId: string | null;
   nodeStatus: Record<string, { status: NodeStatus; error?: string; lastIn?: unknown; lastOut?: unknown }>;
@@ -29,6 +30,7 @@ export interface Store {
   blueprintPanelOpen: boolean; // видимость списка чертежей — переключается клавишей B
   resultPanelOpen: boolean; // видимость дока результатов — переключается кнопкой в TopBar
   logsPanelOpen: boolean; // видимость панели логов — переключается кнопкой в TopBar
+  searchOpen: boolean; // видимость поиска по узлам (Ctrl+F / кнопка в TopBar)
   logsUnread: boolean; // новый лог пришёл, пока панель закрыта — «загорается» кнопка в TopBar
   locale: Locale; // язык UI-оболочки (i18n/) — персистится отдельно, state/localePersist.ts
   tutorialActive: boolean; // обучалка открыта — блокирует хоткеи и клики по канвасу (ui/Tutorial.tsx)
@@ -44,6 +46,7 @@ export interface Store {
   select: (entityId: string | null) => void;
   setTool: (tool: MachineKind | null) => void;
   setRunning: (running: boolean) => void;
+  setDebugMode: (debugMode: boolean) => void;
   setStatus: (nodeId: string, status: NodeStatus, error?: string) => void;
   setIO: (nodeId: string, lastIn?: unknown, lastOut?: unknown) => void;
   pushResult: (nodeId: string, data: unknown) => void;
@@ -59,6 +62,7 @@ export interface Store {
   setBlueprintPanelOpen: (open: boolean) => void;
   setResultPanelOpen: (open: boolean) => void;
   setLogsPanelOpen: (open: boolean) => void;
+  setSearchOpen: (open: boolean) => void;
   clearLogs: () => void;
   loadBlueprints: (blueprints: Blueprint[]) => void;
   setLocale: (locale: Locale) => void;
@@ -70,6 +74,7 @@ export interface Store {
 export const useStore = create<Store>((set, get) => ({
   entities: {},
   running: false,
+  debugMode: false,
   selectedTool: null,
   selectedEntityId: null,
   nodeStatus: {},
@@ -82,6 +87,7 @@ export const useStore = create<Store>((set, get) => ({
   blueprintPanelOpen: false,
   resultPanelOpen: false,
   logsPanelOpen: false,
+  searchOpen: false,
   logsUnread: false,
   locale: 'en',
   tutorialActive: false,
@@ -244,7 +250,13 @@ export const useStore = create<Store>((set, get) => ({
   },
 
   setRunning: (running: boolean) => {
-    set({ running });
+    // debugMode сбрасывается на каждый Start/Stop — фабрика никогда не стартует
+    // уже «на паузе» из предыдущего прогона.
+    set({ running, debugMode: false });
+  },
+
+  setDebugMode: (debugMode: boolean) => {
+    set({ debugMode });
   },
 
   setStatus: (nodeId: string, status: NodeStatus, error?: string) => {
@@ -352,6 +364,10 @@ export const useStore = create<Store>((set, get) => ({
   setLogsPanelOpen: (open: boolean) => {
     // Открыли — считаем всё прочитанным, гасим индикатор
     set({ logsPanelOpen: open, logsUnread: open ? false : get().logsUnread });
+  },
+
+  setSearchOpen: (open: boolean) => {
+    set({ searchOpen: open });
   },
 
   clearLogs: () => {

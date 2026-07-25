@@ -159,6 +159,17 @@
   font-weight: 600;
 }
 
+.icon-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.icon-button:disabled:hover {
+  background: var(--dirt);
+  border-color: var(--panel-border);
+  color: var(--text-muted);
+}
+
 /* Новый лог, пока панель закрыта — «загорается» кнопка (docs/06) */
 .icon-button.unread {
   border-color: var(--error);
