@@ -4,6 +4,7 @@ import { TILE } from './app';
 import { getTexture } from './assets';
 import { MANIPULATOR_VISUAL_SCALE, SILO_VISUAL_SCALE, SILO_Y_OFFSET, LAB_VISUAL_SCALE_Y } from './machines';
 import { useStore } from '../state/store';
+import { t } from '../i18n/dictionaries';
 import { footprintTiles, canPlace } from '../core/grid';
 import { instantiateBlueprint, canPlaceBlueprint } from '../core/blueprint';
 import { findLibraryBlueprint } from '../core/blueprintLibrary';
@@ -347,7 +348,7 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
         if (movedPx >= DRAG_THRESHOLD) {
           const selected = collectSelection(dragStart, dragEnd);
           if (selected.length === 0) {
-            store.toast('Пустая область — нечего сохранять в чертёж');
+            store.toast(t('toast.emptySelection', store.locale));
             clearEntityHighlight();
           } else {
             store.setPendingSelection(selected);
