@@ -61,12 +61,19 @@ interface TraceResult {
 }
 
 /**
- * Тайл, с которого манипулятор физически забирает предмет (BACK). При 1×1 footprint
- * сторона BACK — просто соседний тайл в направлении, обратном dir (docs/03: "вход
- * физически принимается с любого соседнего тайла"). Карта нужна trace(), чтобы
- * манипулятор мог захватить предмет из ЛЮБОГО тайла ленты, мимо которого он стоит —
- * а не только из тайла, где лента упирается прямо в него (конечный/терминальный тайл).
- * Без этого манипулятор у не конечного (mid-line) тайла конвейера не видел трассу вообще.
+ * Тайл, с которого манипулятор физически забирает предмет (BACK) — соседний тайл
+ * в направлении, обратном dir (направленно, НЕ "любой сосед" — только тот один тайл
+ * позади манипулятора). Карта нужна trace(), чтобы манипулятор мог захватить предмет
+ * из ЛЮБОГО тайла ленты, мимо которого он стоит — а не только из тайла, где лента
+ * упирается прямо в него (конечный/терминальный тайл). Без этого манипулятор у не
+ * конечного (mid-line) тайла конвейера не видел трассу вообще.
+ *
+ * Детерминизм: 1×1 манипуляторы не перекрываются (canPlace), но МОГУТ легально делить
+ * один и тот же intake-тайл (два разных манипулятора с разных сторон одной ленты) —
+ * при коллизии побеждает манипулятор с лексикографически меньшим id, а не тот, что
+ * раньше встретился в Object.values(entities). Порядок ключей записи (после
+ * save/load, вставки/удаления сущностей) не должен влиять на итоговый граф —
+ * buildGraph обязан быть чистой функцией геометрии мира.
  */
 function buildManipulatorIntakeMap(entities: Record<string, Entity>): Map<string, string> {
   const map = new Map<string, string>();
@@ -74,7 +81,12 @@ function buildManipulatorIntakeMap(entities: Record<string, Entity>): Map<string
     if (entity.kind !== 'manipulator') continue;
     const delta = DELTA[entity.dir];
     const intake = { x: entity.pos.x - delta.x, y: entity.pos.y - delta.y };
-    map.set(`${intake.x},${intake.y}`, entity.id);
+    const key = `${intake.x},${intake.y}`;
+    const existing = map.get(key);
+    if (existing !== undefined && existing < entity.id) {
+      continue; // уже есть манипулятор с меньшим id на этом тайле — оставляем его
+    }
+    map.set(key, entity.id);
   }
   return map;
 }
@@ -93,6 +105,17 @@ function buildManipulatorIntakeMap(entities: Record<string, Entity>): Map<string
  * обрывается там и уходит в манипулятор, даже если лента продолжается дальше:
  * манипулятор "снимает" предмет в этой точке, что для остальных тайлов трассы
  * (до и после) ничего не меняет — они остаются обычными тайлами ленты для других trace().
+ *
+ * Приоритет терминала: если лента указывает ПРЯМО в манипулятор на СЛЕДУЮЩЕМ тайле
+ * (классический терминальный случай) — боковой tap на текущем тайле игнорируется,
+ * трасса идёт дальше и доходит до этого манипулятора естественным путём (следующая
+ * итерация цикла, ветка "дошли до станка"). Иначе сосед-манипулятор, который лишь
+ * тапает эту же ленту сбоку, мог бы перехватить уже работающую терминальную связь.
+ *
+ * Важно (МVP-упрощение, см. docs/03): первый tap по ходу трассы забирает ВЕСЬ поток
+ * с этого источника — ничего не долетает до манипуляторов/станков дальше по той же
+ * ленте (это НЕ то же самое, что раньше: до этого фикса такой манипулятор просто не
+ * получал ничего сам, но и не забирал поток у других).
  */
 function trace(
   start: Vec,
@@ -152,16 +175,30 @@ function trace(
     path.push({ x: cur.x, y: cur.y });
     visited.add(key);
 
+    // Куда лента ведёт дальше
+    const delta = DELTA[entityAtTile.dir];
+    const forward = { x: cur.x + delta.x, y: cur.y + delta.y };
+    const forwardKey = `${forward.x},${forward.y}`;
+
+    // Приоритет терминала: если СЛЕДУЮЩИЙ тайл — манипулятор, который и так примет
+    // этот тайл как валидный вход (обычный терминальный случай) — не тапаем здесь
+    // сбоку, пусть трасса дойдёт до него сама на следующей итерации.
+    const forwardEntityId = occupancy.get(forwardKey);
+    const forwardEntity = forwardEntityId ? entities[forwardEntityId] : undefined;
+    const forwardIsManipulatorTerminal =
+      !!forwardEntity &&
+      forwardEntity.kind === 'manipulator' &&
+      inTiles(forwardEntity).has(forwardKey);
+
     // Манипулятор стоит рядом с ЭТИМ тайлом (не обязательно с концом трассы) и
     // забирает предмет прямо здесь — независимо от того, куда лента идёт дальше
     const tappingManipulatorId = manipulatorIntake.get(key);
-    if (tappingManipulatorId) {
+    if (tappingManipulatorId && !forwardIsManipulatorTerminal) {
       return { to: tappingManipulatorId, path };
     }
 
     // Двигаемся дальше по направлению ленты
-    const delta = DELTA[entityAtTile.dir];
-    cur = { x: cur.x + delta.x, y: cur.y + delta.y };
+    cur = forward;
   }
 
   // Больше лент нет
