@@ -167,13 +167,19 @@ function setupEventHandler() {
         // Лог вход→выход каждого станка: в панель логов (LogsPanel) и в консоль.
         const kind = store.entities[event.nodeId]?.kind ?? '?';
         const label = `${kind} #${event.nodeId}`;
-        const parts: string[] = [];
-        if (event.lastIn !== undefined) parts.push(`IN ${logPreview(event.lastIn)}`);
-        if (event.lastOut !== undefined) parts.push(`OUT ${logPreview(event.lastOut)}`);
-        if (parts.length > 0) {
-          store.toast(`${label}: ${parts.join('  →  ')}`);
-          console.log('[io]', label, { in: event.lastIn, out: event.lastOut });
+        // silo: финальный node-io (lastIn без lastOut) несёт тот же payload, что и
+        // следом идущий 'result' → pushResult (см. engine.ts, ветка 'done'). ResultPanel
+        // уже покажет этот результат — не дублируем его ещё и как запись в LogsPanel.
+        const isSiloFinalIo = kind === 'silo' && event.lastOut === undefined;
+        if (!isSiloFinalIo) {
+          const parts: string[] = [];
+          if (event.lastIn !== undefined) parts.push(`IN ${logPreview(event.lastIn)}`);
+          if (event.lastOut !== undefined) parts.push(`OUT ${logPreview(event.lastOut)}`);
+          if (parts.length > 0) {
+            store.toast(`${label}: ${parts.join('  →  ')}`);
+          }
         }
+        console.log('[io]', label, { in: event.lastIn, out: event.lastOut });
         break;
       }
 
