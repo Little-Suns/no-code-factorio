@@ -13,6 +13,7 @@ import { ConfigPanel } from './ConfigPanel';
 import { ResultPanel } from './ResultPanel';
 import { BlueprintPanel } from './BlueprintPanel';
 import { LogsPanel } from './LogsPanel';
+import { Tutorial } from './Tutorial';
 import './App.css';
 
 export function App() {
@@ -50,6 +51,7 @@ export function App() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && e.target === document.body) {
+        if (useStore.getState().tutorialActive) return; // Esc в обучалке не деселектит — только Skip
         useStore.getState().select(null);
       }
     };
@@ -71,6 +73,7 @@ export function App() {
         <BlueprintPanel />
         <LogsPanel />
         <Hotbar />
+        <Tutorial />
       </div>
     </div>
   );

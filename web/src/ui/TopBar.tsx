@@ -41,6 +41,7 @@ export function TopBar() {
       if (e.code === 'Space' && !isInput) {
         e.preventDefault();
         if (e.repeat) return; // автоповтор ОС при удержании — иначе спам startRun()/stopRun()
+        if (useStore.getState().tutorialActive) return; // обучалка открыта — блокирует хоткеи
         if (running) {
           stopRun();
         } else {
@@ -126,6 +127,7 @@ export function TopBar() {
           className={`run-button ${running ? 'running' : ''}`}
           onClick={handleRun}
           title={t('top.runTitle')}
+          data-tutorial="run"
         >
           {running ? t('top.stop') : t('top.run')}
         </button>
@@ -168,13 +170,22 @@ export function TopBar() {
           className={`icon-button ${logsPanelOpen ? 'active' : ''} ${logsUnread ? 'unread' : ''}`}
           onClick={() => setLogsPanelOpen(!logsPanelOpen)}
           title={t('top.logsTitle')}
+          data-tutorial="logs"
         >
           ⚠ {t('top.logs')}
+        </button>
+        <button
+          className="icon-button"
+          onClick={() => useStore.getState().startTutorial()}
+          title={t('top.tutorialTitle')}
+        >
+          ? {t('top.tutorial')}
         </button>
         <button
           className={`icon-button ${blueprintPanelOpen ? 'active' : ''}`}
           onClick={() => setBlueprintPanelOpen(!blueprintPanelOpen)}
           title={t('top.blueprintsTitle')}
+          data-tutorial="blueprints"
         >
           ▤ {t('top.blueprints')}
         </button>
@@ -182,6 +193,7 @@ export function TopBar() {
           className={`icon-button ${resultPanelOpen ? 'active' : ''}`}
           onClick={() => setResultPanelOpen(!resultPanelOpen)}
           title={t('top.resultsTitle')}
+          data-tutorial="results"
         >
           ▥ {t('top.results')}
         </button>

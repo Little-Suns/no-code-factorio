@@ -31,6 +31,8 @@ export interface Store {
   logsPanelOpen: boolean; // видимость панели логов — переключается кнопкой в TopBar
   logsUnread: boolean; // новый лог пришёл, пока панель закрыта — «загорается» кнопка в TopBar
   locale: Locale; // язык UI-оболочки (i18n/) — персистится отдельно, state/localePersist.ts
+  tutorialActive: boolean; // обучалка открыта — блокирует хоткеи и клики по канвасу (ui/Tutorial.tsx)
+  tutorialStep: number; // индекс текущего шага; список шагов и их количество — в Tutorial.tsx
   // actions
   place: (entity: Entity) => boolean;
   remove: (entityId: string) => void;
@@ -58,6 +60,9 @@ export interface Store {
   clearLogs: () => void;
   loadBlueprints: (blueprints: Blueprint[]) => void;
   setLocale: (locale: Locale) => void;
+  startTutorial: () => void;
+  setTutorialStep: (step: number) => void;
+  skipTutorial: () => void;
 }
 
 export const useStore = create<Store>((set, get) => ({
@@ -77,6 +82,8 @@ export const useStore = create<Store>((set, get) => ({
   logsPanelOpen: false,
   logsUnread: false,
   locale: 'en',
+  tutorialActive: false,
+  tutorialStep: 0,
 
   place: (entity: Entity) => {
     const state = get();
@@ -304,5 +311,17 @@ export const useStore = create<Store>((set, get) => ({
     if (typeof document !== 'undefined') {
       document.documentElement.lang = HTML_LANG[locale];
     }
+  },
+
+  startTutorial: () => {
+    set({ tutorialActive: true, tutorialStep: 0 });
+  },
+
+  setTutorialStep: (step: number) => {
+    set({ tutorialStep: step });
+  },
+
+  skipTutorial: () => {
+    set({ tutorialActive: false });
   },
 }));

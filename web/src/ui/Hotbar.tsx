@@ -58,6 +58,8 @@ export function Hotbar() {
       // ConfigPanel/BlueprintPanel переключал бы инструмент постановки на карте.
       const target = e.target as HTMLElement;
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return;
+      // Обучалка открыта (ui/Tutorial.tsx) — блокирует хоткеи наравне с кликами по канвасу.
+      if (useStore.getState().tutorialActive) return;
 
       const tool = KEY_TO_TOOL[e.key];
       if (tool) {
@@ -71,13 +73,14 @@ export function Hotbar() {
   }, [setTool]);
 
   return (
-    <div className="hotbar">
+    <div className="hotbar" data-tutorial="hotbar">
       {ALL_TOOLS.map((tool) => (
         <button
           key={tool}
           className={`hotbar-slot ${selectedTool === tool ? 'active' : ''}`}
           onClick={() => setTool(tool)}
           aria-label={`${t(TOOL_NAME_KEYS[tool])} (${HOTKEYS[tool]})`}
+          data-tutorial={tool === 'manipulator' ? 'hotbar-manipulator' : undefined}
         >
           <div className="hotbar-icon" data-tool={tool}>
             {TOOL_ICONS[tool]}
