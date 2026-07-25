@@ -303,8 +303,19 @@ export class Engine {
 
       if (this.abortController.signal.aborted) return;
 
-      // Если это тупик — дропим
       if (edge.to === null) {
+        // Кольцо лент: не дропаем, а гоняем предмет по петле, пока не Stop (Factorio-петля).
+        // loop начинается с текущей позиции (последний тайл), включает замыкающий шаг
+        // last→loopFrom (они соседние) → без визуального рывка на стыке.
+        if (edge.loopFrom !== undefined && edge.path.length > 0) {
+          const loop = [edge.path[edge.path.length - 1], ...edge.path.slice(edge.loopFrom)];
+          while (!this.abortController.signal.aborted) {
+            await this.transport.move(packet.id, loop, packet.item, packet.sizeHint);
+            if (this.abortController.signal.aborted) return;
+          }
+          return;
+        }
+        // Обычный тупик — дропим
         this.emit({
           t: 'packet-drop',
           packetId: packet.id,
