@@ -6,6 +6,7 @@ import { MANIPULATOR_VISUAL_SCALE, SILO_VISUAL_SCALE, SILO_Y_OFFSET } from './ma
 import { useStore } from '../state/store';
 import { footprintTiles, canPlace } from '../core/grid';
 import { instantiateBlueprint, canPlaceBlueprint } from '../core/blueprint';
+import { findLibraryBlueprint } from '../core/blueprintLibrary';
 import { beltShape, makePath, drawTrack } from './belts';
 import { rasterizeLine } from './rasterize';
 import type { Dir, Entity, MachineKind, Vec } from '../core/types';
@@ -133,7 +134,7 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
   // переставляем позиции (как и одиночный ghost).
   const updateGroupGhost = (blueprintId: string) => {
     const store = useStore.getState();
-    const bp = store.blueprints.find((b) => b.id === blueprintId);
+    const bp = store.blueprints.find((b) => b.id === blueprintId) ?? findLibraryBlueprint(blueprintId);
     if (!bp) {
       clearGroupGhost();
       return;
@@ -359,7 +360,7 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
         // Постановка чертежа — origin, как и у обычных станков, берём по началу
         // клика (dragStart), не по release: клик без драга даёт ожидаемый результат,
         // а поведение симметрично store.place() ниже.
-        const bp = store.blueprints.find((b) => b.id === store.stampBlueprintId);
+        const bp = store.blueprints.find((b) => b.id === store.stampBlueprintId) ?? findLibraryBlueprint(store.stampBlueprintId);
         if (bp) {
           const instantiated = instantiateBlueprint(bp, dragStart);
           store.placeMany(instantiated);

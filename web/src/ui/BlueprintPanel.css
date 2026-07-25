@@ -112,12 +112,36 @@
   background: var(--accent-bright);
 }
 
+.blueprint-section-title {
+  padding: 7px 11px 0;
+  color: var(--text-dim);
+  font-size: 9px;
+  font-family: var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
 .blueprint-list {
-  padding: 10px 11px;
+  padding: 7px 11px 10px;
   display: flex;
   flex-direction: column;
   gap: 7px;
   overflow-y: auto;
+}
+
+.blueprint-list-library {
+  border-bottom: 2px solid var(--panel-border);
+}
+
+/* Библиотека — пресеты из коробки, только «поставить», без экспорта/удаления */
+.blueprint-item.library {
+  border-left-style: dashed;
+  border-left-color: var(--panel-border);
+}
+
+.blueprint-item.library.active {
+  border-left-color: var(--accent);
 }
 
 .blueprint-empty {

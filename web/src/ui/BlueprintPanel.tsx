@@ -6,6 +6,7 @@ import {
   importBlueprintString,
   Blueprint,
 } from '../core/blueprint';
+import { LIBRARY_BLUEPRINTS } from '../core/blueprintLibrary';
 import './BlueprintPanel.css';
 
 export function BlueprintPanel() {
@@ -101,6 +102,7 @@ export function BlueprintPanel() {
         </div>
       )}
 
+      <div className="blueprint-section-title">Мои чертежи</div>
       <div className="blueprint-list">
         {blueprints.length === 0 ? (
           <div className="blueprint-empty">Нет чертежей</div>
@@ -128,6 +130,28 @@ export function BlueprintPanel() {
             </div>
           ))
         )}
+      </div>
+
+      {/* Библиотека — статичные пресеты из коробки (blueprintLibrary.ts), read-only:
+          без экспорта/удаления, только «поставить», как обычный инструмент. */}
+      <div className="blueprint-section-title">Библиотека</div>
+      <div className="blueprint-list blueprint-list-library">
+        {LIBRARY_BLUEPRINTS.map((bp) => (
+          <div key={bp.id} className={`blueprint-item library ${stampBlueprintId === bp.id ? 'active' : ''}`}>
+            <span className="blueprint-name" title={`${bp.entities.length} станков`}>
+              {bp.name}
+            </span>
+            <div className="blueprint-item-actions">
+              <button
+                className="blueprint-icon-btn"
+                onClick={() => setStampBlueprint(stampBlueprintId === bp.id ? null : bp.id)}
+                title="Поставить"
+              >
+                ✥
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="blueprint-import">
