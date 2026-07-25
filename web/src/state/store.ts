@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Entity, NodeStatus, MachineKind } from '../core/types';
+import type { Entity, NodeStatus, MachineKind, Vec } from '../core/types';
 import { canPlace } from '../core/grid';
 import { NODE_DEFS } from '../core/nodes';
 import type { Blueprint } from '../core/blueprint';
@@ -38,6 +38,7 @@ export interface Store {
   remove: (entityId: string) => void;
   removeMany: (entityIds: string[]) => void;
   rotate: (entityId: string) => void;
+  move: (entityId: string, pos: Vec) => boolean;
   setConfig: (entityId: string, config: Record<string, unknown>) => void;
   select: (entityId: string | null) => void;
   setTool: (tool: MachineKind | null) => void;
@@ -164,6 +165,28 @@ export const useStore = create<Store>((set, get) => ({
     set((s) => ({
       entities: { ...s.entities, [entityId]: newEntity },
     }));
+  },
+
+  // Перетаскивание станка/ленты мышкой (баг 16): та же схема проверки, что и rotate —
+  // сам станок исключаем из занятости, иначе целевая клетка всегда «занята» им же.
+  move: (entityId: string, pos: Vec) => {
+    const state = get();
+    if (state.running) {
+      get().toast(t('toast.stopFactory', state.locale));
+      return false;
+    }
+    const entity = state.entities[entityId];
+    if (!entity) return false;
+    const newEntity = { ...entity, pos };
+    const others = { ...state.entities };
+    delete others[entityId];
+    if (!canPlace(others, newEntity)) {
+      return false;
+    }
+    set((s) => ({
+      entities: { ...s.entities, [entityId]: newEntity },
+    }));
+    return true;
   },
 
   setConfig: (entityId: string, config: Record<string, unknown>) => {
