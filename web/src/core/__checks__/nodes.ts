@@ -125,64 +125,26 @@ async function testAssemblerRecipeFallback() {
 }
 
 // ============================================================================
-// AC 2: splitter-expr ветвит по условию, splitter-llm парсит YES/NO
+// AC 2: дублер пропускает данные как {out} (движок спавнит клон на каждый 'out'-edge)
 // ============================================================================
 
-async function testSplitterExpr() {
+async function testDuplicatorPassthrough() {
   const handler = NODE_DEFS.splitter.handler as Handler;
   if (!handler) throw new Error('splitter handler missing');
 
   const ctx: NodeCtx = {
-    config: { mode: 'expr', expr: 'String(data).length > 10' },
-    data: 'Short text',
+    config: {},
+    data: 'payload',
     tpl: (s) => s,
     llm: mockLlm,
     proxyFetch: mockProxyFetch,
   };
 
-  const result = (await handler(ctx)) as {
-    branch: 'true' | 'false';
-    out: unknown;
-  };
-  if (result.branch !== 'false') throw new Error('AC2-expr: "Short text" should be false');
-  if (result.out !== 'Short text') throw new Error('AC2-expr: data not preserved');
-
-  // Длинный текст
-  const ctx2 = { ...ctx, data: 'This is a much longer text' };
-  const result2 = (await handler(ctx2)) as {
-    branch: 'true' | 'false';
-    out: unknown;
-  };
-  if (result2.branch !== 'true')
-    throw new Error('AC2-expr: long text should be true');
-
-  console.log('✓ AC2a: splitter-expr');
-}
-
-async function testSplitterLlm() {
-  mockLlmCalls = [];
-  const handler = NODE_DEFS.splitter.handler as Handler;
-
-  const ctx: NodeCtx = {
-    config: {
-      mode: 'llm',
-      question: 'Is this positive feedback?',
-    },
-    data: 'This product is amazing!',
-    tpl: (s) => s,
-    llm: mockLlm,
-    proxyFetch: mockProxyFetch,
-  };
-
-  const result = (await handler(ctx)) as {
-    branch: 'true' | 'false';
-    out: unknown;
-  };
-  if (result.branch !== 'true') throw new Error('AC2-llm: positive should be true');
-  if (mockLlmCalls[0]?.system !== 'Ответь строго YES или NO.')
-    throw new Error('AC2-llm: wrong system');
-
-  console.log('✓ AC2b: splitter-llm');
+  const result = (await handler(ctx)) as { out?: unknown; branch?: unknown };
+  if (!('out' in result)) throw new Error('AC2: дублер должен вернуть {out}');
+  if ('branch' in result) throw new Error('AC2: дублер не ветвит (без branch) — размножает движок');
+  if (result.out !== 'payload') throw new Error('AC2: данные должны пройти без изменений');
+  console.log('✓ AC2: duplicator-passthrough');
 }
 
 // ============================================================================
@@ -532,8 +494,7 @@ function testRegistry() {
 export async function checkNodes() {
   await testAssemblerLlm();
   await testAssemblerRecipeFallback();
-  await testSplitterExpr();
-  await testSplitterLlm();
+  await testDuplicatorPassthrough();
   await testMixerConcat();
   await testMixerLlm();
   await testMinerUrl();

@@ -592,14 +592,6 @@ export class Engine {
         if (node.kind === 'lab' && branch === 'rework') {
           outItem = 'verdict';
         }
-        const newPacket: Packet = {
-          id: `pkt-${crypto.randomUUID().slice(0, 8)}`,
-          data: result.out,
-          item: outItem,
-          sizeHint: JSON.stringify(result.out).length,
-          ttl: packet.ttl - 1,
-        };
-
         this.emit({
           t: 'node-io',
           nodeId: node.id,
@@ -607,20 +599,25 @@ export class Engine {
           lastOut: result.out,
         });
 
-        this.emit({
-          t: 'packet-spawn',
-          packet: newPacket,
-          at: node.pos,
-        });
-
         // Находим исходящие edge с соответствующим branch
         const outEdges = this.edges.filter(
           (e) => e.from === node.id && e.branch === branch
         );
 
-        // Запускаем доставку по каждому edge
+        // Клон пакета со СВЕЖИМ id на каждый выходной edge — иначе несколько edge одной
+        // branch (дублер: два выхода 'out') делили бы один id/спрайт, второй move стёр
+        // бы первый. Для одиночного выхода (assembler и др.) поведение прежнее.
+        const sizeHint = JSON.stringify(result.out).length;
         for (const edge of outEdges) {
-          const chain = this.deliverPacket(edge, newPacket);
+          const clone: Packet = {
+            id: `pkt-${crypto.randomUUID().slice(0, 8)}`,
+            data: result.out,
+            item: outItem,
+            sizeHint,
+            ttl: packet.ttl - 1,
+          };
+          this.emit({ t: 'packet-spawn', packet: clone, at: node.pos });
+          const chain = this.deliverPacket(edge, clone);
           this.running.add(chain);
           chain.finally(() => this.running.delete(chain));
         }

@@ -65,8 +65,8 @@ export const NODE_DEFS: Record<MachineKind, NodeDef> = {
   },
   splitter: {
     kind: 'splitter',
-    title: 'Разветвитель',
-    size: { w: 2, h: 1 },
+    title: 'Дублер',
+    size: { w: 2, h: 2 },
     schema: splitterSchema,
     handler: splitterHandler,
   },

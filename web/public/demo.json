@@ -4,7 +4,10 @@
     {
       "id": "m1abcd01",
       "kind": "miner",
-      "pos": { "x": 0, "y": 5 },
+      "pos": {
+        "x": 0,
+        "y": 5
+      },
       "dir": 1,
       "config": {
         "mode": "text",
@@ -12,38 +15,165 @@
         "intervalSec": 4
       }
     },
-    { "id": "b1", "kind": "belt", "pos": { "x": 2, "y": 5 }, "dir": 1, "config": {} },
-    { "id": "b2", "kind": "belt", "pos": { "x": 3, "y": 5 }, "dir": 1, "config": {} },
-    { "id": "b3", "kind": "belt", "pos": { "x": 4, "y": 5 }, "dir": 1, "config": {} },
-    { "id": "b4", "kind": "manipulator", "pos": { "x": 5, "y": 5 }, "dir": 1, "config": {} },
-    { "id": "b5", "kind": "belt", "pos": { "x": 2, "y": 6 }, "dir": 1, "config": {} },
-    { "id": "b6", "kind": "belt", "pos": { "x": 3, "y": 6 }, "dir": 1, "config": {} },
-    { "id": "b7", "kind": "belt", "pos": { "x": 4, "y": 6 }, "dir": 1, "config": {} },
-    { "id": "b8", "kind": "manipulator", "pos": { "x": 5, "y": 6 }, "dir": 1, "config": {} },
     {
-      "id": "a1abcd02",
-      "kind": "assembler",
-      "pos": { "x": 6, "y": 5 },
-      "dir": 1,
-      "config": { "recipe": "summarizer" }
-    },
-    { "id": "bbridge", "kind": "belt", "pos": { "x": 8, "y": 5 }, "dir": 1, "config": {} },
-    { "id": "b9", "kind": "belt", "pos": { "x": 9, "y": 5 }, "dir": 1, "config": {} },
-    { "id": "b10", "kind": "belt", "pos": { "x": 10, "y": 5 }, "dir": 1, "config": {} },
-    { "id": "b11", "kind": "belt", "pos": { "x": 11, "y": 5 }, "dir": 1, "config": {} },
-    { "id": "b12", "kind": "manipulator", "pos": { "x": 12, "y": 5 }, "dir": 1, "config": {} },
-    {
-      "id": "s1abcd03",
-      "kind": "silo",
-      "pos": { "x": 13, "y": 5 },
+      "id": "b1",
+      "kind": "belt",
+      "pos": {
+        "x": 2,
+        "y": 5
+      },
       "dir": 1,
       "config": {}
     },
-
+    {
+      "id": "b2",
+      "kind": "belt",
+      "pos": {
+        "x": 3,
+        "y": 5
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "b3",
+      "kind": "belt",
+      "pos": {
+        "x": 4,
+        "y": 5
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "b4",
+      "kind": "manipulator",
+      "pos": {
+        "x": 5,
+        "y": 5
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "b5",
+      "kind": "belt",
+      "pos": {
+        "x": 2,
+        "y": 6
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "b6",
+      "kind": "belt",
+      "pos": {
+        "x": 3,
+        "y": 6
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "b7",
+      "kind": "belt",
+      "pos": {
+        "x": 4,
+        "y": 6
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "b8",
+      "kind": "manipulator",
+      "pos": {
+        "x": 5,
+        "y": 6
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "a1abcd02",
+      "kind": "assembler",
+      "pos": {
+        "x": 6,
+        "y": 5
+      },
+      "dir": 1,
+      "config": {
+        "recipe": "summarizer"
+      }
+    },
+    {
+      "id": "bbridge",
+      "kind": "belt",
+      "pos": {
+        "x": 8,
+        "y": 5
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "b9",
+      "kind": "belt",
+      "pos": {
+        "x": 9,
+        "y": 5
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "b10",
+      "kind": "belt",
+      "pos": {
+        "x": 10,
+        "y": 5
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "b11",
+      "kind": "belt",
+      "pos": {
+        "x": 11,
+        "y": 5
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "b12",
+      "kind": "manipulator",
+      "pos": {
+        "x": 12,
+        "y": 5
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "s1abcd03",
+      "kind": "silo",
+      "pos": {
+        "x": 13,
+        "y": 5
+      },
+      "dir": 1,
+      "config": {}
+    },
     {
       "id": "m2demo01",
       "kind": "miner",
-      "pos": { "x": 0, "y": 9 },
+      "pos": {
+        "x": 0,
+        "y": 9
+      },
       "dir": 1,
       "config": {
         "mode": "text",
@@ -51,51 +181,205 @@
         "intervalSec": 5
       }
     },
-    { "id": "c1", "kind": "belt", "pos": { "x": 2, "y": 9 }, "dir": 1, "config": {} },
-    { "id": "c2", "kind": "belt", "pos": { "x": 3, "y": 9 }, "dir": 1, "config": {} },
-    { "id": "c3", "kind": "belt", "pos": { "x": 4, "y": 9 }, "dir": 1, "config": {} },
-    { "id": "c4", "kind": "belt", "pos": { "x": 5, "y": 9 }, "dir": 1, "config": {} },
-    { "id": "c5", "kind": "manipulator", "pos": { "x": 6, "y": 9 }, "dir": 1, "config": {} },
-    { "id": "c1b", "kind": "belt", "pos": { "x": 2, "y": 10 }, "dir": 1, "config": {} },
-    { "id": "c2b", "kind": "belt", "pos": { "x": 3, "y": 10 }, "dir": 1, "config": {} },
-    { "id": "c3b", "kind": "belt", "pos": { "x": 4, "y": 10 }, "dir": 1, "config": {} },
-    { "id": "c4b", "kind": "belt", "pos": { "x": 5, "y": 10 }, "dir": 1, "config": {} },
-    { "id": "c5b", "kind": "manipulator", "pos": { "x": 6, "y": 10 }, "dir": 1, "config": {} },
     {
-      "id": "sp1demo",
-      "kind": "splitter",
-      "pos": { "x": 7, "y": 9 },
-      "dir": 1,
-      "config": { "mode": "llm", "question": "Это позитивный отзыв?" }
-    },
-
-    { "id": "tt1", "kind": "belt", "pos": { "x": 8, "y": 9 }, "dir": 1, "config": {} },
-    { "id": "tt2", "kind": "belt", "pos": { "x": 9, "y": 9 }, "dir": 1, "config": {} },
-    { "id": "tt3", "kind": "manipulator", "pos": { "x": 10, "y": 9 }, "dir": 1, "config": {} },
-    {
-      "id": "silo2demo",
-      "kind": "silo",
-      "pos": { "x": 11, "y": 9 },
+      "id": "c1",
+      "kind": "belt",
+      "pos": {
+        "x": 2,
+        "y": 9
+      },
       "dir": 1,
       "config": {}
     },
-
-    { "id": "ff1", "kind": "belt", "pos": { "x": 8, "y": 10 }, "dir": 2, "config": {} },
-    { "id": "ff2", "kind": "belt", "pos": { "x": 8, "y": 11 }, "dir": 2, "config": {} },
-    { "id": "ff3", "kind": "belt", "pos": { "x": 8, "y": 12 }, "dir": 1, "config": {} },
-    { "id": "ff4", "kind": "belt", "pos": { "x": 9, "y": 12 }, "dir": 1, "config": {} },
-    { "id": "ff5", "kind": "manipulator", "pos": { "x": 10, "y": 12 }, "dir": 1, "config": {} },
+    {
+      "id": "c2",
+      "kind": "belt",
+      "pos": {
+        "x": 3,
+        "y": 9
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "c3",
+      "kind": "belt",
+      "pos": {
+        "x": 4,
+        "y": 9
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "c4",
+      "kind": "belt",
+      "pos": {
+        "x": 5,
+        "y": 9
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "c5",
+      "kind": "manipulator",
+      "pos": {
+        "x": 6,
+        "y": 9
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "c1b",
+      "kind": "belt",
+      "pos": {
+        "x": 2,
+        "y": 10
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "c2b",
+      "kind": "belt",
+      "pos": {
+        "x": 3,
+        "y": 10
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "c3b",
+      "kind": "belt",
+      "pos": {
+        "x": 4,
+        "y": 10
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "c4b",
+      "kind": "belt",
+      "pos": {
+        "x": 5,
+        "y": 10
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "c5b",
+      "kind": "manipulator",
+      "pos": {
+        "x": 6,
+        "y": 10
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "sp1demo",
+      "kind": "splitter",
+      "pos": {
+        "x": 7,
+        "y": 9
+      },
+      "dir": 1,
+      "config": {
+        "mode": "llm",
+        "question": "Это позитивный отзыв?"
+      }
+    },
+    {
+      "id": "tt2",
+      "kind": "belt",
+      "pos": {
+        "x": 9,
+        "y": 9
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "tt3",
+      "kind": "manipulator",
+      "pos": {
+        "x": 10,
+        "y": 9
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "silo2demo",
+      "kind": "silo",
+      "pos": {
+        "x": 11,
+        "y": 9
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "ff4",
+      "kind": "belt",
+      "pos": {
+        "x": 9,
+        "y": 12
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "ff5",
+      "kind": "manipulator",
+      "pos": {
+        "x": 10,
+        "y": 12
+      },
+      "dir": 1,
+      "config": {}
+    },
     {
       "id": "wh1demo",
       "kind": "webhook",
-      "pos": { "x": 11, "y": 12 },
+      "pos": {
+        "x": 11,
+        "y": 12
+      },
       "dir": 1,
       "config": {
         "url": "https://your-webhook-url.example.com/negative-review",
         "method": "POST",
-        "headers": { "content-type": "application/json" },
+        "headers": {
+          "content-type": "application/json"
+        },
         "body": "{\"content\": \"⚠️ Negative review detected: {{text}}\"}"
       }
+    },
+    {
+      "id": "ffA",
+      "kind": "belt",
+      "pos": {
+        "x": 9,
+        "y": 10
+      },
+      "dir": 2,
+      "config": {}
+    },
+    {
+      "id": "ffB",
+      "kind": "belt",
+      "pos": {
+        "x": 9,
+        "y": 11
+      },
+      "dir": 2,
+      "config": {}
     }
   ]
 }

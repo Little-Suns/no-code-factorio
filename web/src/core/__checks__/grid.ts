@@ -41,7 +41,7 @@ assert(offset.x === 0 && offset.y === 2 - 1 - 1, 'rotOffset dir=3: (1,0) → (0,
 
 console.log('✓ rotOffset OK');
 
-// footprint сплиттера при dir=1 занимает 1×2
+// footprint дублера — 2×2 (инвариант к dir)
 console.log('Testing footprint for splitter dir=1...');
 const splitterDir1: Entity = {
   id: 'splitter1',
@@ -51,25 +51,15 @@ const splitterDir1: Entity = {
   config: {},
 };
 const tiles = footprintTiles(splitterDir1);
-assert(tiles.length === 2, `footprint splitter dir=1 should have 2 tiles, got ${tiles.length}`);
-// Должны быть (0,0) и (0,1)
+assert(tiles.length === 4, `footprint splitter (2×2) should have 4 tiles, got ${tiles.length}`);
 const tileSet = new Set(tiles.map((t) => `${t.x},${t.y}`));
-assert(tileSet.has('0,0'), 'splitter dir=1 should contain tile (0,0)');
-assert(tileSet.has('0,1'), 'splitter dir=1 should contain tile (0,1)');
-
-// Проверим ширину и высоту на примере pos
-const minX = Math.min(...tiles.map((t) => t.x));
-const maxX = Math.max(...tiles.map((t) => t.x));
-const minY = Math.min(...tiles.map((t) => t.y));
-const maxY = Math.max(...tiles.map((t) => t.y));
-const width = maxX - minX + 1;
-const height = maxY - minY + 1;
-assert(width === 1, `splitter dir=1 width should be 1, got ${width}`);
-assert(height === 2, `splitter dir=1 height should be 2, got ${height}`);
+for (const t of ['0,0', '1,0', '0,1', '1,1']) {
+  assert(tileSet.has(t), `splitter 2×2 should contain tile (${t})`);
+}
 
 console.log('✓ footprint splitter dir=1 OK');
 
-// порты splitter при dir=0 дают 'true' слева и 'false' справа
+// порты дублера при dir=0 — оба FRONT-тайла с branch 'out'
 console.log('Testing outPorts for splitter dir=0...');
 const splitterDir0: Entity = {
   id: 'splitter0',
@@ -80,23 +70,10 @@ const splitterDir0: Entity = {
 };
 const ports = outPorts(splitterDir0);
 assert(ports.length === 2, `splitter dir=0 should have 2 output ports, got ${ports.length}`);
-
-const truePort = ports.find((p) => p.branch === 'true');
-const falsePort = ports.find((p) => p.branch === 'false');
-
-assert(truePort !== undefined, 'splitter dir=0 should have true port');
-assert(falsePort !== undefined, 'splitter dir=0 should have false port');
-
-// Левый = true (x=0), правый = false (x=1)
-// При pos=(0,0), y=-1 для FRONT
-assert(
-  truePort!.tile.x === 0 && truePort!.tile.y === -1,
-  `true port should be at (0,-1), got (${truePort!.tile.x},${truePort!.tile.y})`
-);
-assert(
-  falsePort!.tile.x === 1 && falsePort!.tile.y === -1,
-  `false port should be at (1,-1), got (${falsePort!.tile.x},${falsePort!.tile.y})`
-);
+assert(ports.every((p) => p.branch === 'out'), 'дублер: оба порта должны быть branch out');
+const portTiles = new Set(ports.map((p) => `${p.tile.x},${p.tile.y}`));
+assert(portTiles.has('0,-1') && portTiles.has('1,-1'),
+  `дублер dir=0: порты должны быть на (0,-1) и (1,-1), got ${[...portTiles].join(' ')}`);
 
 console.log('✓ outPorts splitter dir=0 OK');
 

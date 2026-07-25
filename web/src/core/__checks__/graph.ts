@@ -251,8 +251,8 @@ console.log('Test 4: lab rework port with feedback (through manipulator)');
 }
 console.log('✓ Test 4 OK');
 
-// Test 5: splitter — два порта дают edges с branch 'true' и 'false' (без манипулятора — тупики)
-console.log('Test 5: splitter with true and false branches');
+// Test 5: дублер — оба FRONT-порта дают edges с branch 'out' (по одной копии на выход)
+console.log('Test 5: duplicator — two out-branch edges');
 {
   const splitter: Entity = {
     id: 'splitter1',
@@ -262,41 +262,18 @@ console.log('Test 5: splitter with true and false branches');
     config: {},
   };
 
-  // Две ленты вверх от true и false портов
-  const beltTrue: Entity = {
-    id: 'bt',
-    kind: 'belt',
-    pos: { x: 30, y: 29 },
-    dir: 0,
-    config: {},
-  };
+  // Две ленты вверх от двух FRONT-портов (2×2: front-ряд y=29, тайлы (30,29),(31,29))
+  const belt1: Entity = { id: 'bt', kind: 'belt', pos: { x: 30, y: 29 }, dir: 0, config: {} };
+  const belt2: Entity = { id: 'bf', kind: 'belt', pos: { x: 31, y: 29 }, dir: 0, config: {} };
 
-  const beltFalse: Entity = {
-    id: 'bf',
-    kind: 'belt',
-    pos: { x: 31, y: 29 },
-    dir: 0,
-    config: {},
-  };
-
-  const entities = {
-    splitter1: splitter,
-    bt: beltTrue,
-    bf: beltFalse,
-  };
+  const entities = { splitter1: splitter, bt: belt1, bf: belt2 };
 
   const edges = buildGraph(entities);
   const splitterEdges = edges.filter((e) => e.from === 'splitter1');
 
-  assert(splitterEdges.length === 2, `Splitter should have 2 edges, got ${splitterEdges.length}`);
-
-  const trueEdge = splitterEdges.find((e) => e.branch === 'true');
-  const falseEdge = splitterEdges.find((e) => e.branch === 'false');
-
-  assert(trueEdge !== undefined, 'Splitter should have true edge');
-  assert(falseEdge !== undefined, 'Splitter should have false edge');
-  assert(trueEdge!.to === null, 'True edge is dead-end');
-  assert(falseEdge!.to === null, 'False edge is dead-end');
+  assert(splitterEdges.length === 2, `Duplicator should have 2 edges, got ${splitterEdges.length}`);
+  assert(splitterEdges.every((e) => e.branch === 'out'), 'дублер: оба edge должны быть branch out');
+  assert(splitterEdges.every((e) => e.to === null), 'без манипулятора оба выхода — тупики (ленты в никуда)');
 }
 console.log('✓ Test 5 OK');
 

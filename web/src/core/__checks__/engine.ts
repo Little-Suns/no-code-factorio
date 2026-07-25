@@ -1148,6 +1148,53 @@ async function testBeltLoop() {
 }
 
 /**
+ * AC16: дублер (два выхода одной branch 'out') — движок спавнит клон на КАЖДЫЙ edge,
+ * обе копии доходят независимо (оба silo получают result).
+ */
+async function testDuplicatorTwoCopies() {
+  const events: EngineEvent[] = [];
+
+  const entities: Record<string, Entity> = {
+    miner1: { id: 'miner1', kind: 'miner', pos: { x: 0, y: 0 }, dir: 0, config: { mode: 'text', text: 'x' } },
+    dup1: { id: 'dup1', kind: 'splitter', pos: { x: 5, y: 0 }, dir: 0, config: {} },
+    siloA: { id: 'siloA', kind: 'silo', pos: { x: 10, y: -1 }, dir: 0, config: {} },
+    siloB: { id: 'siloB', kind: 'silo', pos: { x: 10, y: 1 }, dir: 0, config: {} },
+  };
+  // Два выхода дублера — оба branch 'out'
+  const edges: Edge[] = [
+    { id: 'e1:out:0', from: 'miner1', branch: 'out', to: 'dup1', path: [{ x: 1, y: 0 }, { x: 4, y: 0 }] },
+    { id: 'e2:out:0', from: 'dup1', branch: 'out', to: 'siloA', path: [{ x: 6, y: -1 }, { x: 9, y: -1 }] },
+    { id: 'e2:out:1', from: 'dup1', branch: 'out', to: 'siloB', path: [{ x: 6, y: 1 }, { x: 9, y: 1 }] },
+  ];
+
+  const handlers: Record<string, (ctx: NodeCtx) => Promise<HandlerResult>> = {
+    splitter: async (ctx) => ({ out: ctx.data }),
+    silo: async () => ({ done: true }),
+  };
+
+  const engine = new Engine(entities, edges, fakeTransport, (e) => events.push(e), { handlers: handlers as any });
+  engine.start();
+  engine.triggerMiner('miner1');
+  await new Promise((r) => setTimeout(r, 120));
+  engine.stop();
+
+  const results = events.filter((e): e is Extract<EngineEvent, { t: 'result' }> => e.t === 'result');
+  const gotA = results.some((e) => e.nodeId === 'siloA');
+  const gotB = results.some((e) => e.nodeId === 'siloB');
+  if (!gotA || !gotB) {
+    throw new Error(`AC16: обе копии должны дойти (siloA=${gotA}, siloB=${gotB})`);
+  }
+  // Спавнов от дублера должно быть 2 (по клону на каждый выход), с разными id
+  const dupSpawns = events.filter((e): e is Extract<EngineEvent, { t: 'packet-spawn' }> =>
+    e.t === 'packet-spawn' && e.at.x === 5 && e.at.y === 0);
+  const ids = new Set(dupSpawns.map((e) => e.packet.id));
+  if (ids.size < 2) {
+    throw new Error(`AC16: дублер должен спавнить 2 клона с разными id, получено ${ids.size}`);
+  }
+  console.log('✓ AC16: duplicator — обе копии независимо доходят до выходов');
+}
+
+/**
  * Запуск всех проверок
  */
 (async () => {
@@ -1167,8 +1214,9 @@ async function testBeltLoop() {
     await testMinerUrlThroughSpawnPacket();
     await testPauseStopsNewSpawns();
     await testBeltLoop();
+    await testDuplicatorTwoCopies();
 
-    console.log('\n✅ engine checks OK — все 15 AC пройдены');
+    console.log('\n✅ engine checks OK — все 16 AC пройдены');
   } catch (e) {
     console.error('\n❌ engine checks FAILED:', e);
     throw e;
