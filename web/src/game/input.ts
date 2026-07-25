@@ -2,7 +2,7 @@ import { Sprite, Point, Graphics } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { TILE } from './app';
 import { getTexture } from './assets';
-import { MANIPULATOR_VISUAL_SCALE, SILO_VISUAL_SCALE, SILO_Y_OFFSET, LAB_VISUAL_SCALE_Y, SPLITTER_VISUAL_SCALE } from './machines';
+import { MANIPULATOR_VISUAL_SCALE, SILO_VISUAL_SCALE, SILO_Y_OFFSET, LAB_VISUAL_SCALE_Y, SPLITTER_VISUAL_SCALE, ASSEMBLER_VISUAL_SCALE } from './machines';
 import { useStore } from '../state/store';
 import { t } from '../i18n/dictionaries';
 import { footprintTiles, canPlace } from '../core/grid';
@@ -166,14 +166,14 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
       // Текстура lab авторена на 2×1, футпринт (SIZES) — 2×2 (см. updateGhost выше и
       // machines.ts) — пивот по размеру текстуры, иначе арт сместился бы к верху клетки
       // нерастянутым, как раньше при 2×1-футпринте.
-      const [sw, sh] = e.kind === 'lab' || e.kind === 'splitter' ? [2, 1] : [w, h];
+      const [sw, sh] = e.kind === 'assembler' ? [3, 3] : e.kind === 'lab' || e.kind === 'splitter' ? [2, 1] : [w, h];
       sprite.visible = true;
       sprite.pivot.set((sw * TILE) / 2, (sh * TILE) / 2);
       sprite.position.set(e.pos.x * TILE + (rw * TILE) / 2, e.pos.y * TILE + (rh * TILE) / 2);
       sprite.angle = e.dir * 90;
       sprite.scale.set(
-        e.kind === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : e.kind === 'splitter' ? SPLITTER_VISUAL_SCALE : 1,
-        e.kind === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : e.kind === 'splitter' ? SPLITTER_VISUAL_SCALE : e.kind === 'lab' ? LAB_VISUAL_SCALE_Y : 1
+        e.kind === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : e.kind === 'splitter' ? SPLITTER_VISUAL_SCALE : e.kind === 'assembler' ? ASSEMBLER_VISUAL_SCALE : 1,
+        e.kind === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : e.kind === 'splitter' ? SPLITTER_VISUAL_SCALE : e.kind === 'assembler' ? ASSEMBLER_VISUAL_SCALE : e.kind === 'lab' ? LAB_VISUAL_SCALE_Y : 1
       );
       sprite.tint = ok ? TINT_OK : TINT_BAD;
     });
@@ -292,8 +292,8 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
     // поставленного станка (machines.ts) — иначе ghost выглядит как старый мелкий спрайт.
     // lab: та же вертикальная растяжка арта, что и у реально поставленного станка.
     ghostSprite.scale.set(
-      tool === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : tool === 'silo' ? SILO_VISUAL_SCALE : tool === 'splitter' ? SPLITTER_VISUAL_SCALE : 1,
-      tool === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : tool === 'silo' ? SILO_VISUAL_SCALE : tool === 'splitter' ? SPLITTER_VISUAL_SCALE : tool === 'lab' ? LAB_VISUAL_SCALE_Y : 1
+      tool === 'manipulator' ? MANIPULATOR_VISUAL_SCALE : tool === 'silo' ? SILO_VISUAL_SCALE : tool === 'splitter' ? SPLITTER_VISUAL_SCALE : tool === 'assembler' ? ASSEMBLER_VISUAL_SCALE : 1,
+      tool === 'manipulator' ? -MANIPULATOR_VISUAL_SCALE : tool === 'silo' ? SILO_VISUAL_SCALE : tool === 'splitter' ? SPLITTER_VISUAL_SCALE : tool === 'assembler' ? ASSEMBLER_VISUAL_SCALE : tool === 'lab' ? LAB_VISUAL_SCALE_Y : 1
     );
 
     const test: Entity = { id: 'ghost', kind: tool, pos: tile, dir: ghostDir, config: {} };

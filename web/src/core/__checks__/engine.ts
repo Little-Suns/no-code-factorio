@@ -1008,7 +1008,9 @@ async function testMinerUrlThroughSpawnPacket() {
   engine.start();
   engine.triggerMiner('miner1');
 
-  await new Promise((r) => setTimeout(r, 50));
+  // miner держит минимум working ~2.7с (core/nodes/miner.ts MIN_WORK_MS, тот же
+  // принцип, что у silo LAUNCH_MS) — ждём с запасом.
+  await new Promise((r) => setTimeout(r, 3200));
   engine.stop();
 
   if (receivedByAssembler !== 'Content from URL') {

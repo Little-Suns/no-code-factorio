@@ -8,6 +8,14 @@ import { Handler, NodeCtx } from '../engine';
 import { Field } from './index';
 import { RECIPES } from './recipes';
 
+// Тот же принцип, что у silo (см. silo.ts LAUNCH_MS): work-анимация (16 кадров ×
+// animationSpeed 0.1 ≈ 2.7с) должна успеть отыграть. У assembler обычно достаточно
+// сетевой задержки реального LLM-вызова, но при моке (нет ключа, docs/07) или быстром
+// ответе working может смениться на ok быстрее одного кадра — анимация не отрисуется.
+// Доливаем ТОЛЬКО остаток до минимума, а не плоскую паузу — иначе уже медленный
+// реальный вызов ждал бы вхолостую ещё 2.7с сверху.
+const MIN_WORK_MS = 2700;
+
 export const assemblerSchema: Field[] = [
   {
     key: 'recipe',
@@ -60,11 +68,16 @@ export const assemblerHandler: Handler = async (ctx: NodeCtx) => {
     prompt = `Контекст из памяти (склад):\n${memoryContext}\n\nЗадача:\n${prompt}`;
   }
 
+  const started = Date.now();
   const response = await ctx.llm({
     system: system || undefined,
     prompt,
     tools: modules.length > 0 ? modules : undefined,
   });
+  const elapsed = Date.now() - started;
+  if (elapsed < MIN_WORK_MS) {
+    await new Promise((resolve) => setTimeout(resolve, MIN_WORK_MS - elapsed));
+  }
 
   return { out: response };
 };
