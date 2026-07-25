@@ -112,7 +112,7 @@ export function BlueprintPanel() {
         {blueprints.length === 0 ? (
           <div className="blueprint-empty">{t('bp.empty')}</div>
         ) : (
-          blueprints.map((bp) => (
+          blueprints.map((bp, i) => (
             <div key={bp.id} className={`blueprint-item ${stampBlueprintId === bp.id ? 'active' : ''}`}>
               <span className="blueprint-name" title={t('bp.entitiesCountTitle', { n: bp.entities.length })}>
                 {bp.name}
@@ -120,6 +120,7 @@ export function BlueprintPanel() {
               <div className="blueprint-item-actions">
                 <button
                   className="blueprint-icon-btn"
+                  data-tutorial={i === 0 ? 'blueprint-stamp' : undefined}
                   onClick={() => setStampBlueprint(stampBlueprintId === bp.id ? null : bp.id)}
                   title={t('bp.stampTitle')}
                 >

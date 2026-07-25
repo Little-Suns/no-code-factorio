@@ -8,8 +8,11 @@ import './Tutorial.css';
 /**
  * Обучалка первого запуска: пошаговый тур с подсветкой реальных элементов UI
  * (по атрибуту `data-tutorial="<id>"`, расставлен в Hotbar.tsx/TopBar.tsx).
- * Автостарт/флаг «видел» — state/tutorialPersist.ts. Шаги без `target` — по центру
- * экрана, без подсветки (вступление, общие советы). Первый шаг — выбор языка
+ * Автостарт/флаг «видел» — state/tutorialPersist.ts. Шаги без `target` — без
+ * подсветки и без затемнения фона (вступление, общие советы, а также rotate/move —
+ * у них цель это произвольный станок на канвасе, а не фиксированный DOM-узел), карточка
+ * в левом верхнем углу под TopBar, не по центру — иначе перекрывала бы канвас, где как раз
+ * нужно что-то сделать. Первый шаг — выбор языка
  * (не через t(), т.к. до выбора язык может быть неподходящим): дальше весь тур
  * идёт уже на выбранном.
  *
@@ -76,6 +79,11 @@ export function Tutorial() {
     entityCount: number;
   } | null>(null);
   const [stampSeen, setStampSeen] = useState(false);
+  // rotate/move: сработало хоть раз с момента входа на шаг, а не «отличается от
+  // снимка ПРЯМО СЕЙЧАС» — иначе поворот на 360° (4×R, обратно в исходный dir)
+  // или перемещение станка обратно на исходный тайл не засчитывались бы, хотя
+  // действие было выполнено.
+  const [changedSeen, setChangedSeen] = useState(false);
 
   useEffect(() => {
     snapshotRef.current = {
@@ -85,6 +93,7 @@ export function Tutorial() {
       entityCount: Object.keys(entities).length,
     };
     setStampSeen(false);
+    setChangedSeen(false);
     // eslint: намеренно только `step` — снимок берём исключительно при входе на шаг
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
@@ -93,17 +102,28 @@ export function Tutorial() {
     if (current?.practice === 'blueprintStamp' && stampBlueprintId) setStampSeen(true);
   }, [current?.practice, stampBlueprintId]);
 
+  useEffect(() => {
+    const practice = current?.practice;
+    const snap = snapshotRef.current;
+    if (!snap) return;
+    if (practice === 'rotate' && Object.entries(entities).some(([id, e]) => snap.dir[id] !== undefined && snap.dir[id] !== e.dir)) {
+      setChangedSeen(true);
+    } else if (
+      practice === 'move' &&
+      Object.entries(entities).some(([id, e]) => snap.pos[id] && (snap.pos[id].x !== e.pos.x || snap.pos[id].y !== e.pos.y))
+    ) {
+      setChangedSeen(true);
+    }
+  }, [entities, current?.practice]);
+
   const practiceDone = useMemo(() => {
     const practice = current?.practice;
     const snap = snapshotRef.current;
     if (!practice || !snap) return true;
     switch (practice) {
       case 'rotate':
-        return Object.entries(entities).some(([id, e]) => snap.dir[id] !== undefined && snap.dir[id] !== e.dir);
       case 'move':
-        return Object.entries(entities).some(
-          ([id, e]) => snap.pos[id] && (snap.pos[id].x !== e.pos.x || snap.pos[id].y !== e.pos.y)
-        );
+        return changedSeen;
       case 'connect':
         return buildGraph(entities).some((edge) => edge.to !== null);
       case 'blueprintSave':
@@ -114,7 +134,7 @@ export function Tutorial() {
         return true;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current?.practice, entities, blueprints, stampSeen]);
+  }, [current?.practice, entities, blueprints, stampSeen, changedSeen]);
 
   if (!active || !current) return null;
 
@@ -126,28 +146,42 @@ export function Tutorial() {
     setTutorialStep(step + 1);
   };
 
-  // «Дырка» подсветки: без цели — точка по центру экрана (box-shadow всё равно
-  // закрывает весь вьюпорт тёмным, дырка 0×0 незаметна).
+  // Обводка цели рисуется всегда, когда цель есть (даже на practice-шагах —
+  // manipulator/blueprints/blueprintStamp всё равно показывают, НА какую кнопку
+  // смотреть). А вот тёмный фон (box-shadow на 9999px) — только на чисто
+  // информационных шагах без practice: на practice-шагах нужно РАБОТАТЬ с
+  // канвасом/панелями у себя за спиной, full-screen затемнение вокруг цели
+  // всё равно прятало бы то, что реально нужно кликать (canvas при rotate/move,
+  // саму панель чертежей при blueprintSave/blueprintStamp). На шагах вообще без
+  // цели (welcome/place/config/done) раньше был баг похуже: дырка 0×0 в центре —
+  // экран темнел полностью без видимого просвета.
   const spot = rect
     ? { top: rect.top - SPOT_PAD, left: rect.left - SPOT_PAD, width: rect.width + SPOT_PAD * 2, height: rect.height + SPOT_PAD * 2 }
-    : { top: window.innerHeight / 2, left: window.innerWidth / 2, width: 0, height: 0 };
+    : null;
 
-  const cardStyle: CSSProperties = rect
+  // Карточка: рядом с целью — только на информационных шагах (там фон и так
+  // читаемый, есть смысл её приблизить к подсвеченной кнопке). На practice-шагах
+  // и шагах без цели — фиксированный угол под TopBar, не мёртвый центр экрана
+  // и не поверх канваса/панели, с которой нужно работать.
+  const cardNearTarget = !!rect && !current.practice;
+  const cardStyle: CSSProperties = cardNearTarget
     ? {
         top:
-          rect.top + rect.height + SPOT_PAD * 2 + CARD_HEIGHT_GUESS <= window.innerHeight
-            ? rect.top + rect.height + SPOT_PAD * 2
-            : Math.max(CARD_MARGIN, rect.top - SPOT_PAD * 2 - CARD_HEIGHT_GUESS),
-        left: Math.min(Math.max(CARD_MARGIN, rect.left), window.innerWidth - CARD_WIDTH - CARD_MARGIN),
+          rect!.top + rect!.height + SPOT_PAD * 2 + CARD_HEIGHT_GUESS <= window.innerHeight
+            ? rect!.top + rect!.height + SPOT_PAD * 2
+            : Math.max(CARD_MARGIN, rect!.top - SPOT_PAD * 2 - CARD_HEIGHT_GUESS),
+        left: Math.min(Math.max(CARD_MARGIN, rect!.left), window.innerWidth - CARD_WIDTH - CARD_MARGIN),
       }
-    : { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
+    : { top: 72, left: CARD_MARGIN };
 
   return (
     <div className={`tutorial-overlay ${current.practice ? 'practice' : ''}`}>
-      <div
-        className={`tutorial-spotlight ${rect ? '' : 'no-target'}`}
-        style={{ top: spot.top, left: spot.left, width: spot.width, height: spot.height }}
-      />
+      {spot && (
+        <div
+          className={`tutorial-spotlight ${current.practice ? 'no-dim' : ''}`}
+          style={{ top: spot.top, left: spot.left, width: spot.width, height: spot.height }}
+        />
+      )}
       <div className="tutorial-card" style={cardStyle}>
         <div className="tutorial-step-count">{step + 1} / {STEPS.length}</div>
         {current.lang ? (

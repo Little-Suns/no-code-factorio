@@ -21,8 +21,10 @@
   transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
 }
 
-.tutorial-spotlight.no-target {
-  outline: none;
+/* Practice-шаги: обводка цели остаётся (показывает, куда смотреть), а тёмный
+   фон убран — под ним канвас/панель, с которыми нужно реально работать. */
+.tutorial-spotlight.no-dim {
+  box-shadow: none;
 }
 
 .tutorial-card {

@@ -39,7 +39,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     practice: 'blueprintSave',
   },
   {
-    target: 'blueprints',
+    target: 'blueprint-stamp',
     titleKey: 'tutorial.step.blueprintStamp.title',
     descKey: 'tutorial.step.blueprintStamp.desc',
     practice: 'blueprintStamp',
