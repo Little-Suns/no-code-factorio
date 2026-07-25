@@ -39,6 +39,7 @@ export interface Store {
   removeMany: (entityIds: string[]) => void;
   rotate: (entityId: string) => void;
   move: (entityId: string, pos: Vec) => boolean;
+  moveMany: (positions: { id: string; pos: Vec }[]) => boolean;
   setConfig: (entityId: string, config: Record<string, unknown>) => void;
   select: (entityId: string | null) => void;
   setTool: (tool: MachineKind | null) => void;
@@ -186,6 +187,38 @@ export const useStore = create<Store>((set, get) => ({
     set((s) => ({
       entities: { ...s.entities, [entityId]: newEntity },
     }));
+    return true;
+  },
+
+  // Групповое перетаскивание рамкой выделения (pendingSelection) — атомарно, как
+  // placeMany: либо вся группа сдвигается, либо ничего (canPlaceBlueprint уже
+  // проверяет и коллизии с миром, и между собой — но между собой чистая трансляция
+  // их и так не меняет, реальная проверка тут только против остального мира).
+  moveMany: (positions: { id: string; pos: Vec }[]) => {
+    const state = get();
+    if (state.running) {
+      get().toast(t('toast.stopFactory', state.locale));
+      return false;
+    }
+    const idSet = new Set(positions.map((p) => p.id));
+    const newEntities: Entity[] = [];
+    for (const p of positions) {
+      const entity = state.entities[p.id];
+      if (!entity) return false;
+      newEntities.push({ ...entity, pos: p.pos });
+    }
+    const others: Record<string, Entity> = {};
+    for (const [id, entity] of Object.entries(state.entities)) {
+      if (!idSet.has(id)) others[id] = entity;
+    }
+    if (!canPlaceBlueprint(others, newEntities)) {
+      return false;
+    }
+    set((s) => {
+      const entities = { ...s.entities };
+      for (const entity of newEntities) entities[entity.id] = entity;
+      return { entities };
+    });
     return true;
   },
 

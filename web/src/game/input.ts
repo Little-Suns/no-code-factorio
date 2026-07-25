@@ -42,6 +42,11 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
   // не «прыгал» так, чтобы pos совпал с курсором, а сохранял исходную точку хвата.
   let movingEntityId: string | null = null;
   let moveGrabOffset: Vec = { x: 0, y: 0 };
+  // Групповой драг: если клик пришёлся на станок из уже выделенной рамкой группы
+  // (store.pendingSelection) — тащим всю группу, сохраняя относительное расположение.
+  let movingGroupIds: string[] = [];
+  let groupMoveAnchor: Vec = { x: 0, y: 0 };
+  let groupMoveStartPositions: Record<string, Vec> = {};
 
   // E4: выделение рамкой — просто зажим+растягивание ЛКМ без инструмента/чертежа на кисти
   let selectionBox: Graphics | null = null;
@@ -317,6 +322,27 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
   canvas.addEventListener('pointermove', (e: PointerEvent) => {
     lastMouse = { x: e.clientX, y: e.clientY };
     const store = useStore.getState();
+    // Групповое перетаскивание — то же «упирается в занятое», но атомарно для всей
+    // группы (moveMany/canPlaceBlueprint), абсолютная цель всегда от исходных позиций
+    // (не накопление за кадр), чтобы не было дрейфа при отклонённых кадрах.
+    if (movingGroupIds.length > 0) {
+      const raw = toTile(e.clientX, e.clientY);
+      const delta = { x: raw.x - groupMoveAnchor.x, y: raw.y - groupMoveAnchor.y };
+      if (delta.x !== 0 || delta.y !== 0) {
+        const positions = movingGroupIds
+          .filter((id) => groupMoveStartPositions[id])
+          .map((id) => ({
+            id,
+            pos: { x: groupMoveStartPositions[id].x + delta.x, y: groupMoveStartPositions[id].y + delta.y },
+          }));
+        store.moveMany(positions);
+      }
+      // Рамка подсветки должна ехать вместе с группой — пересчитываем по свежим
+      // позициям из стора (moveMany мог отклонить кадр — тогда останется на месте).
+      const fresh = useStore.getState();
+      updateEntityHighlight(movingGroupIds.map((id) => fresh.entities[id]).filter((e): e is Entity => !!e));
+      return;
+    }
     // Перетаскивание станка — двигаем сразу в сторе (как rotate: canPlace не пускает
     // в занятую клетку, поэтому лишней проверки/ghost не нужно, драг просто «упирается»).
     if (movingEntityId) {
@@ -345,11 +371,22 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
       const store = useStore.getState();
       // Новый драг рамкой — сбросить подсветку прошлого выделения, если она ещё висела
       if (!store.selectedTool && !store.stampBlueprintId) {
-        clearEntityHighlight();
-        // Клик по существующему станку без инструмента на кисти — начало драга
-        // перемещения (баг 16), а не рамки выделения. Пока работает — не тащим.
-        if (!store.running) {
-          const hitId = findEntityAtTile(dragStart);
+        const hitId = !store.running ? findEntityAtTile(dragStart) : null;
+        const group = store.pendingSelection;
+        if (hitId && group && group.some((ent) => ent.id === hitId)) {
+          // Клик по станку из уже выделенной рамкой группы — тащим всю группу целиком,
+          // подсветку не гасим (иначе непонятно, что именно двигается).
+          movingGroupIds = group.map((ent) => ent.id);
+          groupMoveAnchor = dragStart;
+          groupMoveStartPositions = {};
+          for (const id of movingGroupIds) {
+            const entity = store.entities[id];
+            if (entity) groupMoveStartPositions[id] = entity.pos;
+          }
+        } else {
+          clearEntityHighlight();
+          // Клик по существующему станку без инструмента на кисти — начало драга
+          // перемещения (баг 16), а не рамки выделения. Пока работает — не тащим.
           if (hitId) {
             const entity = store.entities[hitId];
             movingEntityId = hitId;
@@ -367,6 +404,17 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
 
     if (e.button === 0 && dragStart) {
       const dragEnd = toTile(e.clientX, e.clientY);
+
+      if (movingGroupIds.length > 0) {
+        // Подсветку/pendingSelection не трогаем — группа остаётся выделенной для
+        // повторного перетаскивания или сохранения в чертёж.
+        movingGroupIds = [];
+        groupMoveStartPositions = {};
+        dragStart = null;
+        leftDownPx = null;
+        updateGhost();
+        return;
+      }
 
       if (movingEntityId) {
         // Клик без движения тоже проходит через сюда (target = pos) — то же
@@ -469,6 +517,8 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
       leftDownPx = null;
       movingEntityId = null;
       moveGrabOffset = { x: 0, y: 0 };
+      movingGroupIds = [];
+      groupMoveStartPositions = {};
       clearSelectionBox();
       clearEntityHighlight();
       updateGhost();
