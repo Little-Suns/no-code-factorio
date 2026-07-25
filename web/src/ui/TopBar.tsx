@@ -2,11 +2,13 @@ import React, { useRef, useEffect } from 'react';
 import { useStore } from '../state/store';
 import { startRun, stopRun } from '../state/runtime';
 import type { Entity } from '../core/types';
+import { useT, LOCALES, LOCALE_NAMES } from '../i18n';
 import './TopBar.css';
 
 const ENERGY_SEGMENTS = 10;
 
 export function TopBar() {
+  const t = useT();
   const running = useStore((state) => state.running);
   const entities = useStore((state) => state.entities);
   const loadWorld = useStore((state) => state.loadWorld);
@@ -18,7 +20,14 @@ export function TopBar() {
   const logsPanelOpen = useStore((state) => state.logsPanelOpen);
   const setLogsPanelOpen = useStore((state) => state.setLogsPanelOpen);
   const logsUnread = useStore((state) => state.logsUnread);
+  const locale = useStore((state) => state.locale);
+  const setLocale = useStore((state) => state.setLocale);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCycleLocale = () => {
+    const idx = LOCALES.indexOf(locale);
+    setLocale(LOCALES[(idx + 1) % LOCALES.length]);
+  };
 
   const entityCount = Object.keys(entities).length;
   const litSegments = energy ? Math.round((energy.charge / energy.capacity) * ENERGY_SEGMENTS) : 0;
@@ -79,12 +88,12 @@ export function TopBar() {
         const world = JSON.parse(content);
         if (world.version === 1 && Array.isArray(world.entities)) {
           loadWorld(world.entities);
-          useStore.getState().toast('Фабрика загружена');
+          useStore.getState().toast(t('toast.worldLoaded'));
         } else {
-          useStore.getState().toast('Некорректный формат файла');
+          useStore.getState().toast(t('toast.invalidFileFormat'));
         }
       } catch (err) {
-        useStore.getState().toast('Ошибка при загрузке файла');
+        useStore.getState().toast(t('toast.fileLoadError'));
       }
     };
     reader.readAsText(file);
@@ -99,14 +108,14 @@ export function TopBar() {
     try {
       const res = await fetch('/demo.json');
       if (!res.ok) {
-        useStore.getState().toast('Не удалось загрузить демо');
+        useStore.getState().toast(t('toast.demoLoadFailed'));
         return;
       }
       const world = await res.json();
       loadWorld(world.entities);
-      useStore.getState().toast('Демо-фабрика загружена');
+      useStore.getState().toast(t('toast.demoLoaded'));
     } catch (err) {
-      useStore.getState().toast('Ошибка при загрузке демо');
+      useStore.getState().toast(t('toast.demoLoadError'));
     }
   };
 
@@ -116,13 +125,13 @@ export function TopBar() {
         <button
           className={`run-button ${running ? 'running' : ''}`}
           onClick={handleRun}
-          title="Space"
+          title={t('top.runTitle')}
         >
-          {running ? '⏹ Stop' : '▶ Run'}
+          {running ? t('top.stop') : t('top.run')}
         </button>
 
-        <span className="entity-counter" title={`Entities: ${entityCount}`}>
-          <span>ENTITIES</span>
+        <span className="entity-counter" title={`${t('top.entities')}: ${entityCount}`}>
+          <span>{t('top.entities')}</span>
           <span className="entity-counter-value">{entityCount}</span>
         </span>
 
@@ -131,7 +140,7 @@ export function TopBar() {
         {energy && (
           <div
             className="energy-bar"
-            title={`Энергия: ${Math.round(energy.charge)} / ${Math.round(energy.capacity)}`}
+            title={t('top.energyTitle', { charge: Math.round(energy.charge), capacity: Math.round(energy.capacity) })}
           >
             <span className="energy-bar-icon">⚡</span>
             <div className="energy-bar-track">
@@ -144,39 +153,46 @@ export function TopBar() {
       </div>
 
       <div className="top-bar-center">
-        <span className="top-bar-title">no-code-factorio</span>
+        <span className="top-bar-title">{t('top.title')}</span>
       </div>
 
       <div className="top-bar-right">
         <button
+          className="icon-button"
+          onClick={handleCycleLocale}
+          title={t('top.langTitle')}
+        >
+          🌐 {LOCALE_NAMES[locale]}
+        </button>
+        <button
           className={`icon-button ${logsPanelOpen ? 'active' : ''} ${logsUnread ? 'unread' : ''}`}
           onClick={() => setLogsPanelOpen(!logsPanelOpen)}
-          title="Показать/скрыть логи"
+          title={t('top.logsTitle')}
         >
-          ⚠ Логи
+          ⚠ {t('top.logs')}
         </button>
         <button
           className={`icon-button ${blueprintPanelOpen ? 'active' : ''}`}
           onClick={() => setBlueprintPanelOpen(!blueprintPanelOpen)}
-          title="Показать/скрыть панель чертежей (B)"
+          title={t('top.blueprintsTitle')}
         >
-          ▤ Чертежи
+          ▤ {t('top.blueprints')}
         </button>
         <button
           className={`icon-button ${resultPanelOpen ? 'active' : ''}`}
           onClick={() => setResultPanelOpen(!resultPanelOpen)}
-          title="Показать/скрыть панель результатов"
+          title={t('top.resultsTitle')}
         >
-          ▥ Результаты
+          ▥ {t('top.results')}
         </button>
-        <button className="icon-button" onClick={handleExport} title="Export (JSON)">
-          ↓ Export
+        <button className="icon-button" onClick={handleExport} title={t('top.exportTitle')}>
+          ↓ {t('top.export')}
         </button>
-        <button className="icon-button" onClick={handleImport} title="Import (JSON)">
-          ↑ Import
+        <button className="icon-button" onClick={handleImport} title={t('top.importTitle')}>
+          ↑ {t('top.import')}
         </button>
-        <button className="icon-button" onClick={handleLoadDemo} title="Load demo">
-          🎲 Demo
+        <button className="icon-button" onClick={handleLoadDemo} title={t('top.demoTitle')}>
+          🎲 {t('top.demo')}
         </button>
 
         <input

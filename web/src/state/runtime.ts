@@ -6,6 +6,7 @@ import { GameTransport, consumePacket, dropPacket } from '../game/packets';
 import { rocketLaunch } from '../game/fx';
 import { triggerManipulatorGrab, triggerManipulatorRelease } from '../game/machines';
 import { useStore } from './store';
+import { t, translateEngineError } from '../i18n/dictionaries';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? 'http://localhost:8787';
 
@@ -161,7 +162,7 @@ function setupEventHandler() {
         // error → лом+дым; dead-end/ttl → падение с fade (тост даёт node-status error)
         dropPacket(event.packetId, event.reason);
         if (event.reason !== 'error') {
-          store.toast(`✕ пакет упал (${event.reason})`);
+          store.toast(t('toast.packetDropped', store.locale, { reason: event.reason }));
           console.log('[drop]', event.packetId, event.reason);
         }
         break;
@@ -170,7 +171,8 @@ function setupEventHandler() {
         store.setStatus(event.nodeId, event.status, event.error);
         if (event.status === 'error' && event.error) {
           const kind = store.entities[event.nodeId]?.kind ?? '?';
-          store.toast(`⚠ ${kind} #${event.nodeId}: ${event.error}`);
+          const errorText = translateEngineError(event.error, store.locale);
+          store.toast(`⚠ ${kind} #${event.nodeId}: ${errorText}`);
           console.warn('[node error]', kind, event.nodeId, event.error);
         }
         break;
@@ -230,7 +232,7 @@ export async function startRun(): Promise<void> {
     // Проверка: есть ли хотя бы одна шахта
     const hasAnyMiner = Object.values(store.entities).some((e) => e.kind === 'miner');
     if (!hasAnyMiner) {
-      store.toast('Поставь шахту');
+      store.toast(t('toast.placeMiner', store.locale));
       return;
     }
 

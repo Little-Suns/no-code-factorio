@@ -4,6 +4,7 @@ import { canPlace } from '../core/grid';
 import { NODE_DEFS } from '../core/nodes';
 import type { Blueprint } from '../core/blueprint';
 import { canPlaceBlueprint } from '../core/blueprint';
+import { t, Locale } from '../i18n/dictionaries';
 
 export interface Store {
   entities: Record<string, Entity>;
@@ -23,6 +24,7 @@ export interface Store {
   resultPanelOpen: boolean; // видимость дока результатов — переключается кнопкой в TopBar
   logsPanelOpen: boolean; // видимость панели логов — переключается кнопкой в TopBar
   logsUnread: boolean; // новый лог пришёл, пока панель закрыта — «загорается» кнопка в TopBar
+  locale: Locale; // язык UI-оболочки (i18n/) — персистится отдельно, state/localePersist.ts
   // actions
   place: (entity: Entity) => boolean;
   remove: (entityId: string) => void;
@@ -49,6 +51,7 @@ export interface Store {
   setLogsPanelOpen: (open: boolean) => void;
   clearLogs: () => void;
   loadBlueprints: (blueprints: Blueprint[]) => void;
+  setLocale: (locale: Locale) => void;
 }
 
 export const useStore = create<Store>((set, get) => ({
@@ -67,11 +70,12 @@ export const useStore = create<Store>((set, get) => ({
   resultPanelOpen: false,
   logsPanelOpen: false,
   logsUnread: false,
+  locale: 'en',
 
   place: (entity: Entity) => {
     const state = get();
     if (state.running) {
-      get().toast('Останови фабрику');
+      get().toast(t('toast.stopFactory', state.locale));
       return false;
     }
     if (!canPlace(state.entities, entity)) {
@@ -101,7 +105,7 @@ export const useStore = create<Store>((set, get) => ({
   remove: (entityId: string) => {
     const state = get();
     if (state.running) {
-      get().toast('Останови фабрику');
+      get().toast(t('toast.stopFactory', state.locale));
       return;
     }
     set((s) => {
@@ -119,7 +123,7 @@ export const useStore = create<Store>((set, get) => ({
   removeMany: (entityIds: string[]) => {
     const state = get();
     if (state.running) {
-      get().toast('Останови фабрику');
+      get().toast(t('toast.stopFactory', state.locale));
       return;
     }
     const idSet = new Set(entityIds);
@@ -234,7 +238,7 @@ export const useStore = create<Store>((set, get) => ({
   placeMany: (entities: Entity[]) => {
     const state = get();
     if (state.running) {
-      get().toast('Останови фабрику');
+      get().toast(t('toast.stopFactory', state.locale));
       return false;
     }
     if (!canPlaceBlueprint(state.entities, entities)) {
@@ -287,5 +291,9 @@ export const useStore = create<Store>((set, get) => ({
 
   loadBlueprints: (blueprints: Blueprint[]) => {
     set({ blueprints });
+  },
+
+  setLocale: (locale: Locale) => {
+    set({ locale });
   },
 }));

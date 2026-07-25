@@ -1,8 +1,10 @@
 import React from 'react';
 import { useStore } from '../state/store';
+import { useT } from '../i18n';
 import './LogsPanel.css';
 
 export function LogsPanel() {
+  const t = useT();
   const isOpen = useStore((state) => state.logsPanelOpen);
   const setIsOpen = useStore((state) => state.setLogsPanelOpen);
   const logsUnread = useStore((state) => state.logsUnread);
@@ -14,9 +16,9 @@ export function LogsPanel() {
       <button
         className={`logs-reopen ${logsUnread ? 'unread' : ''}`}
         onClick={() => setIsOpen(true)}
-        title="Показать логи"
+        title={t('logs.reopenTitle')}
       >
-        &#9888; ЛОГИ {logsUnread ? '●' : ''}
+        &#9888; {t('logs.reopenLabel')} {logsUnread ? '●' : ''}
       </button>
     );
   }
@@ -26,12 +28,12 @@ export function LogsPanel() {
   return (
     <div className="logs-panel">
       <div className="logs-header">
-        <h3 className="logs-title">Логи</h3>
+        <h3 className="logs-title">{t('logs.title')}</h3>
         <div className="logs-controls">
-          <button className="logs-clear" onClick={clearLogs} disabled={items.length === 0} title="Очистить логи">
-            Clear
+          <button className="logs-clear" onClick={clearLogs} disabled={items.length === 0} title={t('logs.clearTitle')}>
+            {t('logs.clear')}
           </button>
-          <button className="logs-close" onClick={() => setIsOpen(false)} title="Свернуть панель логов">
+          <button className="logs-close" onClick={() => setIsOpen(false)} title={t('logs.collapseTitle')}>
             &#9652;
           </button>
         </div>
@@ -39,7 +41,7 @@ export function LogsPanel() {
 
       <div className="logs-content">
         {items.length === 0 ? (
-          <div className="logs-empty">Пока пусто</div>
+          <div className="logs-empty">{t('logs.empty')}</div>
         ) : (
           <div className="logs-list">
             {items.map((t) => (

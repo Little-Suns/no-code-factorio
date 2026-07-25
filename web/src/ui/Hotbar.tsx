@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { useStore } from '../state/store';
 import type { MachineKind } from '../core/types';
-import { ALL_TOOLS, HOTKEYS, TOOL_DESCRIPTIONS, TOOL_ICONS, TOOL_NAMES } from './hotbarData';
+import { ALL_TOOLS, HOTKEYS, TOOL_DESCRIPTIONS, TOOL_ICONS } from './hotbarData';
+import { useT } from '../i18n';
 import './Hotbar.css';
 
 // Явная аннотация обязательна: без неё Object.fromEntries выводит тип со значением
@@ -12,7 +13,27 @@ const KEY_TO_TOOL: Partial<Record<string, MachineKind>> = Object.fromEntries(
   ALL_TOOLS.map((tool) => [HOTKEYS[tool], tool])
 );
 
+// Заголовки станков берём из общего i18n-словаря (ключ node.<kind>.title) — тот же
+// текст, что и в заголовке ConfigPanel, чтобы не дублировать перевод в двух местах.
+// TOOL_DESCRIPTIONS (hotbarData.tsx) пока не переведены — короткое описание роли
+// станка остаётся на русском во всех локалях, это отдельная задача на будущее.
+const TOOL_NAME_KEYS: Record<MachineKind, string> = {
+  belt: 'node.belt.title',
+  miner: 'node.miner.title',
+  assembler: 'node.assembler.title',
+  splitter: 'node.splitter.title',
+  mixer: 'node.mixer.title',
+  silo: 'node.silo.title',
+  furnace: 'node.furnace.title',
+  chest: 'node.chest.title',
+  lab: 'node.lab.title',
+  accumulator: 'node.accumulator.title',
+  webhook: 'node.webhook.title',
+  manipulator: 'node.manipulator.title',
+};
+
 export function Hotbar() {
+  const t = useT();
   const selectedTool = useStore((state) => state.selectedTool);
   const setTool = useStore((state) => state.setTool);
 
@@ -42,8 +63,8 @@ export function Hotbar() {
           key={tool}
           className={`hotbar-slot ${selectedTool === tool ? 'active' : ''}`}
           onClick={() => setTool(tool)}
-          title={`${TOOL_NAMES[tool]} (${HOTKEYS[tool]}) — ${TOOL_DESCRIPTIONS[tool]}`}
-          aria-label={`${TOOL_NAMES[tool]} (${HOTKEYS[tool]})`}
+          title={`${t(TOOL_NAME_KEYS[tool])} (${HOTKEYS[tool]}) — ${TOOL_DESCRIPTIONS[tool]}`}
+          aria-label={`${t(TOOL_NAME_KEYS[tool])} (${HOTKEYS[tool]})`}
         >
           <div className="hotbar-icon" data-tool={tool}>
             {TOOL_ICONS[tool]}
