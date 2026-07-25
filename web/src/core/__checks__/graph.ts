@@ -181,6 +181,13 @@ console.log('Test 3: belt ring does not hang');
   // Шахта 2x2 должна иметь 2 edge (по одному от каждого FRONT порта)
   const minerEdges = edges.filter((e) => e.from === 'miner3');
   assert(minerEdges.length === 2, `Expected 2 edges from miner3 (2x2 has 2 ports), got ${minerEdges.length}`);
+
+  // Кольцо помечено loopFrom и to=null → движок гоняет предмет по петле, а не дропает
+  const ringEdge = minerEdges.find((e) => e.loopFrom !== undefined);
+  assert(ringEdge !== undefined, 'Ring edge should have loopFrom set');
+  assert(ringEdge!.to === null, `Ring edge should be dead-end (to=null), got ${ringEdge!.to}`);
+  assert(ringEdge!.loopFrom! >= 0 && ringEdge!.loopFrom! < ringEdge!.path.length,
+    `loopFrom should index into path, got ${ringEdge!.loopFrom} of ${ringEdge!.path.length}`);
 }
 console.log('✓ Test 3 OK');
 

@@ -1028,6 +1028,50 @@ async function testMinerUrlThroughSpawnPacket() {
 }
 
 /**
+ * AC14: кольцо лент (edge.to=null + loopFrom) — предмет гоняется по петле, НЕ дропается.
+ */
+async function testBeltLoop() {
+  const events: EngineEvent[] = [];
+  let moveCount = 0;
+  const countingTransport: Transport = {
+    move: async () => { moveCount++; await new Promise((r) => setTimeout(r, 10)); },
+    clear: () => {},
+  };
+
+  const entities: Record<string, Entity> = {
+    miner1: { id: 'miner1', kind: 'miner', pos: { x: 0, y: 0 }, dir: 0, config: { mode: 'text', text: 'x' } },
+  };
+  // Кольцо: to=null, но loopFrom задан → движок зацикливает
+  const edges: Edge[] = [
+    {
+      id: 'e1:out:0',
+      from: 'miner1',
+      branch: 'out',
+      to: null,
+      path: [{ x: 1, y: 0 }, { x: 2, y: 0 }, { x: 2, y: 1 }, { x: 1, y: 1 }],
+      loopFrom: 0,
+    },
+  ];
+
+  const engine = new Engine(entities, edges, countingTransport, (e) => events.push(e), {});
+  engine.start();
+  engine.triggerMiner('miner1');
+
+  await new Promise((r) => setTimeout(r, 80)); // несколько кругов
+  engine.stop();
+  await new Promise((r) => setTimeout(r, 20));
+
+  const drops = events.filter((e) => e.t === 'packet-drop' && e.reason === 'dead-end');
+  if (drops.length > 0) {
+    throw new Error('AC14: зацикленный предмет НЕ должен дропаться как dead-end');
+  }
+  if (moveCount < 2) {
+    throw new Error(`AC14: предмет должен гоняться по петле (несколько move), было ${moveCount}`);
+  }
+  console.log(`✓ AC14: belt loop — предмет циркулирует, не дропается (${moveCount} кругов)`);
+}
+
+/**
  * Запуск всех проверок
  */
 (async () => {
@@ -1045,8 +1089,9 @@ async function testMinerUrlThroughSpawnPacket() {
     await testAssemblerMemorySnapshot();
     await testEnergyCapacityInsufficient();
     await testMinerUrlThroughSpawnPacket();
+    await testBeltLoop();
 
-    console.log('\n✅ engine checks OK — все 13 AC пройдены');
+    console.log('\n✅ engine checks OK — все 14 AC пройдены');
   } catch (e) {
     console.error('\n❌ engine checks FAILED:', e);
     throw e;

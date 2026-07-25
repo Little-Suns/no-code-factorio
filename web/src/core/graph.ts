@@ -39,6 +39,7 @@ export function buildGraph(entities: Record<string, Entity>): Edge[] {
           branch: port.branch,
           to: traceResult.to,
           path: traceResult.path,
+          loopFrom: traceResult.loopFrom,
         };
         edges.push(edge);
       }
@@ -51,6 +52,7 @@ export function buildGraph(entities: Record<string, Entity>): Edge[] {
 interface TraceResult {
   to: string | null;
   path: Vec[];
+  loopFrom?: number; // индекс тайла в path, на котором лента замкнулась в кольцо
 }
 
 /**
@@ -77,9 +79,11 @@ function trace(
   while (true) {
     const key = `${cur.x},${cur.y}`;
 
-    // Если уже посетили этот тайл — кольцо
+    // Если уже посетили этот тайл — кольцо: возвращаем индекс, с которого начинается цикл,
+    // чтобы движок гонял предмет по петле, а не дропал в тупик (docs/03).
     if (visited.has(key)) {
-      break;
+      const loopFrom = path.findIndex((p) => p.x === cur.x && p.y === cur.y);
+      return { to: null, path, loopFrom: loopFrom >= 0 ? loopFrom : undefined };
     }
 
     // Если достигли максимальной длины пути

@@ -45,6 +45,8 @@ export interface Edge {
   from: string; branch: Branch;
   to: string | null;           // null = тупик (пакет упадёт в конце пути)
   path: Vec[];                 // тайлы лент от выхода к входу
+  loopFrom?: number;           // индекс в path, с которого лента образует кольцо (to=null,
+                               // но предмет не дропается — гоняется по циклу, Factorio-петля)
 }
 
 export type NodeStatus = 'idle' | 'working' | 'ok' | 'error';
