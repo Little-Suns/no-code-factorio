@@ -2,105 +2,87 @@
   "version": 1,
   "entities": [
     {
-      "id": "m1abcd01",
+      "id": "nr_miner",
       "kind": "miner",
       "pos": {
         "x": 0,
-        "y": 5
+        "y": 0
       },
       "dir": 1,
       "config": {
         "mode": "text",
-        "text": "Great product! Fast delivery and excellent customer service.",
-        "intervalSec": 4
+        "text": "<p>Breaking: <b>local bakery</b> wins award for best sourdough in the city, customers say.</p>",
+        "intervalSec": 6
       }
     },
     {
-      "id": "b1",
+      "id": "nr_furnace_g0",
       "kind": "belt",
       "pos": {
         "x": 2,
-        "y": 5
+        "y": 0
       },
       "dir": 1,
       "config": {}
     },
     {
-      "id": "b2",
+      "id": "nr_furnace_g1",
       "kind": "belt",
       "pos": {
         "x": 3,
-        "y": 5
+        "y": 0
       },
       "dir": 1,
       "config": {}
     },
     {
-      "id": "b3",
-      "kind": "belt",
-      "pos": {
-        "x": 4,
-        "y": 5
-      },
-      "dir": 1,
-      "config": {}
-    },
-    {
-      "id": "b4",
+      "id": "nr_furnace_m",
       "kind": "manipulator",
       "pos": {
-        "x": 5,
-        "y": 5
-      },
-      "dir": 1,
-      "config": {}
-    },
-    {
-      "id": "b5",
-      "kind": "belt",
-      "pos": {
-        "x": 2,
-        "y": 6
-      },
-      "dir": 1,
-      "config": {}
-    },
-    {
-      "id": "b6",
-      "kind": "belt",
-      "pos": {
-        "x": 3,
-        "y": 6
-      },
-      "dir": 1,
-      "config": {}
-    },
-    {
-      "id": "b7",
-      "kind": "belt",
-      "pos": {
         "x": 4,
-        "y": 6
+        "y": 0
       },
       "dir": 1,
       "config": {}
     },
     {
-      "id": "b8",
+      "id": "nr_furnace",
+      "kind": "furnace",
+      "pos": {
+        "x": 5,
+        "y": 0
+      },
+      "dir": 1,
+      "config": {
+        "code": "return String(data).replace(/<[^>]+>/g, '');"
+      }
+    },
+    {
+      "id": "nr_asm1_g0",
+      "kind": "belt",
+      "pos": {
+        "x": 7,
+        "y": 0
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "nr_asm1_m",
       "kind": "manipulator",
       "pos": {
-        "x": 5,
-        "y": 6
+        "x": 8,
+        "y": 0
       },
       "dir": 1,
       "config": {}
     },
     {
-      "id": "a1abcd02",
+      "id": "nr_asm1",
       "kind": "assembler",
       "pos": {
-        "x": 6,
-        "y": 5
+        "x": 9,
+        "y": 0
       },
       "dir": 1,
       "config": {
@@ -108,278 +90,590 @@
       }
     },
     {
-      "id": "bbridge",
-      "kind": "belt",
-      "pos": {
-        "x": 8,
-        "y": 5
-      },
-      "dir": 1,
-      "config": {}
-    },
-    {
-      "id": "b9",
-      "kind": "belt",
-      "pos": {
-        "x": 9,
-        "y": 5
-      },
-      "dir": 1,
-      "config": {}
-    },
-    {
-      "id": "b10",
-      "kind": "belt",
-      "pos": {
-        "x": 10,
-        "y": 5
-      },
-      "dir": 1,
-      "config": {}
-    },
-    {
-      "id": "b11",
+      "id": "nr_lab_g0",
       "kind": "belt",
       "pos": {
         "x": 11,
-        "y": 5
+        "y": 0
       },
       "dir": 1,
       "config": {}
     },
     {
-      "id": "b12",
+      "id": "nr_lab_m",
       "kind": "manipulator",
       "pos": {
         "x": 12,
-        "y": 5
+        "y": 0
       },
       "dir": 1,
       "config": {}
     },
     {
-      "id": "s1abcd03",
-      "kind": "silo",
+      "id": "nr_lab",
+      "kind": "lab",
       "pos": {
         "x": 13,
-        "y": 5
-      },
-      "dir": 1,
-      "config": {}
-    },
-    {
-      "id": "m2demo01",
-      "kind": "miner",
-      "pos": {
-        "x": 0,
-        "y": 9
+        "y": 0
       },
       "dir": 1,
       "config": {
-        "mode": "text",
-        "text": "Доставка была быстрой и упаковка аккуратная, но сам товар пришёл с браком и деньги за возврат до сих пор не вернули.",
-        "intervalSec": 5
+        "criteria": "Коротко, по делу, без канцелярита, максимум 3 предложения"
       }
     },
     {
-      "id": "c1",
+      "id": "nr_rw0",
       "kind": "belt",
       "pos": {
-        "x": 2,
-        "y": 9
+        "x": 15,
+        "y": 1
       },
-      "dir": 1,
+      "dir": 2,
       "config": {}
     },
     {
-      "id": "c2",
+      "id": "nr_rw1",
       "kind": "belt",
       "pos": {
-        "x": 3,
-        "y": 9
+        "x": 15,
+        "y": 2
       },
-      "dir": 1,
+      "dir": 2,
       "config": {}
     },
     {
-      "id": "c3",
+      "id": "nr_rw2",
       "kind": "belt",
       "pos": {
-        "x": 4,
-        "y": 9
+        "x": 15,
+        "y": 3
       },
-      "dir": 1,
+      "dir": 3,
       "config": {}
     },
     {
-      "id": "c4",
+      "id": "nr_rw3",
       "kind": "belt",
       "pos": {
-        "x": 5,
-        "y": 9
+        "x": 14,
+        "y": 3
       },
-      "dir": 1,
+      "dir": 3,
       "config": {}
     },
     {
-      "id": "c5",
+      "id": "nr_rw4",
+      "kind": "belt",
+      "pos": {
+        "x": 13,
+        "y": 3
+      },
+      "dir": 3,
+      "config": {}
+    },
+    {
+      "id": "nr_rw5",
+      "kind": "belt",
+      "pos": {
+        "x": 12,
+        "y": 3
+      },
+      "dir": 3,
+      "config": {}
+    },
+    {
+      "id": "nr_rw6",
+      "kind": "belt",
+      "pos": {
+        "x": 11,
+        "y": 3
+      },
+      "dir": 3,
+      "config": {}
+    },
+    {
+      "id": "nr_rw7",
+      "kind": "belt",
+      "pos": {
+        "x": 10,
+        "y": 3
+      },
+      "dir": 3,
+      "config": {}
+    },
+    {
+      "id": "nr_rw8",
+      "kind": "belt",
+      "pos": {
+        "x": 9,
+        "y": 3
+      },
+      "dir": 3,
+      "config": {}
+    },
+    {
+      "id": "nr_rw9",
+      "kind": "belt",
+      "pos": {
+        "x": 8,
+        "y": 3
+      },
+      "dir": 0,
+      "config": {}
+    },
+    {
+      "id": "nr_rw10",
+      "kind": "belt",
+      "pos": {
+        "x": 8,
+        "y": 2
+      },
+      "dir": 0,
+      "config": {}
+    },
+    {
+      "id": "nr_rw_manip",
       "kind": "manipulator",
       "pos": {
-        "x": 6,
-        "y": 9
+        "x": 8,
+        "y": 1
       },
       "dir": 1,
       "config": {}
     },
     {
-      "id": "c1b",
+      "id": "nr_dup_g0",
       "kind": "belt",
       "pos": {
-        "x": 2,
-        "y": 10
+        "x": 15,
+        "y": 0
       },
       "dir": 1,
       "config": {}
     },
     {
-      "id": "c2b",
-      "kind": "belt",
-      "pos": {
-        "x": 3,
-        "y": 10
-      },
-      "dir": 1,
-      "config": {}
-    },
-    {
-      "id": "c3b",
-      "kind": "belt",
-      "pos": {
-        "x": 4,
-        "y": 10
-      },
-      "dir": 1,
-      "config": {}
-    },
-    {
-      "id": "c4b",
-      "kind": "belt",
-      "pos": {
-        "x": 5,
-        "y": 10
-      },
-      "dir": 1,
-      "config": {}
-    },
-    {
-      "id": "c5b",
+      "id": "nr_dup_m",
       "kind": "manipulator",
       "pos": {
-        "x": 6,
-        "y": 10
+        "x": 16,
+        "y": 0
       },
       "dir": 1,
       "config": {}
     },
     {
-      "id": "sp1demo",
+      "id": "nr_dup",
       "kind": "splitter",
       "pos": {
-        "x": 7,
-        "y": 9
+        "x": 17,
+        "y": 0
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "nr_copy_g0",
+      "kind": "belt",
+      "pos": {
+        "x": 19,
+        "y": 0
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "nr_copy_m",
+      "kind": "manipulator",
+      "pos": {
+        "x": 20,
+        "y": 0
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "nr_copy",
+      "kind": "assembler",
+      "pos": {
+        "x": 21,
+        "y": 0
+      },
+      "dir": 1,
+      "config": {
+        "recipe": "copywriter"
+      }
+    },
+    {
+      "id": "nr_trlane0",
+      "kind": "belt",
+      "pos": {
+        "x": 19,
+        "y": 1
+      },
+      "dir": 2,
+      "config": {}
+    },
+    {
+      "id": "nr_trlane1",
+      "kind": "belt",
+      "pos": {
+        "x": 19,
+        "y": 2
+      },
+      "dir": 2,
+      "config": {}
+    },
+    {
+      "id": "nr_trlane2",
+      "kind": "belt",
+      "pos": {
+        "x": 19,
+        "y": 3
+      },
+      "dir": 2,
+      "config": {}
+    },
+    {
+      "id": "nr_translate_g0",
+      "kind": "belt",
+      "pos": {
+        "x": 19,
+        "y": 4
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "nr_translate_m",
+      "kind": "manipulator",
+      "pos": {
+        "x": 20,
+        "y": 4
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "nr_translate",
+      "kind": "assembler",
+      "pos": {
+        "x": 21,
+        "y": 4
+      },
+      "dir": 1,
+      "config": {
+        "recipe": "translator"
+      }
+    },
+    {
+      "id": "nr_toprun0",
+      "kind": "belt",
+      "pos": {
+        "x": 23,
+        "y": 0
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "nr_bottomrun0",
+      "kind": "belt",
+      "pos": {
+        "x": 23,
+        "y": 4
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "nr_toprun1",
+      "kind": "belt",
+      "pos": {
+        "x": 24,
+        "y": 0
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "nr_bottomrun1",
+      "kind": "belt",
+      "pos": {
+        "x": 24,
+        "y": 4
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "nr_toprun2",
+      "kind": "belt",
+      "pos": {
+        "x": 25,
+        "y": 0
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "nr_bottomrun2",
+      "kind": "belt",
+      "pos": {
+        "x": 25,
+        "y": 4
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "nr_bottomturn",
+      "kind": "belt",
+      "pos": {
+        "x": 26,
+        "y": 4
+      },
+      "dir": 0,
+      "config": {}
+    },
+    {
+      "id": "nr_bottomturn_3",
+      "kind": "belt",
+      "pos": {
+        "x": 26,
+        "y": 3
+      },
+      "dir": 0,
+      "config": {}
+    },
+    {
+      "id": "nr_mixer_manip_t",
+      "kind": "manipulator",
+      "pos": {
+        "x": 26,
+        "y": 0
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "nr_mixer_manip_b",
+      "kind": "manipulator",
+      "pos": {
+        "x": 26,
+        "y": 2
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "nr_mixer",
+      "kind": "mixer",
+      "pos": {
+        "x": 27,
+        "y": 0
       },
       "dir": 1,
       "config": {
         "mode": "llm",
-        "question": "Это позитивный отзыв?"
+        "prompt": "Объедини соцсеть-пост и его английский перевод в одну финальную публикацию с обеими версиями"
       }
     },
     {
-      "id": "tt2",
+      "id": "nr_chest_g0",
       "kind": "belt",
       "pos": {
-        "x": 9,
-        "y": 9
+        "x": 30,
+        "y": 1
       },
       "dir": 1,
       "config": {}
     },
     {
-      "id": "tt3",
+      "id": "nr_chest_m",
       "kind": "manipulator",
       "pos": {
-        "x": 10,
-        "y": 9
+        "x": 31,
+        "y": 1
       },
       "dir": 1,
       "config": {}
     },
     {
-      "id": "silo2demo",
-      "kind": "silo",
+      "id": "nr_chest",
+      "kind": "chest",
       "pos": {
-        "x": 11,
-        "y": 9
-      },
-      "dir": 1,
-      "config": {}
-    },
-    {
-      "id": "ff4",
-      "kind": "belt",
-      "pos": {
-        "x": 9,
-        "y": 12
-      },
-      "dir": 1,
-      "config": {}
-    },
-    {
-      "id": "ff5",
-      "kind": "manipulator",
-      "pos": {
-        "x": 10,
-        "y": 12
-      },
-      "dir": 1,
-      "config": {}
-    },
-    {
-      "id": "wh1demo",
-      "kind": "webhook",
-      "pos": {
-        "x": 11,
-        "y": 12
+        "x": 32,
+        "y": 1
       },
       "dir": 1,
       "config": {
-        "url": "https://your-webhook-url.example.com/negative-review",
+        "batchSize": 3
+      }
+    },
+    {
+      "id": "nr_silo_g0",
+      "kind": "belt",
+      "pos": {
+        "x": 33,
+        "y": 1
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "nr_silo_m",
+      "kind": "manipulator",
+      "pos": {
+        "x": 34,
+        "y": 1
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "nr_silo",
+      "kind": "silo",
+      "pos": {
+        "x": 35,
+        "y": 1
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "sp_miner",
+      "kind": "miner",
+      "pos": {
+        "x": 0,
+        "y": 20
+      },
+      "dir": 1,
+      "config": {
+        "mode": "webhook"
+      }
+    },
+    {
+      "id": "sp_furnace_g0",
+      "kind": "belt",
+      "pos": {
+        "x": 2,
+        "y": 20
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "sp_furnace_g1",
+      "kind": "belt",
+      "pos": {
+        "x": 3,
+        "y": 20
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "sp_furnace_m",
+      "kind": "manipulator",
+      "pos": {
+        "x": 4,
+        "y": 20
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "sp_furnace",
+      "kind": "furnace",
+      "pos": {
+        "x": 5,
+        "y": 20
+      },
+      "dir": 1,
+      "config": {
+        "code": "return String(data).trim().replace(/\\s+/g, ' ');"
+      }
+    },
+    {
+      "id": "sp_classify_g0",
+      "kind": "belt",
+      "pos": {
+        "x": 7,
+        "y": 20
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "sp_classify_m",
+      "kind": "manipulator",
+      "pos": {
+        "x": 8,
+        "y": 20
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "sp_classify",
+      "kind": "assembler",
+      "pos": {
+        "x": 9,
+        "y": 20
+      },
+      "dir": 1,
+      "config": {
+        "recipe": "sentiment"
+      }
+    },
+    {
+      "id": "sp_webhook_g0",
+      "kind": "belt",
+      "pos": {
+        "x": 11,
+        "y": 20
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "sp_webhook_m",
+      "kind": "manipulator",
+      "pos": {
+        "x": 12,
+        "y": 20
+      },
+      "dir": 1,
+      "config": {}
+    },
+    {
+      "id": "sp_webhook",
+      "kind": "webhook",
+      "pos": {
+        "x": 13,
+        "y": 20
+      },
+      "dir": 1,
+      "config": {
+        "url": "https://your-webhook-url.example.com/support-alerts",
         "method": "POST",
         "headers": {
           "content-type": "application/json"
         },
-        "body": "{\"content\": \"⚠️ Negative review detected: {{text}}\"}"
+        "body": "{\"content\": \"Отзыв ({{text}})\"}"
       }
     },
     {
-      "id": "ffA",
-      "kind": "belt",
+      "id": "nr_accumulator",
+      "kind": "accumulator",
       "pos": {
-        "x": 9,
-        "y": 10
+        "x": 0,
+        "y": -3
       },
-      "dir": 2,
-      "config": {}
-    },
-    {
-      "id": "ffB",
-      "kind": "belt",
-      "pos": {
-        "x": 9,
-        "y": 11
-      },
-      "dir": 2,
-      "config": {}
+      "dir": 1,
+      "config": {
+        "capacity": 1000
+      }
     }
   ]
 }
