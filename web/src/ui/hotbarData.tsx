@@ -97,11 +97,12 @@ export const TOOL_ICONS: Record<MachineKind, JSX.Element> = {
     </svg>
   ),
   miner: (
+    // Бур/добыча: стрела вниз бьёт в грунт, под линией земли — выбитая руда.
     <svg viewBox="0 0 24 24" width="22" height="22" {...strokeProps}>
-      <path d="M12 3 L12 12" />
-      <path d="M5 12 L19 12" />
-      <path d="M4 10 L8 15 L4 20" />
-      <path d="M20 10 L16 15 L20 20" />
+      <path d="M12 3 L12 14" />
+      <path d="M8 11 L12 15 L16 11" />
+      <path d="M5 18 L19 18" />
+      <path d="M8 20 L7.3 22 M12 20 L12 22.5 M16 20 L16.7 22" />
     </svg>
   ),
   assembler: (
@@ -119,17 +120,20 @@ export const TOOL_ICONS: Record<MachineKind, JSX.Element> = {
     </svg>
   ),
   mixer: (
+    // Воронка-смеситель: широкий раструб сводит несколько входов в один узкий выход
+    // (отдельная фигура, не зеркало splitter, — различима и по форме, не только по цвету).
     <svg viewBox="0 0 24 24" width="22" height="22" {...strokeProps}>
-      <path d="M5 5 L13 12" />
-      <path d="M5 19 L13 12" />
-      <path d="M13 12 L20 12" />
+      <path d="M4 5 L20 5 L13.5 13 L13.5 19.5 L10.5 19.5 L10.5 13 Z" />
     </svg>
   ),
   silo: (
+    // Ракета: широкие треугольные стабилизаторы + выхлоп снизу — не «перо», а силуэт ракеты.
     <svg viewBox="0 0 24 24" width="22" height="22" {...strokeProps}>
-      <path d="M12 3 L16 9 L16 18 L8 18 L8 9 Z" />
-      <path d="M9.5 18 L8 21 M14.5 18 L16 21" />
-      <path d="M12 3 L12 9" />
+      <path d="M12 3 L16 10 L16 17 L8 17 L8 10 Z" />
+      <path d="M8 12 L4 19 L8 17 Z" />
+      <path d="M16 12 L20 19 L16 17 Z" />
+      <circle cx="12" cy="9.5" r="1.3" fill="currentColor" stroke="none" />
+      <path d="M9.5 20 L8.5 23 M12 20 L12 23.5 M14.5 20 L15.5 23" />
     </svg>
   ),
   furnace: (
