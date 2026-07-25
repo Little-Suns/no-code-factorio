@@ -22,16 +22,21 @@ function e(id: string, kind: Entity['kind'], x: number, y: number, config: Recor
   return { id, kind, pos: { x, y }, dir: 1, config };
 }
 
-// 1. Ячейка обработки: шахта → манипулятор (2 линии) → ассемблер (LLM-суммаризатор).
+// 1. Ячейка обработки: шахта → манипулятор → ассемблер (LLM-суммаризатор).
+// Только один из двух выходных портов майнера подключён намеренно: майнер 2×2 физически
+// отдаёт FRONT с обоих тайлов, и demo.json (B3) подключает оба через отдельные
+// belt+manipulator в assembler — но engine.ts клонирует пакет на каждый live edge, а значит
+// две линии = два одинаковых пакета на один trigger → assembler (LLM) вызывается ДВАЖДЫ за
+// клик по цене одного отзыва. Для «рекомендованного» пресета это тихое удвоение стоимости
+// нежелательно, поэтому здесь оставлена одна линия — второй порт майнера просто не подключён
+// (dead-end, не ошибка, buildGraph такое допускает).
 const processingCell: Blueprint = {
   id: 'lib-processing-cell',
   name: 'Ячейка обработки',
   entities: [
     e('pc-miner', 'miner', 0, 0, { mode: 'text', text: 'Great product! Fast delivery and excellent service.', intervalSec: 0 }),
     e('pc-belt-1', 'belt', 2, 0),
-    e('pc-belt-2', 'belt', 2, 1),
     e('pc-manip-1', 'manipulator', 3, 0),
-    e('pc-manip-2', 'manipulator', 3, 1),
     e('pc-assembler', 'assembler', 4, 0, { recipe: 'summarizer', modules: [] }),
   ],
 };
@@ -68,15 +73,16 @@ const mixerJoin: Blueprint = {
 };
 
 // 4. Полная линия саммаризатора: шахта → ассемблер → манипулятор → силос (запуск ракеты).
+// Как и в (1): только одна линия майнер→ассемблер подключена (см. комментарий у
+// processingCell выше) — иначе assembler (LLM) и, как следствие, silo/ракета отработали
+// бы дважды на один trigger майнера.
 const summarizerLine: Blueprint = {
   id: 'lib-summarizer-line',
   name: 'Линия саммаризатора → силос',
   entities: [
     e('sl-miner', 'miner', 0, 0, { mode: 'text', text: 'Great product! Fast delivery and excellent service.', intervalSec: 0 }),
     e('sl-belt-1', 'belt', 2, 0),
-    e('sl-belt-2', 'belt', 2, 1),
     e('sl-manip-1', 'manipulator', 3, 0),
-    e('sl-manip-2', 'manipulator', 3, 1),
     e('sl-assembler', 'assembler', 4, 0, { recipe: 'summarizer', modules: [] }),
     e('sl-belt-3', 'belt', 6, 0),
     e('sl-manip-3', 'manipulator', 7, 0),

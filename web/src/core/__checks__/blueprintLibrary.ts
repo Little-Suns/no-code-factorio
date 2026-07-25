@@ -1,14 +1,26 @@
 // Проверка библиотеки готовых чертежей (blueprintLibrary.ts): каждый пресет должен
 // (1) без ошибок раунд-триппиться через instantiateBlueprint/canPlaceBlueprint —
 //     на пустой карте и без коллизий внутри себя;
-// (2) реально собирать связный граф через buildGraph — т.е. не просто валидный JSON,
-//     а рабочая мини-фабрика, где инвариант «manipulator обязателен для станок↔станок»
-//     (docs/03) соблюдён и хотя бы одна станок→станок связь через manipulator есть.
+// (2) реально собирать РОВНО ожидаемое число живых edges через buildGraph — не просто
+//     ">0" (это можно случайно удовлетворить одной работающей связью в углу чертежа,
+//     пока остальная часть пресета разорвана) — и все НЕ-belt сущности пресета должны
+//     лежать в одной компоненте связности этих edges (иначе часть станков пресета
+//     физически недостижима друг от друга, хоть какой-то edge где-то и нашёлся).
+//
+// ВАЖНО про инвариант manipulator: buildGraph (core/graph.ts) по построению никогда не
+// возвращает live edge (to !== null) между двумя НЕ-manipulator станками — trace()
+// коннектит только когда fromManipulator ИЛИ target.kind === 'manipulator'. Поэтому
+// проверка «каждый live edge касается manipulator» была бы тавтологией: она всегда
+// истинна для ЛЮБОГО набора сущностей независимо от того, правильно ли расставлен
+// конкретный пресет — это свойство graph.ts, а не пресета. Единственный способ реально
+// проверить геометрию КОНКРЕТНОГО пресета — точное число edges + связность, что и делает
+// этот файл (было доказано ревью: сдвиг одной ленты в lib-mixer-join, разрывающий пресет
+// на 2 несвязанные половины, раньше проходил этот чек с exit 0).
 
 import { instantiateBlueprint, canPlaceBlueprint } from '../blueprint';
 import { LIBRARY_BLUEPRINTS } from '../blueprintLibrary';
 import { buildGraph } from '../graph';
-import { Entity, MachineKind } from '../types';
+import { Entity } from '../types';
 
 function assert(cond: boolean, msg: string): void {
   if (!cond) {
@@ -18,7 +30,23 @@ function assert(cond: boolean, msg: string): void {
 
 console.log('Testing blueprintLibrary...');
 
+// Точное число live edges на пресет — посчитано вручную по геометрии каждого пресета
+// (см. blueprintLibrary.ts), а не подсмотрено в консоли: любое изменение расстановки
+// (сдвиг тайла, потеря манипулятора, лишняя/недостающая линия) обязано сломать этот
+// тест, а не молча пройти на ">0".
+const EXPECTED_LIVE_EDGES: Record<string, number> = {
+  'lib-processing-cell': 2, // miner->manip, manip->assembler
+  'lib-splitter-branch': 4, // splitter->manip(true/false), manip->chest ×2
+  'lib-mixer-join': 4, // manip(top/bottom)->mixer, mixer->manip(out), manip->chest
+  'lib-summarizer-line': 4, // miner->manip, manip->assembler, assembler->manip, manip->silo
+  'lib-furnace-buffer': 3, // manip->furnace, furnace->manip, manip->chest
+};
+
 assert(LIBRARY_BLUEPRINTS.length >= 3, 'library: минимум 3 пресета');
+assert(
+  LIBRARY_BLUEPRINTS.every((bp) => bp.id in EXPECTED_LIVE_EDGES),
+  'library: для каждого пресета в LIBRARY_BLUEPRINTS задано ожидаемое число edges в EXPECTED_LIVE_EDGES'
+);
 
 const seenIds = new Set<string>();
 for (const bp of LIBRARY_BLUEPRINTS) {
@@ -38,8 +66,6 @@ for (const bp of LIBRARY_BLUEPRINTS) {
     `library: "${bp.name}" — повторная постановка не переиспользует id`
   );
 
-  // Внутри одного набора не должно быть самоколлизий (реальная проверка geometрии,
-  // а не только формы JSON) — canPlaceBlueprint уже проверяет это внутри instantiated.
   const world: Record<string, Entity> = {};
   for (const ent of placedA) world[ent.id] = ent;
   assert(Object.keys(world).length === placedA.length, `library: "${bp.name}" — все id в мире уникальны`);
@@ -49,30 +75,47 @@ for (const bp of LIBRARY_BLUEPRINTS) {
   const overlapping = instantiateBlueprint(bp, { x: 100, y: 100 });
   assert(!canPlaceBlueprint(world, overlapping), `library: "${bp.name}" — наложение на себя же детектится`);
 
-  // buildGraph: пресет обязан содержать хотя бы одну реальную связь станок→станок
-  // (branch to !== null) через manipulator — иначе это не рабочая мини-фабрика,
-  // а просто набор непричастных друг к другу тайлов.
+  // buildGraph: РОВНО ожидаемое число live edges — не ">0". Это ловит и недостающие
+  // связи (сломанная геометрия), и лишние (например, случайно продублированную линию).
   const edges = buildGraph(world);
   const liveEdges = edges.filter((edge) => edge.to !== null);
-  assert(liveEdges.length > 0, `library: "${bp.name}" — buildGraph находит хотя бы одну живую связь`);
+  const expected = EXPECTED_LIVE_EDGES[bp.id];
+  assert(
+    liveEdges.length === expected,
+    `library: "${bp.name}" — ожидалось ${expected} live edges, получено ${liveEdges.length}`
+  );
 
-  // Манипулятор обязателен для КАЖДОЙ связи станок↔станок в пресете (docs/03): любой
-  // Edge, чьи from и to — оба НЕ manipulator, был бы прямым проходом без манипулятора,
-  // что buildGraph в принципе не должен уметь произвести (иначе баг в самом graph.ts,
-  // не в чертеже) — но явная проверка тут документирует инвариант и защищает пресет
-  // от будущих правок, которые случайно уберут промежуточный manipulator.
-  const kindOf = (id: string): MachineKind => world[id].kind;
+  // Связность: все НЕ-belt сущности пресета (станки + манипуляторы) должны лежать
+  // в ОДНОЙ компоненте связности графа live edges (неориентированно) — иначе часть
+  // пресета физически изолирована от остальной, даже если где-то есть рабочие edges.
+  const stationIds = placedA.filter((ent) => ent.kind !== 'belt').map((ent) => ent.id);
+  assert(stationIds.length > 0, `library: "${bp.name}" — есть хотя бы одна не-belt сущность`);
+
+  const adjacency = new Map<string, Set<string>>();
+  for (const id of stationIds) adjacency.set(id, new Set());
   for (const edge of liveEdges) {
-    const fromKind = kindOf(edge.from);
-    const toKind = edge.to ? kindOf(edge.to) : null;
-    const bridgedByManipulator = fromKind === 'manipulator' || toKind === 'manipulator';
-    assert(
-      bridgedByManipulator,
-      `library: "${bp.name}" — edge ${fromKind}→${toKind} обходит инвариант manipulator`
-    );
+    if (edge.to === null) continue;
+    adjacency.get(edge.from)?.add(edge.to);
+    adjacency.get(edge.to)?.add(edge.from);
   }
 
-  console.log(`✓ "${bp.name}" (${bp.entities.length} entities, ${liveEdges.length} live edges) OK`);
+  const visited = new Set<string>([stationIds[0]]);
+  const queue = [stationIds[0]];
+  while (queue.length > 0) {
+    const cur = queue.shift()!;
+    for (const next of adjacency.get(cur) ?? []) {
+      if (!visited.has(next)) {
+        visited.add(next);
+        queue.push(next);
+      }
+    }
+  }
+  assert(
+    visited.size === stationIds.length,
+    `library: "${bp.name}" — все станки пресета в одной компоненте связности (достигнуто ${visited.size} из ${stationIds.length})`
+  );
+
+  console.log(`✓ "${bp.name}" (${bp.entities.length} entities, ${liveEdges.length} live edges, connected) OK`);
 }
 
 console.log('blueprintLibrary checks OK');
