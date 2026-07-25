@@ -68,6 +68,7 @@ const ru: Dict = {
   'toast.blueprintImported': 'Чертёж «{name}» импортирован',
   'toast.blueprintInvalid': 'Некорректная строка чертежа',
   'toast.packetDropped': '✕ пакет упал ({reason})',
+  'toast.emptySelection': 'Пустая область — нечего сохранять в чертёж',
 
   'error.noPower': 'Нет питания',
   'error.insufficientCapacity': 'Не хватает ёмкости аккумулятора: нужно ~{need}, есть {have}',
@@ -230,6 +231,7 @@ const en: Dict = {
   'toast.blueprintImported': 'Blueprint "{name}" imported',
   'toast.blueprintInvalid': 'Invalid blueprint string',
   'toast.packetDropped': '✕ packet dropped ({reason})',
+  'toast.emptySelection': 'Empty area — nothing to save as a blueprint',
 
   'error.noPower': 'No power',
   'error.insufficientCapacity': 'Not enough accumulator capacity: need ~{need}, have {have}',
@@ -392,6 +394,7 @@ const zh: Dict = {
   'toast.blueprintImported': '蓝图「{name}」已导入',
   'toast.blueprintInvalid': '蓝图字符串无效',
   'toast.packetDropped': '✕ 包丢失（{reason}）',
+  'toast.emptySelection': '选区为空 — 没有可保存为蓝图的内容',
 
   'error.noPower': '电力不足',
   'error.insufficientCapacity': '蓄电容量不足：需要 ~{need}，现有 {have}',

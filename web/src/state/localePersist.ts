@@ -16,6 +16,15 @@ export function initLocalePersist() {
   const stored = localStorage.getItem(PERSIST_KEY);
   if (isLocale(stored)) {
     useStore.getState().setLocale(stored);
+  } else {
+    // Нет сохранённого выбора — берём язык браузера как более вежливый дефолт, чем
+    // жёсткий 'en' для всех: у существующих RU/ZH-браузеров UI не переключится молча
+    // на английский. Неизвестный/неподдерживаемый язык браузера — остаёмся на 'en'
+    // (дефолт стора, store.ts).
+    const nav = navigator.language.slice(0, 2);
+    if (isLocale(nav)) {
+      useStore.getState().setLocale(nav);
+    }
   }
 
   let prevLocale = useStore.getState().locale;

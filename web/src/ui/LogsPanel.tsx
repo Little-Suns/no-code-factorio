@@ -44,10 +44,10 @@ export function LogsPanel() {
           <div className="logs-empty">{t('logs.empty')}</div>
         ) : (
           <div className="logs-list">
-            {items.map((t) => (
-              <div key={t.id} className="logs-item">
-                <div className="logs-time">{new Date(t.at).toLocaleTimeString()}</div>
-                <div className="logs-text">{t.text}</div>
+            {items.map((item) => (
+              <div key={item.id} className="logs-item">
+                <div className="logs-time">{new Date(item.at).toLocaleTimeString()}</div>
+                <div className="logs-text">{item.text}</div>
               </div>
             ))}
           </div>

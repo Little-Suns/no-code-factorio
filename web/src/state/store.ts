@@ -4,7 +4,13 @@ import { canPlace } from '../core/grid';
 import { NODE_DEFS } from '../core/nodes';
 import type { Blueprint } from '../core/blueprint';
 import { canPlaceBlueprint } from '../core/blueprint';
-import { t, Locale } from '../i18n/dictionaries';
+import { t } from '../i18n/dictionaries';
+import type { Locale } from '../i18n/dictionaries';
+
+// BCP-47 для <html lang>: важно для доступности и для того, чтобы браузер подбирал
+// CJK-шрифт для китайского текста (zh без региона браузеры тоже понимают, но -Hans
+// однозначно указывает на упрощённые иероглифы, которые мы и используем в словаре).
+const HTML_LANG: Record<Locale, string> = { ru: 'ru', en: 'en', zh: 'zh-Hans' };
 
 export interface Store {
   entities: Record<string, Entity>;
@@ -214,7 +220,7 @@ export const useStore = create<Store>((set, get) => ({
   },
 
   dismissToast: (id: string) => {
-    set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+    set((s) => ({ toasts: s.toasts.filter((toast) => toast.id !== id) }));
   },
 
   loadWorld: (entities: Entity[]) => {
@@ -295,5 +301,8 @@ export const useStore = create<Store>((set, get) => ({
 
   setLocale: (locale: Locale) => {
     set({ locale });
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = HTML_LANG[locale];
+    }
   },
 }));
