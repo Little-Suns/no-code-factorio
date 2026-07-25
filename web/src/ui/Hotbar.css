@@ -68,3 +68,63 @@
   font-size: 8px;
   color: var(--text-dim);
 }
+
+.hotbar-tooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: max-content;
+  max-width: 220px;
+  padding: 6px 8px;
+  background: var(--panel-bg);
+  border: 2px solid var(--panel-border);
+  box-shadow:
+    inset 1px 1px 0 #454b53,
+    inset -1px -1px 0 var(--panel-border);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  z-index: 200;
+}
+
+.hotbar-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--panel-border);
+}
+
+.hotbar-slot:hover .hotbar-tooltip,
+.hotbar-slot:focus-visible .hotbar-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+  transition-delay: 0.25s;
+}
+
+.hotbar-tooltip-title {
+  font-size: 11px;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.hotbar-tooltip-key {
+  font-family: var(--f-mono);
+  font-size: 9px;
+  color: var(--text-dim);
+}
+
+.hotbar-tooltip-desc {
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--text-dim);
+  white-space: normal;
+}

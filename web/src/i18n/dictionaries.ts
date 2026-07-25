@@ -15,6 +15,7 @@
  *                 проверяют __checks__/engine.ts дословно; перевод — на стороне отображения
  *                 в runtime.ts через translateEngineError())
  *  - node.<kind>.title           — заголовок станка (Hotbar tooltip + ConfigPanel header)
+ *  - node.<kind>.desc            — краткое описание роли станка (Hotbar tooltip)
  *  - field.<kind>.<key>.label    — подпись поля конфига
  *  - field.<kind>.<key>.placeholder — плейсхолдер поля конфига
  *  - option.<kind>.<key>.<value> — подпись опции select
@@ -136,6 +137,19 @@ const ru: Dict = {
   'node.webhook.title': 'Антенна / Webhook (HTTP)',
   'node.manipulator.title': 'Манипулятор',
   'node.accumulator.title': 'Аккумулятор',
+
+  'node.belt.desc': 'Конвейер — переносит пакет на соседний тайл по направлению.',
+  'node.miner.desc': 'Шахта — добывает сырьё: заданный текст, содержимое URL или тело вебхука.',
+  'node.assembler.desc': 'Сборочный станок (Агент) — обрабатывает текст через LLM по выбранному рецепту.',
+  'node.splitter.desc': 'Дублер — один вход, две идентичные копии (по одной на каждый выход).',
+  'node.mixer.desc': 'Химзавод / Смеситель — склеивает или LLM-синтезирует несколько входящих пакетов в один.',
+  'node.silo.desc': 'Ракета (Output) — принимает финальный результат и открывает панель результатов.',
+  'node.furnace.desc': 'Печь — быстрый JS-препроцессор без LLM (например, чистит текст от HTML-тегов).',
+  'node.chest.desc': 'Сундук — копит пакеты в буфер и отдаёт их пачкой заданного размера дальше.',
+  'node.lab.desc': 'Лаборатория (Критик) — проверяет результат по критериям: PASS пропускает, REWORK возвращает на доработку.',
+  'node.accumulator.desc': 'Аккумулятор — хранит заряд (токены LLM) и питает станки; без него электричество отключено.',
+  'node.webhook.desc': 'Антенна / Webhook — отправляет данные на внешний HTTP-адрес (Discord, Slack, GitHub, свой сервер).',
+  'node.manipulator.desc': 'Манипулятор — обязательный переходник между станками: без него станок↔станок и лента↔станок не соединяются.',
 
   'field.miner.mode.label': 'Источник',
   'option.miner.mode.text': 'Заданный текст',
@@ -300,6 +314,19 @@ const en: Dict = {
   'node.manipulator.title': 'Manipulator',
   'node.accumulator.title': 'Accumulator',
 
+  'node.belt.desc': 'Belt — moves a packet to the adjacent tile in its direction.',
+  'node.miner.desc': 'Miner — extracts raw material: fixed text, URL content, or a webhook body.',
+  'node.assembler.desc': 'Assembler (Agent) — processes text through the LLM using the selected recipe.',
+  'node.splitter.desc': 'Duplicator — one input, two identical copies (one per output).',
+  'node.mixer.desc': 'Chemical Plant / Mixer — concatenates or LLM-synthesizes several incoming packets into one.',
+  'node.silo.desc': 'Rocket (Output) — accepts the final result and opens the results panel.',
+  'node.furnace.desc': 'Furnace — a fast JS preprocessor with no LLM (e.g. strips HTML tags from text).',
+  'node.chest.desc': 'Chest — accumulates packets in a buffer and forwards them in batches of a set size.',
+  'node.lab.desc': 'Lab (Critic) — checks the result against criteria: PASS lets it through, REWORK sends it back.',
+  'node.accumulator.desc': 'Accumulator — stores charge (LLM tokens) and powers machines; without it, power is off.',
+  'node.webhook.desc': 'Antenna / Webhook — sends data to an external HTTP address (Discord, Slack, GitHub, your own server).',
+  'node.manipulator.desc': 'Manipulator — a mandatory adapter between machines: without it, machine-to-machine and belt-to-machine links don’t form.',
+
   'field.miner.mode.label': 'Source',
   'option.miner.mode.text': 'Fixed text',
   'option.miner.mode.url': 'URL content',
@@ -462,6 +489,19 @@ const zh: Dict = {
   'node.webhook.title': '天线 / Webhook (HTTP)',
   'node.manipulator.title': '机械臂',
   'node.accumulator.title': '蓄电池',
+
+  'node.belt.desc': '传送带 — 按方向将包裹传送到相邻格子。',
+  'node.miner.desc': '采矿机 — 采集原料：固定文本、URL 内容或 Webhook 请求体。',
+  'node.assembler.desc': '装配机（代理）— 按所选配方通过 LLM 处理文本。',
+  'node.splitter.desc': '复制器 — 一个输入，输出两份完全相同的副本（每个输出端口一份）。',
+  'node.mixer.desc': '化工厂 / 混合机 — 将多个输入包裹拼接或通过 LLM 合成为一个。',
+  'node.silo.desc': '火箭（输出）— 接收最终结果并打开结果面板。',
+  'node.furnace.desc': '熔炉 — 无需 LLM 的快速 JS 预处理器（例如清除文本中的 HTML 标签）。',
+  'node.chest.desc': '箱子 — 将包裹积攒到缓冲区，并按设定批量大小向后传递。',
+  'node.lab.desc': '实验室（评审）— 按标准检查结果：PASS 放行，REWORK 打回重做。',
+  'node.accumulator.desc': '蓄电池 — 存储电量（LLM Token）并为机器供电；没有它电力将被切断。',
+  'node.webhook.desc': '天线 / Webhook — 将数据发送到外部 HTTP 地址（Discord、Slack、GitHub 或自建服务器）。',
+  'node.manipulator.desc': '机械臂 — 机器之间的必备连接件：没有它，机器与机器、传送带与机器之间无法连接。',
 
   'field.miner.mode.label': '来源',
   'option.miner.mode.text': '固定文本',
