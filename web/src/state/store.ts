@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { Entity, NodeStatus, MachineKind, Vec } from '../core/types';
-import { canPlace } from '../core/grid';
+import { canPlace, rotateGroupRigid } from '../core/grid';
 import { NODE_DEFS } from '../core/nodes';
 import type { Blueprint } from '../core/blueprint';
 import { canPlaceBlueprint } from '../core/blueprint';
@@ -35,11 +35,27 @@ export interface Store {
   locale: Locale; // язык UI-оболочки (i18n/) — персистится отдельно, state/localePersist.ts
   tutorialActive: boolean; // обучалка открыта — блокирует хоткеи и клики по канвасу (ui/Tutorial.tsx)
   tutorialStep: number; // индекс текущего шага; список шагов и их количество — в Tutorial.tsx
+  // Уровни/челленджи (core/levels/): levelActive — id текущего уровня или null = обычная
+  // песочница; levelProgress персистится отдельно (state/levelPersist.ts, зеркало
+  // blueprintPersist.ts); levelCompleteInfo — транзиент для модалки успеха.
+  levelActive: string | null;
+  // stars: 0 — уровень ещё не пройден (но подсказки могли уже раскрываться), 1-3 — пройден.
+  // Разлочка следующего уровня/бонуса проверяет stars > 0, а не просто наличие ключа —
+  // иначе одно раскрытие подсказки без прохождения ошибочно засчитывалось бы как прогресс.
+  levelProgress: Record<string, { stars: 0 | 1 | 2 | 3; hintsRevealed: number }>;
+  levelPanelOpen: boolean;
+  levelCompleteInfo: { id: string; stars: 1 | 2 | 3 } | null;
+  // Разовая всплывашка-подсказка «попробуй уровни» сразу после первого закрытия
+  // обучалки (см. state/tutorialPersist.ts) — транзиент, не персистится отдельно
+  // (факт показа отслеживается тем же ncf.tutorial.seen.v1: показываем только на
+  // переходе tutorialActive true→false, когда флага ещё не было в localStorage).
+  levelsNudgeVisible: boolean;
   // actions
   place: (entity: Entity) => boolean;
   remove: (entityId: string) => void;
   removeMany: (entityIds: string[]) => void;
   rotate: (entityId: string) => void;
+  rotateMany: (entityIds: string[]) => boolean;
   move: (entityId: string, pos: Vec) => boolean;
   moveMany: (positions: { id: string; pos: Vec }[]) => boolean;
   setConfig: (entityId: string, config: Record<string, unknown>) => void;
@@ -50,6 +66,7 @@ export interface Store {
   setStatus: (nodeId: string, status: NodeStatus, error?: string) => void;
   setIO: (nodeId: string, lastIn?: unknown, lastOut?: unknown) => void;
   pushResult: (nodeId: string, data: unknown) => void;
+  clearResults: () => void;
   toast: (text: string) => void;
   dismissToast: (id: string) => void;
   loadWorld: (entities: Entity[]) => void;
@@ -69,6 +86,13 @@ export interface Store {
   startTutorial: () => void;
   setTutorialStep: (step: number) => void;
   skipTutorial: () => void;
+  setLevelActive: (id: string | null) => void;
+  completeLevel: (id: string, stars: 1 | 2 | 3) => void;
+  revealHint: (levelId: string, hintCount: number) => void;
+  setLevelPanelOpen: (open: boolean) => void;
+  setLevelCompleteInfo: (info: { id: string; stars: 1 | 2 | 3 } | null) => void;
+  loadLevelProgress: (progress: Store['levelProgress']) => void;
+  setLevelsNudgeVisible: (visible: boolean) => void;
 }
 
 export const useStore = create<Store>((set, get) => ({
@@ -92,6 +116,11 @@ export const useStore = create<Store>((set, get) => ({
   locale: 'en',
   tutorialActive: false,
   tutorialStep: 0,
+  levelActive: null,
+  levelProgress: {},
+  levelPanelOpen: false,
+  levelCompleteInfo: null,
+  levelsNudgeVisible: false,
 
   place: (entity: Entity) => {
     const state = get();
@@ -172,6 +201,43 @@ export const useStore = create<Store>((set, get) => ({
     set((s) => ({
       entities: { ...s.entities, [entityId]: newEntity },
     }));
+  },
+
+  // Групповой поворот (R по рамке выделения/чертежу на кисти) — атомарно, как
+  // moveMany: группа крутится как ЕДИНОЕ ТВЁРДОЕ ТЕЛО вокруг общего центра (не каждый
+  // элемент вокруг своей оси на месте — иначе взаимное расположение станков после
+  // поворота «разваливается»), геометрия — core/grid.ts::rotateGroupRigid (общая
+  // с постановкой чертежа на кисти, game/input.ts).
+  rotateMany: (entityIds: string[]) => {
+    const state = get();
+    if (state.running) {
+      get().toast(t('toast.stopFactory', state.locale));
+      return false;
+    }
+    const idSet = new Set(entityIds);
+    const group: Entity[] = [];
+    for (const id of entityIds) {
+      const entity = state.entities[id];
+      if (!entity) return false;
+      group.push(entity);
+    }
+    if (group.length === 0) return false;
+
+    const rotated = rotateGroupRigid(group, 1);
+
+    const others: Record<string, Entity> = {};
+    for (const [id, entity] of Object.entries(state.entities)) {
+      if (!idSet.has(id)) others[id] = entity;
+    }
+    if (!canPlaceBlueprint(others, rotated)) {
+      return false;
+    }
+    set((s) => {
+      const entities = { ...s.entities };
+      for (const entity of rotated) entities[entity.id] = entity;
+      return { entities };
+    });
+    return true;
   },
 
   // Перетаскивание станка/ленты мышкой (баг 16): та же схема проверки, что и rotate —
@@ -287,6 +353,10 @@ export const useStore = create<Store>((set, get) => ({
     });
   },
 
+  clearResults: () => {
+    set({ results: {}, nodeStatus: {} });
+  },
+
   toast: (text: string) => {
     set((s) => ({
       toasts: [...s.toasts, { id: crypto.randomUUID().slice(0, 8), text, at: Date.now() }].slice(-200),
@@ -395,5 +465,53 @@ export const useStore = create<Store>((set, get) => ({
 
   skipTutorial: () => {
     set({ tutorialActive: false });
+  },
+
+  setLevelActive: (id: string | null) => {
+    set({ levelActive: id });
+  },
+
+  // Мержит через Math.max — переигранный уровень с меньшим числом сущностей не
+  // портит уже достигнутый лучший результат; hintsRevealed сохраняется как есть
+  // (подсказки уже открытые не «забываются» между попытками).
+  completeLevel: (id: string, stars: 1 | 2 | 3) => {
+    set((s) => {
+      const prev = s.levelProgress[id];
+      return {
+        levelProgress: {
+          ...s.levelProgress,
+          [id]: { stars: Math.max(prev?.stars ?? 0, stars) as 1 | 2 | 3, hintsRevealed: prev?.hintsRevealed ?? 0 },
+        },
+      };
+    });
+  },
+
+  revealHint: (levelId: string, hintCount: number) => {
+    set((s) => {
+      const prev = s.levelProgress[levelId];
+      const hintsRevealed = Math.min(hintCount, (prev?.hintsRevealed ?? 0) + 1);
+      return {
+        levelProgress: {
+          ...s.levelProgress,
+          [levelId]: { stars: prev?.stars ?? 0, hintsRevealed },
+        },
+      };
+    });
+  },
+
+  setLevelPanelOpen: (open: boolean) => {
+    set({ levelPanelOpen: open });
+  },
+
+  setLevelCompleteInfo: (info: { id: string; stars: 1 | 2 | 3 } | null) => {
+    set({ levelCompleteInfo: info });
+  },
+
+  loadLevelProgress: (progress: Store['levelProgress']) => {
+    set({ levelProgress: progress });
+  },
+
+  setLevelsNudgeVisible: (visible: boolean) => {
+    set({ levelsNudgeVisible: visible });
   },
 }));

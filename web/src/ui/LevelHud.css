@@ -1,0 +1,144 @@
+/* pointer-events: none на контейнере — карточка стоит поверх канваса весь сеанс
+   уровня (не на пару секунд, как карточка Tutorial), а игрок может поставить станок
+   ровно под ней (верх-центр экрана). auto возвращается точечно только на кликабельные
+   элементы (кнопки) ниже — иначе клики по станкам/канвасу под карточкой пропадали бы
+   в никуда: не долетали ни до Pixi, ни до самой карточки (баг из ревью — «инпуты/аутпуты
+   станков не работают» на самом деле был потерянными кликами под этой панелью). */
+.level-hud {
+  position: fixed;
+  top: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  background: var(--panel-bg);
+  border: 2px solid var(--panel-border);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.4);
+  padding: 10px 12px;
+  pointer-events: none;
+  z-index: 220;
+}
+
+.level-hud-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.level-hud-title {
+  color: var(--accent);
+  font-family: var(--f-disp);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.level-hud-header-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.level-hud-icon-btn {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: var(--dirt);
+  border: 2px solid var(--panel-border);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 10px;
+  transition: all 0.2s ease;
+  pointer-events: auto;
+}
+
+.level-hud-icon-btn:hover {
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+
+.level-hud-exit {
+  padding: 0 8px;
+  height: 20px;
+  background: var(--dirt);
+  border: 2px solid var(--panel-border);
+  color: var(--text-muted);
+  font-family: var(--f-mono);
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  pointer-events: auto;
+}
+
+.level-hud-exit:hover {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.level-hud-desc {
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 8px 0;
+}
+
+.level-hud-hints {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.level-hud-hint {
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.5;
+  background: var(--dirt-dark);
+  border-left: 3px solid var(--accent);
+  padding: 5px 8px;
+}
+
+.level-hud-hint-index {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.level-hud-hint-btn {
+  align-self: flex-start;
+  padding: 5px 10px;
+  background: var(--dirt);
+  border: 2px solid var(--panel-border);
+  color: var(--text-dim);
+  font-family: var(--f-mono);
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  pointer-events: auto;
+}
+
+.level-hud-hint-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.level-hud-reopen {
+  position: fixed;
+  top: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  background: var(--panel-bg);
+  border: 2px solid var(--panel-border);
+  color: var(--accent);
+  font-family: var(--f-mono);
+  font-size: 10px;
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 220;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.4);
+  transition: all 0.2s ease;
+}
+
+.level-hud-reopen:hover {
+  border-color: var(--accent);
+}

@@ -6,7 +6,7 @@ import { MANIPULATOR_VISUAL_SCALE, SILO_VISUAL_SCALE, SILO_Y_OFFSET, LAB_VISUAL_
 import { useStore } from '../state/store';
 import { tutorialBlocksInput } from '../state/tutorialSteps';
 import { t } from '../i18n/dictionaries';
-import { footprintTiles, canPlace } from '../core/grid';
+import { footprintTiles, canPlace, rotateGroupRigid } from '../core/grid';
 import { instantiateBlueprint, canPlaceBlueprint } from '../core/blueprint';
 import { findLibraryBlueprint } from '../core/blueprintLibrary';
 import { beltShape, makePath, drawTrack } from './belts';
@@ -56,6 +56,11 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
   // E4: групповой ghost при постановке чертежа (store.stampBlueprintId)
   let groupGhostSprites: Sprite[] = [];
   let groupGhostBlueprintId: string | null = null;
+  // Поворот чертежа на кисти (R): накопленный счётчик шагов, применяется в
+  // updateGroupGhost/постановке через core/grid.ts::rotateGroupRigid — чертёж крутится
+  // как единое тело вокруг своего центра (та же геометрия, что и store.rotateMany для
+  // уже поставленной группы). Сбрасывается при смене чертежа.
+  let stampRotation: Dir = 0;
 
   // Процедурный ghost ленты (тот же рендер, что belts.ts): пул Graphics-тайлов.
   let beltGhostPool: Graphics[] = [];
@@ -163,10 +168,13 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
         groupGhostSprites.push(sprite);
       }
       groupGhostBlueprintId = blueprintId;
+      stampRotation = 0; // новый чертёж на кисти — поворот предыдущего к нему не относится
     }
 
     const origin = toTile(lastMouse.x, lastMouse.y);
-    const instantiated = instantiateBlueprint(bp, origin);
+    // Поворот на кисти — единым телом вокруг центра чертежа (rotateGroupRigid), не
+    // каждая сущность вокруг своей оси на месте, иначе форма чертежа «разваливалась».
+    const instantiated = rotateGroupRigid(instantiateBlueprint(bp, origin), stampRotation);
     const ok = canPlaceBlueprint(store.entities, instantiated);
 
     instantiated.forEach((e, i) => {
@@ -462,7 +470,7 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
         // а поведение симметрично store.place() ниже.
         const bp = store.blueprints.find((b) => b.id === store.stampBlueprintId) ?? findLibraryBlueprint(store.stampBlueprintId);
         if (bp) {
-          const instantiated = instantiateBlueprint(bp, dragStart);
+          const instantiated = rotateGroupRigid(instantiateBlueprint(bp, dragStart), stampRotation);
           store.placeMany(instantiated);
           // stampBlueprintId намеренно не сбрасываем — как и selectedTool у обычных
           // станков, чертёж остаётся «на кисти» для повторной постановки подряд.
@@ -523,11 +531,25 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
       moveGrabOffset = { x: 0, y: 0 };
       movingGroupIds = [];
       groupMoveStartPositions = {};
+      stampRotation = 0;
       clearSelectionBox();
       clearEntityHighlight();
       updateGhost();
     } else if (e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К') {
-      if (store.selectedTool) {
+      if (store.stampBlueprintId) {
+        // Чертёж на кисти — крутим сам груповой ghost перед постановкой (см. updateGroupGhost).
+        stampRotation = ((stampRotation + 1) % 4) as Dir;
+        updateGhost();
+      } else if (store.pendingSelection && store.pendingSelection.length > 0) {
+        // Уже поставленная группа, захваченная рамкой выделения — крутим группу целиком
+        // как единое тело вокруг общего центра (rotateMany), взаимное расположение
+        // станков сохраняется, как при повороте чертежа на кисти.
+        const ids = store.pendingSelection.map((ent) => ent.id);
+        if (store.rotateMany(ids)) {
+          const fresh = useStore.getState();
+          store.setPendingSelection(ids.map((id) => fresh.entities[id]).filter((e): e is Entity => !!e));
+        }
+      } else if (store.selectedTool) {
         ghostDir = (((ghostDir as number) + 1) % 4) as Dir;
         updateGhost();
       } else if (store.selectedEntityId) {
@@ -545,6 +567,9 @@ export function initInput(canvas: HTMLCanvasElement, viewport: Viewport, layers:
       }
     } else if (e.key === 'b' || e.key === 'B' || e.key === 'и' || e.key === 'И') {
       // Панель чертежей — переключатель по B (независимо от рамки выделения, которая тоже на ЛКМ)
+      // Уровень активен — блупринты запрещены (BlueprintPanel и так возвращает null,
+      // это лишь косметическая подстраховка, чтобы тоггл не крутил флаг впустую).
+      if (store.levelActive) return;
       store.setBlueprintPanelOpen(!store.blueprintPanelOpen);
     }
   });

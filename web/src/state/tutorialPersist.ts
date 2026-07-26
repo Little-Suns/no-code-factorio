@@ -15,7 +15,12 @@ export function initTutorialPersist() {
   let prevActive = useStore.getState().tutorialActive;
   useStore.subscribe((state) => {
     if (prevActive && !state.tutorialActive) {
+      // Первое закрытие обучалки за всё время (флага ещё не было) — показать разовую
+      // всплывашку-подсказку про уровни (ui/LevelsNudge.tsx). Повторные прохождения
+      // тура (кнопка «? Обучение» в TopBar) её больше не показывают.
+      const firstTime = !localStorage.getItem(PERSIST_KEY);
       localStorage.setItem(PERSIST_KEY, '1');
+      if (firstTime) useStore.getState().setLevelsNudgeVisible(true);
     }
     prevActive = state.tutorialActive;
   });

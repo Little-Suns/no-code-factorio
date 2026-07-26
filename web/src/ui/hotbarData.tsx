@@ -30,15 +30,15 @@ export const ALL_TOOLS: MachineKind[] = [
   'lab',
 ];
 
-// Hotbar рендерит три визуально разделённые группы (не влияет на ALL_TOOLS/HOTKEYS
+// Hotbar рендерит четыре визуально разделённые группы (не влияет на ALL_TOOLS/HOTKEYS
 // выше — те остаются keyed by MachineKind): "логистика" — не станки, а инструменты
-// соединения/перемещения груза — слева, "станки" — обработка данных — по центру,
-// "результат" (ракета/silo) — справа, отдельно от остальных станков: это финальный
-// узел цепочки, и вынос его в конец панели визуально подсказывает это без пояснений.
+// соединения/перемещения груза — слева, "вход/выход" (шахта-источник и ракета-сток) —
+// сразу за логистикой, т.к. это границы цепочки, с которых и на которых всё строится,
+// "станки" — обработка данных — по центру, дальше по приоритету docs/08.
 export const LOGISTICS_TOOLS: MachineKind[] = ['belt', 'manipulator'];
-export const FINAL_TOOLS: MachineKind[] = ['silo'];
+export const IO_TOOLS: MachineKind[] = ['miner', 'silo'];
 export const MACHINE_TOOLS: MachineKind[] = ALL_TOOLS.filter(
-  (tool) => !LOGISTICS_TOOLS.includes(tool) && !FINAL_TOOLS.includes(tool)
+  (tool) => !LOGISTICS_TOOLS.includes(tool) && !IO_TOOLS.includes(tool)
 );
 
 export const HOTKEYS: Record<MachineKind, string> = {

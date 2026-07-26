@@ -22,6 +22,9 @@
  *  - recipe.<value>.label        — подпись пресета рецепта (НЕ system-промпт)
  *  - module.<id>.label           — подпись MCP-модуля
  *  - search.*   — NodeSearch (поиск/фокус по узлам)
+ *  - top.levels*, level.panel.*, level.hud.*, level.complete.* — панели уровней/челленджей
+ *    (LevelPanel/LevelHud/LevelComplete); level.<id>.title/desc/hint.<n> — контент уровней
+ *    (core/levels/definitions.ts)
  */
 
 export type Locale = 'ru' | 'en' | 'zh';
@@ -68,6 +71,9 @@ const ru: Dict = {
   'top.langTitle': 'Сменить язык интерфейса',
   'top.tutorial': 'Обучение',
   'top.tutorialTitle': 'Показать обучалку заново',
+
+  'levelsNudge.text': 'Готово! Теперь попробуй пройти уровни — там задачи с растущей сложностью и звёзды за компактные решения.',
+  'levelsNudge.dismissTitle': 'Скрыть подсказку',
 
   'toast.stopFactory': 'Останови фабрику',
   'toast.placeMiner': 'Поставь шахту',
@@ -124,7 +130,7 @@ const ru: Dict = {
 
   'bp.title': 'Чертежи',
   'bp.collapseTitle': 'Свернуть панель (B)',
-  'bp.hint': 'Выделить: зажми и потяни ЛКМ по полю фабрики',
+  'bp.hint': 'Выделить: зажми и потяни левой кнопкой мыши по полю фабрики',
   'bp.namePlaceholder': 'Чертёж {n}',
   'bp.save': 'Сохранить ({n})',
   'bp.cancel': 'Отмена',
@@ -155,7 +161,7 @@ const ru: Dict = {
   'node.accumulator.title': 'Аккумулятор',
 
   'node.belt.desc': 'Конвейер — переносит пакет на соседний тайл по направлению.',
-  'node.miner.desc': 'Шахта — добывает сырьё: заданный текст, содержимое URL или тело вебхука.',
+  'node.miner.desc': 'Шахта — точка входа данных: без неё пайплайну попросту нечего обрабатывать. Она добывает сырьё для фабрики — заданный текст, содержимое URL или тело вебхука.',
   'node.assembler.desc': 'Сборочный станок (Агент) — обрабатывает текст через LLM по выбранному рецепту.',
   'node.splitter.desc': 'Дублер — один вход, две идентичные копии (по одной на каждый выход).',
   'node.mixer.desc': 'Химзавод / Смеситель — склеивает или LLM-синтезирует несколько входящих пакетов в один.',
@@ -227,8 +233,8 @@ const ru: Dict = {
   'module.memory.label': 'Память (склад)',
 
   'hotbar.group.logistics': 'Логистика',
+  'hotbar.group.io': 'Вход/выход',
   'hotbar.group.machines': 'Станки',
-  'hotbar.group.final': 'Результат',
 
   'tutorial.skip': 'Пропустить',
   'tutorial.prev': '← Назад',
@@ -248,7 +254,7 @@ const ru: Dict = {
   'tutorial.step.rotate.title': 'Поворот',
   'tutorial.step.rotate.desc': 'Выдели станок и нажми R.',
   'tutorial.step.move.title': 'Перемещение',
-  'tutorial.step.move.desc': 'Зажми ЛКМ и потяни. Работает и для выделенной группы.',
+  'tutorial.step.move.desc': 'Зажми левую кнопку мыши и потяни. Работает и для выделенной группы.',
   'tutorial.step.config.title': 'Настройка',
   'tutorial.step.config.desc': 'Клик по станку открывает панель настроек справа.',
   'tutorial.step.run.title': 'Запуск',
@@ -268,6 +274,55 @@ const ru: Dict = {
 
   'tutorial.practice.pending': 'Попробуй прямо сейчас…',
   'tutorial.practice.done': '✓ Готово!',
+
+  // level.* — уровни/челленджи
+  'top.levels': 'Уровни',
+  'top.levelsTitle': 'Показать/скрыть список уровней',
+  'level.panel.title': 'Уровни',
+  'level.panel.closeTitle': 'Закрыть',
+  'level.panel.bonusBadge': 'бонус',
+  'level.panel.locked': 'Заблокировано',
+  'level.hud.collapseTitle': 'Свернуть',
+  'level.hud.exitTitle': 'Выйти из уровня в песочницу',
+  'level.hud.exit': 'Выйти',
+  'level.hud.showHint': 'Показать подсказку {n}/{total}',
+  'level.complete.title': 'Уровень пройден!',
+  'level.complete.next': 'Следующий уровень',
+  'level.complete.retry': 'Переиграть',
+  'level.complete.menu': 'В меню',
+
+  'level.delivery.title': 'Первая доставка',
+  'level.delivery.desc': 'Любая фабрика начинается с источника данных (шахты) и заканчивается результатом (силос). Собери самую простую цепочку — шахта → манипулятор → силос — и получи первую запись в панели результатов.',
+  'level.delivery.hint.1': 'Шахта и силос сами по себе не связываются — на КАЖДОМ стыке лента↔станок или станок↔станок нужен манипулятор. Поставь ленту от шахты, затем манипулятор перед силосом (стрелкой в его сторону) — без этого предмет никуда не попадёт.',
+  'level.delivery.hint.2': 'Кнопка ▶ Run сама по себе ничего не запускает, если у шахты интервал (intervalSec) равен 0. Кликни по шахте — справа откроется панель настройки с кнопкой ручного запуска, жми её.',
+
+  'level.uppercase.title': 'Заглавными буквами',
+  'level.uppercase.desc': 'Печь (furnace) — станок без LLM, который мгновенно прогоняет данные через твой JS-код. Собери: шахта → манипулятор → печь → манипулятор → силос, и настрой печь так, чтобы она возвращала текст в ВЕРХНЕМ РЕГИСТРЕ.',
+  'level.uppercase.hint.1': 'В поле кода печи (открывается кликом по станку) пиши обычный JS: `return data.toUpperCase()` — `data` это то, что прилетело с ленты.',
+  'level.uppercase.hint.2': 'Печь не думает и не ждёт ответа от LLM — она детерминированный препроцессор, поэтому срабатывает мгновенно, в отличие от сборщика.',
+
+  'level.duplicator.title': 'Удвоитель',
+  'level.duplicator.desc': 'Дублер (splitter) не выбирает и не фильтрует — он просто рассылает одинаковую копию входящего пакета в оба своих выхода. Собери: шахта → манипулятор → дублер → два манипулятора → два силоса, и убедись, что оба силоса получили одинаковый результат.',
+  'level.duplicator.hint.1': 'У дублера два выходных порта рядом — к каждому нужен свой манипулятор и своя лента к своему силосу, иначе один из выходов останется тупиком.',
+  'level.duplicator.hint.2': 'У дублера нет настроек в панели конфигурации — открывать её незачем, он всегда просто копирует вход на оба выхода.',
+
+  'level.batch.title': 'Пачка на склад',
+  'level.batch.desc': 'Сундук (chest) — буфер: он копит пакеты и не пропускает их дальше, пока не наберётся заданное число (batchSize). Собери: шахта → манипулятор → сборщик → манипулятор → сундук, и вброси в шахту минимум 3 пакета подряд, чтобы сундук выгрузил партию.',
+  'level.batch.hint.1': 'Один клик по кнопке шахты — один пакет. Чтобы сундук набрал партию, кликни несколько раз подряд (или задай интервал intervalSec > 0, чтобы шахта сама генерировала пакеты по таймеру).',
+  'level.batch.hint.2': 'Кликни на сундук и в панели справа задай batchSize — например 3, чтобы не жать кнопку шахты много раз (по умолчанию там 5).',
+
+  'level.quality.title': 'Контроль качества',
+  'level.quality.desc': 'Лаборатория (lab) — станок-критик: она проверяет результат сборщика по твоим критериям и либо пропускает его дальше (PASS), либо отправляет обратно на доработку (REWORK). Собери: шахта → манипулятор → сборщик → манипулятор → лаборатория, а из неё — ветку PASS в силос и ветку REWORK лентой назад на вход сборщика.',
+  'level.quality.hint.1': 'У лаборатории два отдельных выходных порта — pass и rework, у каждого своя лента и свой манипулятор на другом конце.',
+  'level.quality.hint.2': 'Ветку rework нужно провести лентой ОБРАТНО ко входу сборщика (получится замкнутый круг на карте) — это единственная петля в игре, которая не виснет, её защищает счётчик TTL.',
+  'level.quality.hint.3': 'Критик время от времени требует доработку (REWORK) — если у этой ветки нет пути назад к сборщику, такой пакет просто пропадёт, и до силоса ничего не дойдёт.',
+
+  'level.editorial.title': 'Редакция',
+  'level.editorial.desc': 'Самое сложное задание: две шахты с черновиками статьи → химзавод (mixer) объединяет их через LLM → сборщик с модулем memory редактирует получившееся, подглядывая в стайлгайд из отдельного сундука → лаборатория проверяет результат → дублер рассылает готовую статью в силос и в архивный сундук. Схема потребляет много LLM-запросов — понадобится заряженный аккумулятор.',
+  'level.editorial.hint.1': 'Химзавод (в отличие от сборщика) ждёт пакет С КАЖДОЙ входящей ленты, прежде чем сработать — обе шахты-черновика должны быть подключены к нему через манипулятор.',
+  'level.editorial.hint.2': 'Третья шахта (стайлгайд) НЕ соединяется со сборщиком лентой — она идёт прямо в отдельный сундук. Модуль memory у сборщика сам читает содержимое этого сундука в фоне, отдельная связь для этого не нужна.',
+  'level.editorial.hint.3': 'Как и в предыдущем уровне, у лаборатории есть rework-петля — заведи её лентой обратно на вход сборщика, иначе доработка результата будет просто теряться.',
+  'level.editorial.hint.4': 'В схеме несколько LLM-станков подряд (химзавод, сборщик, лаборатория) — они быстро расходуют заряд аккумулятора. Поставь его и жми «Зарядить» в его панели, если станки жалуются на нехватку питания.',
 };
 
 const en: Dict = {
@@ -302,6 +357,9 @@ const en: Dict = {
   'top.langTitle': 'Switch interface language',
   'top.tutorial': 'Tutorial',
   'top.tutorialTitle': 'Show the tutorial again',
+
+  'levelsNudge.text': "Nice! Now try the levels — challenges of growing difficulty, with stars for compact solutions.",
+  'levelsNudge.dismissTitle': 'Dismiss hint',
 
   'toast.stopFactory': 'Stop the factory first',
   'toast.placeMiner': 'Place a miner',
@@ -358,7 +416,7 @@ const en: Dict = {
 
   'bp.title': 'Blueprints',
   'bp.collapseTitle': 'Collapse dock (B)',
-  'bp.hint': 'Select: hold and drag LMB over the factory floor',
+  'bp.hint': 'Select: hold and drag the left mouse button over the factory floor',
   'bp.namePlaceholder': 'Blueprint {n}',
   'bp.save': 'Save ({n})',
   'bp.cancel': 'Cancel',
@@ -389,7 +447,7 @@ const en: Dict = {
   'node.accumulator.title': 'Accumulator',
 
   'node.belt.desc': 'Belt — moves a packet to the adjacent tile in its direction.',
-  'node.miner.desc': 'Miner — extracts raw material: fixed text, URL content, or a webhook body.',
+  'node.miner.desc': 'Miner — the data entry point: without it, the pipeline has nothing to process at all. It extracts raw material for the factory — fixed text, URL content, or a webhook body.',
   'node.assembler.desc': 'Assembler (Agent) — processes text through the LLM using the selected recipe.',
   'node.splitter.desc': 'Duplicator — one input, two identical copies (one per output).',
   'node.mixer.desc': 'Chemical Plant / Mixer — concatenates or LLM-synthesizes several incoming packets into one.',
@@ -461,8 +519,8 @@ const en: Dict = {
   'module.memory.label': 'Memory (storage)',
 
   'hotbar.group.logistics': 'Logistics',
+  'hotbar.group.io': 'Input/Output',
   'hotbar.group.machines': 'Machines',
-  'hotbar.group.final': 'Result',
 
   'tutorial.skip': 'Skip',
   'tutorial.prev': '← Back',
@@ -482,7 +540,7 @@ const en: Dict = {
   'tutorial.step.rotate.title': 'Rotate',
   'tutorial.step.rotate.desc': 'Select a machine and press R.',
   'tutorial.step.move.title': 'Move',
-  'tutorial.step.move.desc': 'Hold LMB and drag. Works on a selected group too.',
+  'tutorial.step.move.desc': 'Hold the left mouse button and drag. Works on a selected group too.',
   'tutorial.step.config.title': 'Configure',
   'tutorial.step.config.desc': 'Click a machine to open its settings panel.',
   'tutorial.step.run.title': 'Run',
@@ -502,6 +560,55 @@ const en: Dict = {
 
   'tutorial.practice.pending': 'Try it now…',
   'tutorial.practice.done': '✓ Done!',
+
+  // level.* — levels/challenges
+  'top.levels': 'Levels',
+  'top.levelsTitle': 'Show/hide the level list',
+  'level.panel.title': 'Levels',
+  'level.panel.closeTitle': 'Close',
+  'level.panel.bonusBadge': 'bonus',
+  'level.panel.locked': 'Locked',
+  'level.hud.collapseTitle': 'Collapse',
+  'level.hud.exitTitle': 'Exit the level back to sandbox',
+  'level.hud.exit': 'Exit',
+  'level.hud.showHint': 'Show hint {n}/{total}',
+  'level.complete.title': 'Level complete!',
+  'level.complete.next': 'Next level',
+  'level.complete.retry': 'Retry',
+  'level.complete.menu': 'Menu',
+
+  'level.delivery.title': 'First Delivery',
+  'level.delivery.desc': 'Every factory starts with a data source (the miner) and ends with a result (the silo). Build the simplest possible chain — miner → manipulator → silo — and get your first entry in the results panel.',
+  'level.delivery.hint.1': "The miner and silo won't connect on their own — EVERY belt-to-machine or machine-to-machine junction needs a manipulator. Run a belt from the miner, then place a manipulator right before the silo (pointing at it) — without it the item never arrives.",
+  'level.delivery.hint.2': "Hitting ▶ Run alone won't start anything if the miner's interval (intervalSec) is 0. Click the miner — a config panel opens on the right with a manual trigger button, press that.",
+
+  'level.uppercase.title': 'In Capitals',
+  'level.uppercase.desc': 'The furnace runs no LLM — it just runs your JS code on the data instantly. Build: miner → manipulator → furnace → manipulator → silo, and set up the furnace so it turns the text into UPPERCASE.',
+  'level.uppercase.hint.1': "In the furnace's code field (click the machine to open it) write plain JS: `return data.toUpperCase()` — `data` is whatever arrived on the belt.",
+  'level.uppercase.hint.2': "The furnace doesn't think or wait for an LLM response — it's a deterministic preprocessor, so it fires instantly, unlike the assembler.",
+
+  'level.duplicator.title': 'The Duplicator',
+  'level.duplicator.desc': "The duplicator doesn't choose or filter anything — it just sends an identical copy of whatever it receives out of both its outputs. Build: miner → manipulator → duplicator → two manipulators → two silos, and check that both silos got the same result.",
+  'level.duplicator.hint.1': "The duplicator's two output ports sit right next to each other — each one needs its own manipulator and its own belt to its own silo, or one output will just dead-end.",
+  'level.duplicator.hint.2': "There's nothing to configure on the duplicator — no need to even open its panel, it always just copies the input to both outputs.",
+
+  'level.batch.title': 'Batch to Storage',
+  'level.batch.desc': "The chest is a buffer: it holds packets back and won't let them through until it's collected a set number of them (batchSize). Build: miner → manipulator → assembler → manipulator → chest, and feed the miner at least 3 packets in a row so the chest flushes a batch.",
+  'level.batch.hint.1': "One click of the miner's button sends one packet. To fill the chest's batch, click it several times in a row (or set intervalSec > 0 so the miner generates packets on a timer by itself).",
+  'level.batch.hint.2': "Click the chest and set batchSize in the panel on the right — e.g. 3, so you don't have to click the miner so many times (the default there is 5).",
+
+  'level.quality.title': 'Quality Control',
+  'level.quality.desc': "The lab is a critic machine: it checks the assembler's result against your criteria and either lets it through (PASS) or sends it back for another pass (REWORK). Build: miner → manipulator → assembler → manipulator → lab, then run its PASS branch to a silo and its REWORK branch on a belt back to the assembler's input.",
+  'level.quality.hint.1': 'The lab has two separate output ports — pass and rework — each with its own belt and its own manipulator on the far end.',
+  'level.quality.hint.2': "Route the rework branch with a belt BACK to the assembler's input (you'll get a loop on the map) — it's the one loop in the game that never hangs, protected by a TTL counter.",
+  'level.quality.hint.3': "The critic sometimes asks for a rework (REWORK) — if that branch has no path back to the assembler, that packet is simply lost and nothing reaches the silo.",
+
+  'level.editorial.title': 'The Editorial Desk',
+  'level.editorial.desc': "The hardest challenge here: two miners with article drafts → a chemical plant merges them via LLM synthesis → an assembler with the memory module edits the result while peeking at a style guide from a separate chest → a lab reviews it → a duplicator sends the finished article to a silo and to an archive chest. The chain fires a lot of LLM calls, so you'll need a charged accumulator.",
+  'level.editorial.hint.1': "Unlike the assembler, the chemical plant waits for a packet from EVERY incoming belt before it fires — both draft miners need a manipulator connecting them to it.",
+  'level.editorial.hint.2': "The third miner (style guide) does NOT connect to the assembler by belt at all — it goes straight into its own chest. The assembler's memory module reads that chest's contents on its own in the background, no direct link needed.",
+  'level.editorial.hint.3': "Just like the previous level, the lab has a rework loop — route it with a belt back to the assembler's input, or reworked results just get thrown away.",
+  'level.editorial.hint.4': "Several LLM machines fire back-to-back in this chain (chemical plant, assembler, lab) and drain charge fast. Place an accumulator and hit Recharge in its panel whenever a machine complains about power.",
 };
 
 const zh: Dict = {
@@ -536,6 +643,9 @@ const zh: Dict = {
   'top.langTitle': '切换界面语言',
   'top.tutorial': '教程',
   'top.tutorialTitle': '重新显示教程',
+
+  'levelsNudge.text': '很好！现在试试闯关模式——难度逐级提升的任务，用更紧凑的方案还能拿星星。',
+  'levelsNudge.dismissTitle': '关闭提示',
 
   'toast.stopFactory': '请先停止工厂',
   'toast.placeMiner': '请放置一个采矿机',
@@ -623,7 +733,7 @@ const zh: Dict = {
   'node.accumulator.title': '蓄电池',
 
   'node.belt.desc': '传送带 — 按方向将包裹传送到相邻格子。',
-  'node.miner.desc': '采矿机 — 采集原料：固定文本、URL 内容或 Webhook 请求体。',
+  'node.miner.desc': '采矿机 — 数据入口：没有它，整条流水线就无料可加工。它为工厂采集原料：固定文本、URL 内容或 Webhook 请求体。',
   'node.assembler.desc': '装配机（代理）— 按所选配方通过 LLM 处理文本。',
   'node.splitter.desc': '复制器 — 一个输入，输出两份完全相同的副本（每个输出端口一份）。',
   'node.mixer.desc': '化工厂 / 混合机 — 将多个输入包裹拼接或通过 LLM 合成为一个。',
@@ -695,8 +805,8 @@ const zh: Dict = {
   'module.memory.label': '记忆（仓库）',
 
   'hotbar.group.logistics': '物流',
+  'hotbar.group.io': '输入/输出',
   'hotbar.group.machines': '机器',
-  'hotbar.group.final': '结果',
 
   'tutorial.skip': '跳过',
   'tutorial.prev': '← 上一步',
@@ -716,7 +826,7 @@ const zh: Dict = {
   'tutorial.step.rotate.title': '旋转',
   'tutorial.step.rotate.desc': '选中机器，按 R。',
   'tutorial.step.move.title': '移动',
-  'tutorial.step.move.desc': '按住左键拖动，选中一组也一样。',
+  'tutorial.step.move.desc': '按住鼠标左键拖动，选中一组也一样。',
   'tutorial.step.config.title': '配置',
   'tutorial.step.config.desc': '点击机器，打开右侧设置面板。',
   'tutorial.step.run.title': '启动',
@@ -736,6 +846,55 @@ const zh: Dict = {
 
   'tutorial.practice.pending': '现在就试试…',
   'tutorial.practice.done': '✓ 完成！',
+
+  // level.* — 关卡/挑战
+  'top.levels': '关卡',
+  'top.levelsTitle': '显示/隐藏关卡列表',
+  'level.panel.title': '关卡',
+  'level.panel.closeTitle': '关闭',
+  'level.panel.bonusBadge': '奖励',
+  'level.panel.locked': '未解锁',
+  'level.hud.collapseTitle': '收起',
+  'level.hud.exitTitle': '退出关卡，回到沙盒',
+  'level.hud.exit': '退出',
+  'level.hud.showHint': '显示提示 {n}/{total}',
+  'level.complete.title': '关卡通过！',
+  'level.complete.next': '下一关',
+  'level.complete.retry': '重玩',
+  'level.complete.menu': '返回菜单',
+
+  'level.delivery.title': '首次交付',
+  'level.delivery.desc': '任何工厂都始于数据来源（采矿机），终于产出结果（火箭）。搭建最简单的链路——采矿机 → 机械臂 → 火箭——在结果面板中获得第一条记录。',
+  'level.delivery.hint.1': '采矿机和火箭不会自动连接——传送带与机器、机器与机器之间的每一个衔接处都需要机械臂。先从采矿机接出传送带，再在火箭前放一个机械臂（箭头指向火箭）——少了它，包裹哪里都到不了。',
+  'level.delivery.hint.2': '如果采矿机的间隔（intervalSec）为 0，光按 ▶ Run 什么也不会发生。点击采矿机，右侧会打开配置面板，点里面的手动触发按钮。',
+
+  'level.uppercase.title': '全部大写',
+  'level.uppercase.desc': '熔炉不调用 LLM——它只是立即用你写的 JS 代码处理数据。搭建：采矿机 → 机械臂 → 熔炉 → 机械臂 → 火箭，并让熔炉把文本转成大写。',
+  'level.uppercase.hint.1': '点击熔炉打开它的代码框，写普通 JS：试试 `return data.toUpperCase()`——`data` 就是传送带送来的内容。',
+  'level.uppercase.hint.2': '熔炉不思考、也不等待 LLM 响应——它是确定性预处理器，所以瞬间完成，这点和装配机不同。',
+
+  'level.duplicator.title': '复制器',
+  'level.duplicator.desc': '复制器不做筛选也不做判断——它只是把收到的包裹原样复制一份，从两个输出口同时发出。搭建：采矿机 → 机械臂 → 复制器 → 两个机械臂 → 两个火箭，确认两个火箭收到的结果完全一致。',
+  'level.duplicator.hint.1': '复制器紧挨着的两个输出端口——每个都需要自己的机械臂和自己的传送带通往各自的火箭，少一个那一侧就会变成死路。',
+  'level.duplicator.hint.2': '复制器没有任何配置项——不用点开它的面板，它总是把输入原样复制到两个输出。',
+
+  'level.batch.title': '批量入库',
+  'level.batch.desc': '箱子是一个缓冲区：它先把包裹攒起来，凑够设定的数量（batchSize）才会放行。搭建：采矿机 → 机械臂 → 装配机 → 机械臂 → 箱子，然后连续给采矿机投喂至少 3 个包裹，让箱子放行一批。',
+  'level.batch.hint.1': '采矿机的按钮点一次送一个包裹。要凑够一批，就连续点几次（或者把 intervalSec 设成大于 0，让采矿机按定时器自动生成包裹）。',
+  'level.batch.hint.2': '点击箱子，在右侧面板调整 batchSize——比如设为 3，就不用点采矿机太多次了（默认是 5）。',
+
+  'level.quality.title': '质量把关',
+  'level.quality.desc': '实验室是一个评审站：它按你设定的标准检查装配机的结果，要么放行（PASS），要么打回重做（REWORK）。搭建：采矿机 → 机械臂 → 装配机 → 机械臂 → 实验室，再把 PASS 分支接到火箭，把 REWORK 分支用传送带绕回装配机的输入端。',
+  'level.quality.hint.1': '实验室有两个独立的输出端口——pass 和 rework，各自需要自己的传送带和机械臂。',
+  'level.quality.hint.2': '把 rework 分支用传送带接回装配机的输入端（地图上会出现一个环）——这是游戏里唯一不会卡死的循环，由 TTL 计数器保护。',
+  'level.quality.hint.3': '评审有时会要求返工（REWORK）——如果这条分支没有接回装配机，那个包裹就直接丢失，永远到不了火箭。',
+
+  'level.editorial.title': '编辑部',
+  'level.editorial.desc': '这是最难的挑战：两台采矿机提供文章草稿 → 化工厂通过 LLM 合成把它们合并 → 带 memory 模块的装配机一边参考独立箱子里的风格指南一边编辑 → 实验室审核结果 → 复制器把成品分别送到火箭和存档箱子。这条链路会触发很多次 LLM 调用，需要一块充满电的蓄电池。',
+  'level.editorial.hint.1': '和装配机不同，化工厂要等每一条输入传送带都送来包裹才会触发——两台草稿采矿机都必须通过机械臂连接到它。',
+  'level.editorial.hint.2': '第三台采矿机（风格指南）完全不通过传送带连接装配机——它直接接入自己的箱子。装配机的 memory 模块会在后台自己读取这个箱子的内容，不需要任何直接连接。',
+  'level.editorial.hint.3': '和上一关一样，实验室也有 rework 循环——用传送带把它接回装配机的输入端，否则被打回的结果会直接丢失。',
+  'level.editorial.hint.4': '这条链路里连续接了好几个 LLM 站点（化工厂、装配机、实验室），耗电很快。放一块蓄电池，站点提示缺电时就去它的面板点「充电」。',
 };
 
 export const DICTIONARIES: Record<Locale, Dict> = { ru, en, zh };

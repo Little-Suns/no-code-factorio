@@ -1,0 +1,133 @@
+.level-panel-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 7, 9, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 400;
+  pointer-events: auto;
+}
+
+.level-panel {
+  width: 560px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  background: var(--panel-bg);
+  border: 2px solid var(--panel-border);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+}
+
+.level-panel-header {
+  position: sticky;
+  top: 0;
+  padding: 12px 16px;
+  background: var(--panel-bg);
+  border-bottom: 2px solid var(--panel-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.level-panel-title {
+  color: var(--accent);
+  font-family: var(--f-disp);
+  font-size: 12px;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.level-panel-close {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: var(--dirt);
+  border: 2px solid var(--panel-border);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.level-panel-close:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.level-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  padding: 16px;
+}
+
+.level-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 12px 14px;
+  background: var(--dirt);
+  border: 2px solid var(--panel-border);
+  color: var(--text);
+  font-family: var(--f-mono);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.level-card:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.level-card.locked {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.level-card.bonus {
+  border-style: dashed;
+  border-color: var(--accent-dim);
+}
+
+.level-card-bonus-badge {
+  position: absolute;
+  top: -9px;
+  right: 10px;
+  padding: 1px 6px;
+  background: var(--accent);
+  color: var(--bg);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.level-card-index {
+  color: var(--text-dim);
+  font-size: 9px;
+}
+
+.level-card-name {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.level-card-lock {
+  font-size: 12px;
+}
+
+.level-stars {
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+.level-star {
+  color: var(--text-dim);
+}
+
+.level-star.filled {
+  color: var(--accent);
+}

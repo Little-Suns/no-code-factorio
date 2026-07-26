@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { useStore } from '../state/store';
 import { startRun, stopRun, setDebugMode, stepDebug } from '../state/runtime';
+import { LEVELS } from '../core/levels/definitions';
 import type { Entity } from '../core/types';
 import { tutorialBlocksInput } from '../state/tutorialSteps';
 import { useT, LOCALES, LOCALE_NAMES } from '../i18n';
@@ -17,6 +18,10 @@ export function TopBar() {
   const energy = useStore((state) => state.energy);
   const blueprintPanelOpen = useStore((state) => state.blueprintPanelOpen);
   const setBlueprintPanelOpen = useStore((state) => state.setBlueprintPanelOpen);
+  const levelActive = useStore((state) => state.levelActive);
+  const levelPanelOpen = useStore((state) => state.levelPanelOpen);
+  const setLevelPanelOpen = useStore((state) => state.setLevelPanelOpen);
+  const levelProgress = useStore((state) => state.levelProgress);
   const resultPanelOpen = useStore((state) => state.resultPanelOpen);
   const setResultPanelOpen = useStore((state) => state.setResultPanelOpen);
   const logsPanelOpen = useStore((state) => state.logsPanelOpen);
@@ -222,13 +227,23 @@ export function TopBar() {
           ? {t('top.tutorial')}
         </button>
         <button
-          className={`icon-button ${blueprintPanelOpen ? 'active' : ''}`}
-          onClick={() => setBlueprintPanelOpen(!blueprintPanelOpen)}
-          title={t('top.blueprintsTitle')}
-          data-tutorial="blueprints"
+          className={`icon-button ${levelPanelOpen ? 'active' : ''}`}
+          onClick={() => setLevelPanelOpen(!levelPanelOpen)}
+          title={t('top.levelsTitle')}
+          data-nudge="levels-button"
         >
-          ▤ {t('top.blueprints')}
+          🎯 {t('top.levels')} ({LEVELS.filter((l) => (levelProgress[l.id]?.stars ?? 0) > 0).length}/{LEVELS.length})
         </button>
+        {!levelActive && (
+          <button
+            className={`icon-button ${blueprintPanelOpen ? 'active' : ''}`}
+            onClick={() => setBlueprintPanelOpen(!blueprintPanelOpen)}
+            title={t('top.blueprintsTitle')}
+            data-tutorial="blueprints"
+          >
+            ▤ {t('top.blueprints')}
+          </button>
+        )}
         <button
           className={`icon-button ${resultPanelOpen ? 'active' : ''}`}
           onClick={() => setResultPanelOpen(!resultPanelOpen)}

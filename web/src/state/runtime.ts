@@ -7,6 +7,8 @@ import { rocketLaunch } from '../game/fx';
 import { triggerManipulatorGrab, triggerManipulatorRelease } from '../game/machines';
 import { useStore } from './store';
 import { t, translateEngineError } from '../i18n/dictionaries';
+import { LEVELS } from '../core/levels/definitions';
+import { computeStars } from '../core/levels/stars';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? 'http://localhost:8787';
 
@@ -20,6 +22,12 @@ let starting = false;
 // остановить. Флаг просит startRun() не поднимать фабрику вовсе, когда асинхронная часть
 // закончится, вместо того чтобы молча проигнорировать клик Stop.
 let stopRequestedDuringStart = false;
+
+// Уровни/челленджи: снимок песочницы игрока на момент входа в уровень — startLevel()
+// подменяет store.entities схемой уровня (с нуля), exitLevel() возвращает этот снимок.
+// Настоящая защита от потери данных — guard в state/persist.ts (ncf.world.v1 не
+// перезаписывается, пока levelActive) — это лишь быстрый возврат без перезагрузки страницы.
+let sandboxSnapshot: Entity[] | null = null;
 
 // Баг «переключились со вкладки и вернулись — предметы копятся, не обрабатываются»:
 // wall-clock setInterval шахты (core/engine.ts) не останавливается браузером на скрытой
@@ -164,6 +172,12 @@ function setupEventHandler() {
         if (event.reason !== 'error') {
           store.toast(t('toast.packetDropped', store.locale, { reason: event.reason }));
           console.log('[drop]', event.packetId, event.reason);
+          // Уровень активен — dead-end/ttl очень легко пропустить в потоке тостов
+          // (особенно на квесте про lab: два соседних порта pass/rework легко перепутать
+          // местами, тогда пакет с вердиктом PASS/REWORK молча теряется, а игрок не
+          // понимает, почему схема «рабочая на вид» не засчитывается). Автооткрытие
+          // логов делает причину видимой сразу, а не задним числом в LogsPanel.
+          if (useStore.getState().levelActive) store.setLogsPanelOpen(true);
         }
         break;
 
@@ -205,6 +219,15 @@ function setupEventHandler() {
         if (entity && entity.kind === 'silo') {
           rocketLaunch(entity);
         }
+        // Уровень активен — проверить, не выполнено ли задание этим результатом
+        // (см. core/levels/definitions.ts::evaluate — работает по всему store.results,
+        // т.к. id узлов игрок создаёт сам, заранее их не знает даже дизайнер уровня).
+        // Небольшая задержка перед показом полноэкранной модалки LevelComplete — иначе
+        // она перекрывает канвас в тот же кадр, что и dым/смена статуса силоса, и игрок
+        // не успевает увидеть сам эффект «доставки» (жалоба «ракета не запускается» —
+        // ракета технически срабатывала, но модалка мгновенно закрывала её собой).
+        const levelId = useStore.getState().levelActive;
+        if (levelId) setTimeout(() => evaluateActiveLevel(levelId), 700);
         break;
       }
 
@@ -302,6 +325,51 @@ export function stopRun(): void {
   engine.stop();
   engine = null;
   useStore.getState().setRunning(false);
+}
+
+/**
+ * Найти Level по id и, если evaluate() проходит на текущих store.results, засчитать
+ * прохождение (звёзды по числу сущностей на момент успеха + модалка LevelComplete).
+ */
+function evaluateActiveLevel(levelId: string): void {
+  const level = LEVELS.find((l) => l.id === levelId);
+  if (!level) return;
+  const state = useStore.getState();
+  if (!level.evaluate(state.results)) return;
+  const stars = computeStars(level, Object.keys(state.entities).length);
+  state.completeLevel(level.id, stars);
+  state.setLevelCompleteInfo({ id: level.id, stars });
+}
+
+/**
+ * Вход в уровень: останавливает текущий прогон, откладывает песочницу игрока в сторону
+ * (sandboxSnapshot — см. также guard в state/persist.ts), даёт уровню чистый мир и
+ * чистые results (без этого evaluate() уровня мог бы ложно сработать на результатах от
+ * предыдущей попытки/уровня — store.results не привязан к nodeId уровня, id рантаймовые).
+ */
+export function startLevel(id: string): void {
+  const store = useStore.getState();
+  if (store.tutorialActive) return; // не стартовать поверх обучалки
+  if (engine || starting) stopRun();
+  sandboxSnapshot = Object.values(useStore.getState().entities);
+  store.loadWorld([]);
+  store.clearResults();
+  store.setTool(null); // сбрасывает selectedTool + stampBlueprintId + selectedEntityId
+  store.setPendingSelection(null);
+  store.setLevelActive(id);
+}
+
+/**
+ * Выход из уровня (кнопка «Выйти» в LevelHud, «В меню» в LevelComplete): возвращает
+ * ранее отложенную песочницу, останавливает прогон, если шёл.
+ */
+export function exitLevel(): void {
+  const store = useStore.getState();
+  if (engine || starting) stopRun();
+  store.loadWorld(sandboxSnapshot ?? []);
+  sandboxSnapshot = null;
+  store.clearResults();
+  store.setLevelActive(null);
 }
 
 /**

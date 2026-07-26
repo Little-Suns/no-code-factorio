@@ -188,6 +188,17 @@
   background: var(--accent);
 }
 
+/* Практик-шаг, действие ещё не выполнено (practiceDone === false, см. Tutorial.tsx) —
+   явно серая, неотличимая от обычной disabled-кнопки .tutorial-prev, чтобы было видно,
+   что жать пока рано. Без этого правила disabled только снимал клики, а цвет оставался
+   тем же оранжевым — выглядело как рабочая кнопка, которая почему-то не реагирует. */
+.tutorial-next:disabled {
+  background: var(--dirt);
+  border-color: var(--panel-border);
+  color: var(--text-dim);
+  cursor: not-allowed;
+}
+
 .tutorial-lang-option {
   padding: 6px 14px;
   background: var(--dirt);

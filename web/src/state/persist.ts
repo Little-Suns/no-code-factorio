@@ -41,6 +41,10 @@ export function initPersist() {
   useStore.subscribe((state) => {
     if (state.entities !== prevEntities) {
       prevEntities = state.entities;
+      // Уровень активен (state/runtime.ts::startLevel) — мир на канвасе временно
+      // подменён схемой уровня, не песочницей игрока. Без этого guard'а через 500мс
+      // дебаунса ncf.world.v1 тихо и необратимо затёрся бы миром уровня (см. docs/08).
+      if (state.levelActive) return;
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         const payload = {

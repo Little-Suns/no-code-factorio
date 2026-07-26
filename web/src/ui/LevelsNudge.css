@@ -1,0 +1,59 @@
+.levels-nudge {
+  position: fixed;
+  width: 240px;
+  background: var(--panel-bg);
+  border: 2px solid var(--accent);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.4);
+  padding: 10px 24px 10px 12px;
+  z-index: 260;
+  pointer-events: auto;
+  animation: levelsNudgeIn 0.25s ease;
+}
+
+@keyframes levelsNudgeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.levels-nudge-arrow {
+  position: absolute;
+  top: -8px;
+  width: 12px;
+  height: 12px;
+  background: var(--panel-bg);
+  border-top: 2px solid var(--accent);
+  border-left: 2px solid var(--accent);
+  transform: rotate(45deg);
+}
+
+.levels-nudge-text {
+  margin: 0;
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.levels-nudge-close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.levels-nudge-close:hover {
+  color: var(--text);
+}

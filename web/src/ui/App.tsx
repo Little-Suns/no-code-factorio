@@ -16,6 +16,10 @@ import { BlueprintPanel } from './BlueprintPanel';
 import { LogsPanel } from './LogsPanel';
 import { NodeSearch } from './NodeSearch';
 import { Tutorial } from './Tutorial';
+import { LevelPanel } from './LevelPanel';
+import { LevelHud } from './LevelHud';
+import { LevelComplete } from './LevelComplete';
+import { LevelsNudge } from './LevelsNudge';
 import { tutorialBlocksInput } from '../state/tutorialSteps';
 import './App.css';
 
@@ -78,6 +82,10 @@ export function App() {
         <LogsPanel />
         <NodeSearch />
         <Hotbar />
+        <LevelHud />
+        <LevelPanel />
+        <LevelComplete />
+        <LevelsNudge />
         <Tutorial />
       </div>
     </div>

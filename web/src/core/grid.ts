@@ -176,111 +176,51 @@ export function outPorts(entity: Entity): { tile: Vec; branch: Branch }[] {
 }
 
 // Получить входящие тайлы footprint
+//
+// Правило одно для всех станков (кроме belt/miner/accumulator, у которых нет
+// «сторон» в этом смысле): BACK + LEFT + RIGHT — вся сторона footprint'а,
+// противоположная FRONT, и оба боковых ребра. FRONT остаётся строго выходным —
+// это единственная граница, намеренно исключённая (иначе выход перестал бы что-то
+// значить). Раньше это правило (было только у mixer/chest) распространяем на
+// остальные станки: манипулятор/лента, подходящие сбоку, а не строго «в спину»,
+// тоже должны считаться валидным входом (см. docs/03 — иначе горизонтальная
+// цепочка из туториала не собирается без ручного поворота станка-приёмника).
+// При w=h=2 (furnace/assembler/splitter/lab) BACK+LEFT+RIGHT математически
+// покрывают весь footprint целиком, включая тайлы под FRONT-портами — это
+// тот же эффект, что уже был у mixer (её передние углы тоже во входах, см.
+// __checks__/grid.ts), не новая экзотика, а обобщение старого паттерна.
 export function inTiles(entity: Entity): Set<string> {
   const baseSize = getSize(entity.kind);
   const tiles = new Set<string>();
 
-  // Для каждого направления, определяем какие локальные координаты принимают вход
-  // Потом разворачиваем их согласно entity.dir
-
-  let inputDirs: { side: 'front' | 'back' | 'left' | 'right'; localTiles: [number, number][] }[] = [];
-
-  switch (entity.kind) {
-    case 'belt':
-      // Любая сторона принимает весь footprint
-      // Смысл в том, что любой тайл может быть входом
-      for (const t of footprintTiles(entity)) {
-        tiles.add(`${t.x},${t.y}`);
-      }
-      return tiles;
-
-    case 'miner':
-    case 'accumulator':
-      // Нет входов
-      return tiles;
-
-    case 'furnace':
-      // BACK входы
-      inputDirs = [
-        { side: 'back', localTiles: [[0, baseSize.h - 1], [1, baseSize.h - 1]] },
-      ];
-      break;
-
-    case 'assembler':
-      // BACK входы (весь нижний ряд, 2×2)
-      inputDirs = [
-        {
-          side: 'back',
-          localTiles: [[0, baseSize.h - 1], [1, baseSize.h - 1]],
-        },
-      ];
-      break;
-
-    case 'splitter':
-      // BACK оба тайла
-      inputDirs = [{ side: 'back', localTiles: [[0, baseSize.h - 1], [1, baseSize.h - 1]] }];
-      break;
-
-    case 'mixer':
-      // BACK + LEFT + RIGHT (все тайлы этих сторон)
-      const mixerBack: [number, number][] = [];
-      const mixerLeft: [number, number][] = [];
-      const mixerRight: [number, number][] = [];
-      for (let x = 0; x < baseSize.w; x++) {
-        mixerBack.push([x, baseSize.h - 1]);
-      }
-      for (let y = 0; y < baseSize.h; y++) {
-        mixerLeft.push([0, y]);
-        mixerRight.push([baseSize.w - 1, y]);
-      }
-      inputDirs = [
-        { side: 'back', localTiles: mixerBack },
-        { side: 'left', localTiles: mixerLeft },
-        { side: 'right', localTiles: mixerRight },
-      ];
-      break;
-
-    case 'chest':
-      // BACK + LEFT + RIGHT
-      inputDirs = [
-        { side: 'back', localTiles: [[0, baseSize.h - 1]] },
-        { side: 'left', localTiles: [[0, 0]] },
-        { side: 'right', localTiles: [[baseSize.w - 1, 0]] },
-      ];
-      break;
-
-    case 'lab':
-      // BACK оба тайла
-      inputDirs = [{ side: 'back', localTiles: [[0, baseSize.h - 1], [1, baseSize.h - 1]] }];
-      break;
-
-    case 'silo':
-      // BACK все тайлы
-      const siloBack: [number, number][] = [];
-      for (let x = 0; x < baseSize.w; x++) {
-        siloBack.push([x, baseSize.h - 1]);
-      }
-      inputDirs = [{ side: 'back', localTiles: siloBack }];
-      break;
-
-    case 'webhook':
-      // BACK оба тайла
-      inputDirs = [{ side: 'back', localTiles: [[0, baseSize.h - 1], [1, baseSize.h - 1]] }];
-      break;
-
-    case 'manipulator':
-      // BACK (1×1, как chest — при единственном тайле footprint сторона номинальна:
-      // вход физически принимается с любого соседнего тайла, наружу отдаёт только FRONT)
-      inputDirs = [{ side: 'back', localTiles: [[0, 0]] }];
-      break;
+  if (entity.kind === 'belt') {
+    // Любая сторона принимает весь footprint — любой тайл может быть входом.
+    for (const t of footprintTiles(entity)) {
+      tiles.add(`${t.x},${t.y}`);
+    }
+    return tiles;
   }
 
-  // Локальные координаты → поворот → мировые (смещение от pos)
-  for (const { localTiles } of inputDirs) {
-    for (const [dx, dy] of localTiles) {
-      const rotated = rotOffset(dx, dy, baseSize.w, baseSize.h, entity.dir);
-      tiles.add(`${entity.pos.x + rotated.x},${entity.pos.y + rotated.y}`);
-    }
+  if (entity.kind === 'miner' || entity.kind === 'accumulator') {
+    // Нет входов
+    return tiles;
+  }
+
+  // BACK (нижний ряд) + LEFT (левый столбец) + RIGHT (правый столбец) локальных
+  // координат. При 1×1 (chest, manipulator) все три схлопываются в один и тот же
+  // тайл — вход номинально «с любого соседа», как и раньше.
+  const localTiles: [number, number][] = [];
+  for (let x = 0; x < baseSize.w; x++) {
+    localTiles.push([x, baseSize.h - 1]); // back
+  }
+  for (let y = 0; y < baseSize.h; y++) {
+    localTiles.push([0, y]); // left
+    localTiles.push([baseSize.w - 1, y]); // right
+  }
+
+  for (const [dx, dy] of localTiles) {
+    const rotated = rotOffset(dx, dy, baseSize.w, baseSize.h, entity.dir);
+    tiles.add(`${entity.pos.x + rotated.x},${entity.pos.y + rotated.y}`);
   }
 
   return tiles;
@@ -306,4 +246,58 @@ export function canPlace(entities: Record<string, Entity>, entity: Entity): bool
     }
   }
   return true;
+}
+
+/**
+ * Групповой поворот на 90° по часовой вокруг ОБЩЕГО центра группы (bounding box
+ * занятых тайлов), а не каждой сущности вокруг своей — иначе взаимное расположение
+ * станков после поворота «разваливается» (не совпадает с тем, что игрок видит на
+ * экране). Используется и для уже поставленной группы (store.rotateMany), и для
+ * чертежа на кисти перед постановкой (game/input.ts) — geometрия одна и та же.
+ *
+ * Все MachineKind квадратные (w===h при dir=0, см. getSize выше) — поворот на 90°
+ * не меняет размер footprint'а, поэтому достаточно повернуть центр каждой сущности
+ * вокруг общего пивота ((dx,dy) → (-dy,dx), та же ориентация, что задаёт DELTA) и
+ * пересчитать top-left из нового центра. Одиночная сущность в группе — частный
+ * случай: её центр совпадает с пивотом, смещения нет — то же поведение, что у
+ * одиночного поворота одной сущности.
+ */
+export function rotateGroupRigid(group: Entity[], steps: number): Entity[] {
+  const n = ((steps % 4) + 4) % 4;
+  let current = group;
+  for (let i = 0; i < n; i++) {
+    current = rotateGroupOnce(current);
+  }
+  return current.map((e) => ({ ...e }));
+}
+
+function rotateGroupOnce(group: Entity[]): Entity[] {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const entity of group) {
+    for (const tile of footprintTiles(entity)) {
+      minX = Math.min(minX, tile.x);
+      minY = Math.min(minY, tile.y);
+      maxX = Math.max(maxX, tile.x + 1);
+      maxY = Math.max(maxY, tile.y + 1);
+    }
+  }
+  const pivotX = (minX + maxX) / 2;
+  const pivotY = (minY + maxY) / 2;
+
+  return group.map((entity) => {
+    const tiles = footprintTiles(entity);
+    const size = Math.max(...tiles.map((t) => t.x)) - Math.min(...tiles.map((t) => t.x)) + 1;
+    const half = size / 2;
+    const centerX = entity.pos.x + half;
+    const centerY = entity.pos.y + half;
+    const dx = centerX - pivotX;
+    const dy = centerY - pivotY;
+    const newCenterX = pivotX - dy;
+    const newCenterY = pivotY + dx;
+    return {
+      ...entity,
+      dir: ((entity.dir + 1) % 4) as Dir,
+      pos: { x: Math.round(newCenterX - half), y: Math.round(newCenterY - half) },
+    };
+  });
 }

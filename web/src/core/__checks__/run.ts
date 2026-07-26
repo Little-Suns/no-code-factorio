@@ -17,5 +17,6 @@ import './blueprint';
 import './blueprintLibrary';
 import './stress';
 import './manipulator-invariant';
+import './levels';
 
 console.log('✓ Check runner ready');

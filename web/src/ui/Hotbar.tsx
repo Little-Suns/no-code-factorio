@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useStore } from '../state/store';
 import type { MachineKind } from '../core/types';
-import { ALL_TOOLS, LOGISTICS_TOOLS, MACHINE_TOOLS, FINAL_TOOLS, HOTKEYS, TOOL_ICONS } from './hotbarData';
+import { ALL_TOOLS, LOGISTICS_TOOLS, IO_TOOLS, MACHINE_TOOLS, HOTKEYS, TOOL_ICONS } from './hotbarData';
 import { tutorialBlocksInput } from '../state/tutorialSteps';
 import { useT } from '../i18n';
 import './Hotbar.css';
@@ -103,13 +103,13 @@ export function Hotbar() {
       </div>
       <div className="hotbar-divider" />
       <div className="hotbar-group">
-        <div className="hotbar-group-label">{t('hotbar.group.machines')}</div>
-        <div className="hotbar-group-slots">{MACHINE_TOOLS.map(renderSlot)}</div>
+        <div className="hotbar-group-label">{t('hotbar.group.io')}</div>
+        <div className="hotbar-group-slots">{IO_TOOLS.map(renderSlot)}</div>
       </div>
       <div className="hotbar-divider" />
       <div className="hotbar-group">
-        <div className="hotbar-group-label">{t('hotbar.group.final')}</div>
-        <div className="hotbar-group-slots">{FINAL_TOOLS.map(renderSlot)}</div>
+        <div className="hotbar-group-label">{t('hotbar.group.machines')}</div>
+        <div className="hotbar-group-slots">{MACHINE_TOOLS.map(renderSlot)}</div>
       </div>
     </div>
   );

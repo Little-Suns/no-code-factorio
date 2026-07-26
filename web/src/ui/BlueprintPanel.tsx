@@ -34,6 +34,7 @@ function BlueprintGlyph({ className }: { className?: string }) {
 
 export function BlueprintPanel() {
   const t = useT();
+  const levelActive = useStore((state) => state.levelActive);
   const blueprints = useStore((state) => state.blueprints);
   const pendingSelection = useStore((state) => state.pendingSelection);
   const blueprintPanelOpen = useStore((state) => state.blueprintPanelOpen);
@@ -57,7 +58,11 @@ export function BlueprintPanel() {
   // всегда всплывает под форму сохранения сразу после рамки выделения (pendingSelection
   // сама включает blueprintPanelOpen, см. store.ts). Закрыто — панель полностью скрыта,
   // без плашки-реоткрывашки: единственная точка показа/скрытия — кнопка в TopBar.
-  if (!blueprintPanelOpen && !pendingSelection) {
+  // Уровень активен — блупринты запрещены (нужно решить задачу с нуля, см. docs плана):
+  // скрываем и список, и форму сохранения, и «Библиотеку» одним условием. Это же делает
+  // недостижимой ветку постановки чертежа в game/input.ts — единственный файл, вызывающий
+  // setStampBlueprint, это BlueprintPanel.
+  if (levelActive || (!blueprintPanelOpen && !pendingSelection)) {
     return null;
   }
 

@@ -1,0 +1,82 @@
+.level-complete-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 7, 9, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 450;
+  pointer-events: auto;
+}
+
+.level-complete-card {
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  background: var(--panel-bg);
+  border: 2px solid var(--panel-border);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+  padding: 24px 20px;
+  text-align: center;
+}
+
+.level-complete-title {
+  color: var(--ok);
+  font-family: var(--f-disp);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.level-complete-name {
+  color: var(--text);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.level-complete-stars {
+  font-size: 32px;
+  letter-spacing: 4px;
+  margin-bottom: 20px;
+}
+
+.level-complete-star {
+  color: var(--text-dim);
+}
+
+.level-complete-star.filled {
+  color: var(--accent);
+}
+
+.level-complete-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.level-complete-btn {
+  padding: 8px 12px;
+  background: var(--dirt);
+  border: 2px solid var(--panel-border);
+  color: var(--text-muted);
+  font-family: var(--f-mono);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.level-complete-btn:hover {
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+
+.level-complete-btn.primary {
+  background: var(--accent-dim);
+  border-color: var(--panel-border);
+  color: var(--bg);
+}
+
+.level-complete-btn.primary:hover {
+  background: var(--accent);
+}

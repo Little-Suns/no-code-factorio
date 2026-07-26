@@ -1,5 +1,54 @@
 import { Vec, Dir, Entity, Edge, Branch, DELTA } from './types';
-import { outPorts, inTiles, buildOccupancy } from './grid';
+import { outPorts, inTiles, buildOccupancy, footprintTiles } from './grid';
+
+const ALL_DIRS: Dir[] = [0, 1, 2, 3];
+
+// Станки с единственной семантикой branch у всех своих портов ('out' — не привязан
+// к конкретному FRONT-тайлу, в отличие от lab, где pass/rework жёстко закреплены
+// за левым/правым FRONT-тайлом, и manipulator, чья направленность BACK→FRONT — это
+// сама суть станка, а не деталь размещения). Для этих станков разрешаем боковой
+// съём выхода: помимо канонического FRONT-порта, любая сторона footprint'а с лентой,
+// направленной ОТ станка (её dir совпадает с направлением наружу), тоже становится
+// выходом branch 'out' — см. docs/03. lab и manipulator намеренно исключены.
+const SIDE_OUTPUT_KINDS = new Set(['miner', 'furnace', 'assembler', 'splitter', 'mixer', 'chest']);
+
+/**
+ * Доп. выходные тайлы станка помимо канонических outPorts(): любая сторона footprint'а,
+ * к которой примыкает лента, смотрящая НАРУЖУ (её dir === направление от станка к ней).
+ * Лента, смотрящая внутрь станка, никогда не попадёт сюда — это тот же тайл, что и
+ * потенциальный вход (inTiles), но направление ленты однозначно решает, чем он служит:
+ * одна лента не может одновременно «течь наружу» (годится как выход) и «течь внутрь»
+ * (годится как вход) — конфликта нет.
+ */
+function sideOutputTiles(
+  entity: Entity,
+  occupancy: Map<string, string>,
+  entities: Record<string, Entity>,
+  covered: Set<string>
+): Vec[] {
+  const footprint = footprintTiles(entity);
+  const footprintKeys = new Set(footprint.map((t) => `${t.x},${t.y}`));
+  const extra: Vec[] = [];
+  const seen = new Set<string>();
+
+  for (const tile of footprint) {
+    for (const dir of ALL_DIRS) {
+      const delta = DELTA[dir];
+      const neighbor = { x: tile.x + delta.x, y: tile.y + delta.y };
+      const key = `${neighbor.x},${neighbor.y}`;
+      if (footprintKeys.has(key) || covered.has(key) || seen.has(key)) continue;
+
+      const occId = occupancy.get(key);
+      const occEntity = occId ? entities[occId] : undefined;
+      if (!occEntity || occEntity.kind !== 'belt' || occEntity.dir !== dir) continue;
+
+      seen.add(key);
+      extra.push(neighbor);
+    }
+  }
+
+  return extra;
+}
 
 /**
  * Извлечение графа потока предметов из мира
@@ -22,8 +71,15 @@ export function buildGraph(entities: Record<string, Entity>): Edge[] {
       continue;
     }
 
-    // Для каждого выходного порта
+    // Для каждого выходного порта: канонические FRONT-порты + (для однобранчевых
+    // станков) боковой съём с любой другой стороны, если туда смотрит лента.
     const ports = outPorts(entity);
+    if (SIDE_OUTPUT_KINDS.has(entity.kind)) {
+      const covered = new Set(ports.map((p) => `${p.tile.x},${p.tile.y}`));
+      for (const tile of sideOutputTiles(entity, occupancy, entities, covered)) {
+        ports.push({ tile, branch: 'out' });
+      }
+    }
     for (const port of ports) {
       const traceResult = trace(
         port.tile,

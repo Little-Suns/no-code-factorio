@@ -1,4 +1,4 @@
-import { rotOffset, footprintTiles, outPorts, inTiles, canPlace } from '../grid';
+import { rotOffset, footprintTiles, outPorts, inTiles, canPlace, rotateGroupRigid } from '../grid';
 import { Entity, Vec } from '../types';
 
 // Простая функция assert
@@ -201,12 +201,83 @@ console.log('Testing lab pass/rework ports on 2×2 footprint...');
     `rework port should be at (1,-1), got (${reworkPort!.tile.x},${reworkPort!.tile.y})`
   );
 
-  // BACK принимает вход на обоих нижних тайлах футпринта (y=1, а не y=0 как было при h=1)
+  // BACK принимает вход на обоих нижних тайлах футпринта (y=1, а не y=0 как было при h=1).
+  // При 2×2 BACK+LEFT+RIGHT покрывают весь footprint (см. inTiles) — top row тоже входит,
+  // это тот же эффект, что уже был у mixer (её передние углы — тоже входы).
   const labInTiles = inTiles(lab);
   assert(labInTiles.has('0,1'), 'lab BACK input should include (0,1)');
   assert(labInTiles.has('1,1'), 'lab BACK input should include (1,1)');
-  assert(!labInTiles.has('0,0'), 'lab top row (0,0) is not a BACK input tile');
+  assert(labInTiles.has('0,0'), 'lab LEFT column input should include (0,0) — 2×2 side coverage');
+  assert(labInTiles.has('1,0'), 'lab RIGHT column input should include (1,0) — 2×2 side coverage');
 }
 console.log('✓ lab pass/rework ports OK');
+
+// inTiles обобщён на BACK+LEFT+RIGHT для всех станков (кроме belt/miner/accumulator) —
+// furnace/assembler/splitter/silo/webhook раньше принимали вход только с BACK,
+// манипулятор сбоку (не строго «в спину») не образовывал бы Edge (см. docs/03,
+// баг из туториала: горизонтальная цепочка с дефолтным dir=0 у станка-приёмника).
+console.log('Testing inTiles accepts LEFT/RIGHT for furnace/assembler (not just BACK)...');
+{
+  const furnace: Entity = { id: 'furnace-side', kind: 'furnace', pos: { x: 0, y: 0 }, dir: 0, config: {} };
+  const furnaceTiles = inTiles(furnace);
+  // 2×2 dir=0: LEFT столбец x=0 → (0,0),(0,1); RIGHT столбец x=1 → (1,0),(1,1)
+  assert(furnaceTiles.has('0,0'), 'furnace LEFT column should accept input at (0,0)');
+  assert(furnaceTiles.has('1,0'), 'furnace RIGHT column should accept input at (1,0)');
+
+  const assembler: Entity = { id: 'asm-side', kind: 'assembler', pos: { x: 0, y: 0 }, dir: 0, config: {} };
+  const asmTiles = inTiles(assembler);
+  assert(asmTiles.has('0,0') && asmTiles.has('1,0'), 'assembler side columns should accept input');
+
+  // mixer (3×3): поведение не изменилось — центр и front-middle по-прежнему не входы
+  const mixerCheck: Entity = { id: 'mixer-side', kind: 'mixer', pos: { x: 0, y: 0 }, dir: 0, config: {} };
+  const mixerTiles = inTiles(mixerCheck);
+  assert(!mixerTiles.has('1,1'), 'mixer center must remain non-input after generalization');
+  assert(!mixerTiles.has('1,0'), 'mixer front-middle must remain non-input after generalization');
+}
+console.log('✓ inTiles side generalization OK');
+
+// Групповой поворот — единое твёрдое тело вокруг общего центра, не каждая сущность
+// вокруг своей оси на месте.
+console.log('Testing rotateGroupRigid...');
+{
+  // Одиночная сущность в группе — частный случай: центр совпадает с пивотом,
+  // позиция не меняется, только dir+1 (то же поведение, что у одиночного rotate()).
+  const solo: Entity = { id: 'solo', kind: 'belt', pos: { x: 5, y: 5 }, dir: 0, config: {} };
+  const [soloRotated] = rotateGroupRigid([solo], 1);
+  assert(soloRotated.pos.x === 5 && soloRotated.pos.y === 5, 'single-entity group: position must not change');
+  assert(soloRotated.dir === 1, 'single-entity group: dir must still advance by 1');
+
+  // Два станка в ряд (A слева, B справа) — после поворота на 90° по часовой A должен
+  // оказаться сверху, B снизу (право → низ при повороте по часовой), не остаться на
+  // месте со сменённым dir каждый по отдельности.
+  const a: Entity = { id: 'a', kind: 'belt', pos: { x: 0, y: 0 }, dir: 0, config: {} };
+  const b: Entity = { id: 'b', kind: 'belt', pos: { x: 2, y: 0 }, dir: 0, config: {} };
+  const [aRotated, bRotated] = rotateGroupRigid([a, b], 1);
+  assert(aRotated.dir === 1 && bRotated.dir === 1, 'group members should all advance dir by 1');
+  assert(
+    aRotated.pos.x === 1 && aRotated.pos.y === -1,
+    `left member should move to top (1,-1), got (${aRotated.pos.x},${aRotated.pos.y})`
+  );
+  assert(
+    bRotated.pos.x === 1 && bRotated.pos.y === 1,
+    `right member should move to bottom (1,1), got (${bRotated.pos.x},${bRotated.pos.y})`
+  );
+
+  // 4 шага (360°) — группа должна вернуться ровно в исходное состояние.
+  const fullTurn = rotateGroupRigid([a, b], 4);
+  assert(
+    fullTurn[0].pos.x === a.pos.x && fullTurn[0].pos.y === a.pos.y && fullTurn[0].dir === a.dir,
+    'full 360° turn should return to the original position/dir'
+  );
+
+  // Коллизия внутри группы после поворота не должна ломать функцию (canPlaceBlueprint
+  // — забота вызывающего кода) — сюда просто прогоняем 2×2 станок вместе с 1×1.
+  const miner: Entity = { id: 'm', kind: 'miner', pos: { x: 0, y: 0 }, dir: 0, config: {} };
+  const belt: Entity = { id: 'bt', kind: 'belt', pos: { x: 2, y: 0 }, dir: 0, config: {} };
+  const rotatedMixed = rotateGroupRigid([miner, belt], 1);
+  assert(rotatedMixed.length === 2, 'mixed-size group should preserve entity count');
+  assert(Number.isInteger(rotatedMixed[0].pos.x) && Number.isInteger(rotatedMixed[0].pos.y), 'rotated positions must stay on the integer grid');
+}
+console.log('✓ rotateGroupRigid OK');
 
 console.log('grid checks OK');

@@ -437,4 +437,59 @@ console.log('Test 9: manipulator sandwiched between two stations (no belts)');
 }
 console.log('✓ Test 9 OK');
 
+// Test 10: боковой съём выхода — лента слева от miner (не FRONT), направленная ОТ
+// станка, должна дать рабочий Edge через манипулятор, даже без единой ленты на FRONT.
+console.log('Test 10: side output tap — belt on miner LEFT side (pointing away) reaches a manipulator');
+{
+  const miner: Entity = { id: 'miner10', kind: 'miner', pos: { x: 0, y: 0 }, dir: 0, config: {} };
+  // LEFT сосед тайла (0,0) в направлении West (dir=3) — тайл (-1,0).
+  const belt: Entity = { id: 'belt10', kind: 'belt', pos: { x: -1, y: 0 }, dir: 3, config: {} };
+  // Манипулятор — следующий тайл по ходу ленты (терминальный случай).
+  const manip: Entity = { id: 'manip10', kind: 'manipulator', pos: { x: -2, y: 0 }, dir: 3, config: {} };
+
+  const entities = { miner10: miner, belt10: belt, manip10: manip };
+  const edges = buildGraph(entities);
+
+  const minerEdges = edges.filter((e) => e.from === 'miner10');
+  assert(minerEdges.length === 1, `Expected 1 side-tap edge from miner10, got ${minerEdges.length}`);
+  assert(minerEdges[0].to === 'manip10', `miner10 side tap should reach manip10, got ${minerEdges[0].to}`);
+  assert(minerEdges[0].branch === 'out', 'side-tap edge should be branch out');
+}
+console.log('✓ Test 10 OK');
+
+// Test 11: та же геометрия, но лента развёрнута НАВСТРЕЧУ станку (dir внутрь, не наружу) —
+// не должна давать side-tap edge (эта же лента годится только как потенциальный вход).
+console.log('Test 11: belt pointing INTO the machine must NOT count as a side output tap');
+{
+  const miner: Entity = { id: 'miner11', kind: 'miner', pos: { x: 10, y: 0 }, dir: 0, config: {} };
+  // Та же позиция (9,0), но лента смотрит на восток (dir=1), т.е. НА станок, не от него.
+  const belt: Entity = { id: 'belt11', kind: 'belt', pos: { x: 9, y: 0 }, dir: 1, config: {} };
+
+  const entities = { miner11: miner, belt11: belt };
+  const edges = buildGraph(entities);
+
+  const minerEdges = edges.filter((e) => e.from === 'miner11');
+  assert(minerEdges.length === 0, `Belt facing into the machine must not create a side-tap edge, got ${minerEdges.length}`);
+}
+console.log('✓ Test 11 OK');
+
+// Test 12: lab и manipulator намеренно ИСКЛЮЧЕНЫ из бокового съёма выхода (lab — branch
+// pass/rework жёстко привязан к конкретному FRONT-тайлу; manipulator — направленность
+// BACK→FRONT это его суть). Та же геометрия, что и Test 10, но для lab/manipulator
+// не должна давать edge.
+console.log('Test 12: lab/manipulator excluded from side output tap');
+{
+  const lab: Entity = { id: 'lab12', kind: 'lab', pos: { x: 20, y: 0 }, dir: 0, config: {} };
+  const beltLab: Entity = { id: 'belt12a', kind: 'belt', pos: { x: 19, y: 0 }, dir: 3, config: {} };
+  const manip: Entity = { id: 'manip12', kind: 'manipulator', pos: { x: 30, y: 0 }, dir: 0, config: {} };
+  const beltManip: Entity = { id: 'belt12b', kind: 'belt', pos: { x: 31, y: 0 }, dir: 1, config: {} };
+
+  const entities = { lab12: lab, belt12a: beltLab, manip12: manip, belt12b: beltManip };
+  const edges = buildGraph(entities);
+
+  assert(edges.filter((e) => e.from === 'lab12').length === 0, 'lab must not gain a side-tap edge');
+  assert(edges.filter((e) => e.from === 'manip12').length === 0, 'manipulator must not gain a side-tap edge');
+}
+console.log('✓ Test 12 OK');
+
 console.log('graph checks OK');
